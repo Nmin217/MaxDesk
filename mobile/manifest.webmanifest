@@ -1,0 +1,12 @@
+{
+  "name": "Summon Desk Control",
+  "short_name": "Summon Desk",
+  "description": "Local network controller for the Summon Desk simulator",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07111f",
+  "theme_color": "#071426",
+  "icons": []
+}

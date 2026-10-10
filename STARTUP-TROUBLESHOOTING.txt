@@ -1,0 +1,7 @@
+If the launcher fails:
+1. Extract the complete ZIP to a normal writable folder (not inside the ZIP preview).
+2. Double-click Start Summon Desk.bat. It now pauses briefly so startup messages remain visible.
+3. If it says Node.js was not found, install Node.js 18+ if permitted, then restart the launcher.
+4. If the bridge window reports EADDRINUSE, port 8787 is already being used. Close the older Summon Desk bridge window first.
+5. If company policy blocks BAT/CMD or Node.js, ask IT for an approved run method.
+Phone and computer must use the same trusted Wi-Fi. Use http://COMPUTER-IP:8787/ on the phone.
