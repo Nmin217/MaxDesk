@@ -1,0 +1,14 @@
+Add these in Xcode: target > Info tab (or Info.plist as source code).
+
+1) Local network permission prompt text
+   Key:   Privacy - Local Network Usage Description   (NSLocalNetworkUsageDescription)
+   Value: "Summon Desk talks to your robot on your local network."
+
+2) Bonjour service the robot advertises (so the app can find it without typing an IP; optional, needed only if you add discovery)
+   Key:   Bonjour services   (NSBonjourServices)
+   Value: array with one item:  _summondesk._tcp
+
+3) Allow plain HTTP to local addresses only (the bridge is HTTP on your LAN)
+   Key:   App Transport Security Settings   (NSAppTransportSecurity)
+   Sub-key: Allow Local Networking   (NSAllowsLocalNetworking) = YES
+   Do NOT set "Allow Arbitrary Loads".
