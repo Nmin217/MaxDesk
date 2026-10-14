@@ -50,6 +50,12 @@ const server=require('http').createServer((req,res)=>{
     else if(url==='/v1/sim/cord')command={type:'cord',plugged:!!body.plugged};
     else return send(res,404,{error:'not found'});
     if(!browserState||Date.now()-browserStateAt>=3000)return send(res,503,{accepted:false,status:'Simulator page is not connected. Open /simulator and keep it running.'});
+    // Enforce the cord interlock at the bridge, before acknowledging/queueing a movement request.
+    // Stop and cord plug/unplug commands remain available so the user can stop or clear the interlock.
+    const movementTypes=new Set(['summon','drive','return','learn']);
+    if(movementTypes.has(command.type)&&browserState.cord?.plugged&&browserState.cord?.interlock_on){
+      return send(res,423,{accepted:false,status:'Movement refused: desk cord is plugged in. Unplug the cord before moving.'});
+    }
     const queued={id:nextCommandId++,...command,created_at:Date.now()};
     pendingCommands.push(queued);
     send(res,200,{accepted:true,status:'Command sent to simulator',severity:'info',command_id:queued.id});
