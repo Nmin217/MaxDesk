@@ -14,6 +14,7 @@ const SLIP_A=2.5;
 // ---------------------------------------------------------------------------
 const rects=[{x:220,y:170,w:40,h:150},{x:450,y:60,w:150,h:40},{x:520,y:300,w:120,h:70}];
 const RECTS0=rects.map(r=>({...r}));
+let placeBlocks=false, selectedBlock=null, blockDrag=null, roomStyle='office';
 const HOME={x:85,y:95};   // starting spot (centre of the grid cell the desk starts in); parks horizontal, monitor-back forward
 const circs=[{x:400,y:260,r:18}];
 const CIRCS0=circs.map(c=>({...c}));
@@ -62,7 +63,7 @@ let warp=1,peakA=0,deskH=1.05,userH=1.05,estop=false,T,people,path=[],goal=null,
 let stuckTime=0,recovery=null,recoveryT=0;
 let headTarget=0.3, headState='SETTLED';
 // Phone joystick commands are simulation-only; values are normalized to [-1, 1].
-let manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35};
+let manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35,lastCommandAt:0};
 let peopleInPathCount=0, safetyHolds=0, holdLatch=false, squeeze=false, squeezeUntil=0;
 const user={x:700,y:430,r:13};
 const modAng=[0,0,0,0];
@@ -80,6 +81,7 @@ function setSt(t,c){$('st').textContent=t;$('st').className=c||''}
 function reset(){
   manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35};
   rects.length=0;for(const r of RECTS0)rects.push({...r});   // Reset scene also restores the normal room
+  selectedBlock=null;blockDrag=null;placeBlocks=false;if($('placeMode'))$('placeMode').textContent='Place blocks: off';
   T={x:HOME.x,y:HOME.y,th:0,vx:0,vy:0,w:0};   // starts docked on the charging pad
   people=[
     // Two people seated at the two "desks" (rects). Stationary, already routable.
@@ -485,12 +487,14 @@ function batStep(dt){
   }else lowT=0;
 }
 function startTour(){
+  manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
   if(cordBlocks())return;
   if(estop){setSt('E-stop engaged - release it first','bad');return}
   mode='tour';active=true;parkTh=null;didArrive=false;arT=0;tourI=0;tourT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;
   stuckTime=0;recovery=null;recoveryT=0;headTarget=T.th;headState='SETTLED';setSt('Learning the room: point 1 of '+tourPts().length,'');
 }
 function startReturn(){
+  manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
   if(cordBlocks())return;
   if(estop){setSt('E-stop engaged - release it first','bad');return}
   mode='home';active=true;parkTh=null;didArrive=false;arT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;
@@ -762,6 +766,26 @@ if($('ar').checked&&didArrive&&mode==='user'&&!active&&!estop&&parkTh===null){
   }
 }
 
+// ---- Manual drive override (from the phone Drive sim tab) ----
+// Drop held joystick input if phone/API updates disappear; a lost connection must not
+// leave the simulator driving on the last command indefinitely. This is simulation-only.
+if(manualDrive.enabled && manualDrive.lastCommandAt && Date.now()-manualDrive.lastCommandAt>750){
+  manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
+  setSt('Manual drive timed out — input lost','warn');
+}
+// Robot-frame: joystick "up" moves the desk toward its FRONT arrow (local -y).
+// Runs before the supervisor, so swept-footprint and yaw checks still apply.
+if(manualDrive.enabled && !estop && !active && !recovery && parkTh===null && !cordLock()){
+  const mspd=VMAX*Math.max(0,Math.min(1,manualDrive.speed));
+  const ix=Math.max(-1,Math.min(1,manualDrive.x));
+  const iy=Math.max(-1,Math.min(1,manualDrive.y));
+  const cosT=Math.cos(T.th), sinT=Math.sin(T.th);
+  cx=(cosT*ix + sinT*iy)*mspd;
+  cy=(sinT*ix - cosT*iy)*mspd;
+  w =Math.max(-1,Math.min(1,manualDrive.turn))*YAW_RATE_MAX*0.6;
+  if(Math.abs(cx)>.5||Math.abs(cy)>.5||Math.abs(w)>.05)setSt('Manual drive (simulation)','');
+}
+
 // Safety supervisor (swept footprint vs live lidar points)
 let held=false;
 [cx,cy,w,held]=supervise(cx,cy,w);
@@ -812,8 +836,18 @@ function draw(){
   const S=getComputedStyle(document.documentElement),g=n=>S.getPropertyValue(n).trim();
   const obs=g('--obs'),hitc=g('--hit'),acc=g('--acc'),tbl=g('--tbl'),fg=g('--fg');
   ctx.setTransform(2,0,0,2,0,0);ctx.clearRect(0,0,W,H);
-  // Static obstacles
-  ctx.fillStyle=obs;for(const r of rects)ctx.fillRect(r.x,r.y,r.w,r.h);
+  const floors={office:'#e8e5dc',wood:'#c69a68',tile:'#f4f2e9',warehouse:'#b9b8b2',dark:'#30343b'};
+  const floor=floors[roomStyle]||floors.office;ctx.fillStyle=floor;ctx.fillRect(0,0,W,H);
+  // Room finish / subtle floor pattern; purely visual, never part of collision geometry.
+  if(roomStyle==='tile'||roomStyle==='warehouse'){
+    ctx.strokeStyle=roomStyle==='tile'?'rgba(80,80,80,.12)':'rgba(40,40,40,.09)';ctx.lineWidth=.7;ctx.beginPath();
+    const step=roomStyle==='tile'?50:80;for(let x=0;x<=W;x+=step){ctx.moveTo(x,0);ctx.lineTo(x,H)}for(let y=0;y<=H;y+=step){ctx.moveTo(0,y);ctx.lineTo(W,y)}ctx.stroke();
+  } else if(roomStyle==='wood'){
+    ctx.strokeStyle='rgba(80,45,20,.12)';ctx.lineWidth=1;for(let y=0;y<H;y+=28){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  }
+  ctx.strokeStyle=roomStyle==='dark'?'#707985':'rgba(70,70,70,.45)';ctx.lineWidth=5;ctx.strokeRect(2.5,2.5,W-5,H-5);
+  // Obstacles. Custom blocks are visually distinct and selectable in editor mode.
+  for(const r of rects){ctx.fillStyle=r._custom?(r===selectedBlock?'#f59e0b':'#d97706'):obs;ctx.fillRect(r.x,r.y,r.w,r.h);if(r._custom){ctx.strokeStyle=r===selectedBlock?'#7c2d12':'rgba(70,35,0,.8)';ctx.lineWidth=1.5;ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1)}}
   for(const c of circs){ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,7);ctx.fill()}
   // Costmap
   if($('cost').checked){   // what it knows: grey = never seen, orange = busy (people), purple = remembered obstacle, red = lidar right now
@@ -929,15 +963,22 @@ function loop(n){const dt=Math.max(0,Math.min(.05,(n-lt)/1000));lt=n;let rem=dt*
 function pos(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*W,y:(e.clientY-r.top)/r.height*H}}
 cv.addEventListener('pointerdown',e=>{
   const p=pos(e);
+  if(placeBlocks){
+    const w=Math.max(10,Math.min(300,Number($('blockW').value)||60)),h=Math.max(10,Math.min(300,Number($('blockH').value)||40));
+    const b={x:Math.max(0,Math.min(W-w,p.x-w/2)),y:Math.max(0,Math.min(H-h,p.y-h/2)),w,h,_custom:true};rects.push(b);selectedBlock=b;cv.setPointerCapture(e.pointerId);$('editHint').textContent='Block added. Click Place blocks to stop adding, or add more blocks.';return;
+  }
   if(Math.hypot(p.x-T.x-Math.cos(T.th)*ESX,p.y-T.y-Math.sin(T.th)*ESX)<13){toggleEstop();return}
+  const b=[...rects].reverse().find(r=>r._custom&&p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h);
+  if(b){selectedBlock=b;blockDrag={b,dx:p.x-b.x,dy:p.y-b.y};cv.setPointerCapture(e.pointerId);return}
   if(Math.hypot(p.x-user.x,p.y-user.y)<32){drag=true;cv.setPointerCapture(e.pointerId)}
 });
-cv.addEventListener('pointermove',e=>{if(!drag)return;const p=pos(e);user.x=Math.max(20,Math.min(W-20,p.x));user.y=Math.max(20,Math.min(H-20,p.y))});
-cv.addEventListener('pointerup',()=>drag=false);
+cv.addEventListener('pointermove',e=>{const p=pos(e);if(blockDrag){const b=blockDrag.b;b.x=Math.max(0,Math.min(W-b.w,p.x-blockDrag.dx));b.y=Math.max(0,Math.min(H-b.h,p.y-blockDrag.dy));return}if(!drag)return;user.x=Math.max(20,Math.min(W-20,p.x));user.y=Math.max(20,Math.min(H-20,p.y))});
+function finishCanvasDrag(){drag=false;blockDrag=null}
+cv.addEventListener('pointerup',finishCanvasDrag);cv.addEventListener('pointercancel',finishCanvasDrag);
 
-$('go').onclick=()=>{if(cordBlocks())return;if(bat.r<8&&!estop){startReturn();setSt('Battery too low - returning to the dock instead','warn');return}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
+$('go').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(bat.r<8&&!estop){startReturn();setSt('Battery too low - returning to the dock instead','warn');return}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
 $('back').onclick=startReturn;
-$('stop').onclick=()=>{didArrive=false;arT=0;active=false;path=[];recovery=null;stuckTime=0;setSt('Stopped','warn')};
+$('stop').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;didArrive=false;arT=0;active=false;path=[];recovery=null;stuckTime=0;setSt('Stopped','warn')};
 $('rst').onclick=()=>{forgetMap();sceneKey='default';reset();clearMapArrays();loadMap()};
 $('learn').onclick=startTour;
 $('cord').onclick=()=>{
@@ -947,10 +988,20 @@ $('cord').onclick=()=>{
 $('forget').onclick=()=>{forgetMap();setSt('Map forgotten: it will plan through unknown space again until it relearns','')};
 // Slot test: a full-width wall with one 70 px slot (the desk is 56 x 36 px). The only way through is to turn the
 // desk so its long axis points through the slot.
-$('slot').onclick=()=>{reset();sceneKey='slot';clearMapArrays();loadMap();rects.length=0;rects.push({x:0,y:240,w:365,h:20},{x:435,y:240,w:365,h:20});circs.length=0;people=[];
-  user.x=700;user.y=430;setSt('Slot test: press Come to me. The only way is through the 70 px slot','')};
+function buildSlotTest(){
+  const gap=Math.max(56,Math.min(160,Number($('slotGap').value)||70)),dir=$('slotDirection').value;
+  reset();sceneKey='slot';clearMapArrays();loadMap();rects.length=0;
+  if(dir==='horizontal'){const gx=(W-gap)/2;rects.push({x:0,y:240,w:gx,h:20},{x:gx+gap,y:240,w:W-gx-gap,h:20});T.x=400;T.y=90;user.x=700;user.y=430;}
+  else{const gy=(H-gap)/2;rects.push({x:380,y:0,w:20,h:gy},{x:380,y:gy+gap,w:20,h:H-gy-gap});T.x=100;T.y=250;user.x=700;user.y=250;}
+  circs.length=0;people=[];setSt('Slot test ('+gap+' px, '+dir+'): press Come to me. Watch the desk orientation as it crosses the gap.','');
+}
+$('slot').onclick=buildSlotTest;$('runSlot').onclick=buildSlotTest;
+$('roomStyle').onchange=()=>{roomStyle=$('roomStyle').value};
+$('placeMode').onclick=()=>{placeBlocks=!placeBlocks;blockDrag=null;$('placeMode').textContent='Place blocks: '+(placeBlocks?'on':'off');$('editHint').textContent=placeBlocks?'Click anywhere in the room to add a block using the width and height above.':'Click and drag an orange block to reposition it. Added blocks affect route planning and collision checks.'};
+$('deleteBlock').onclick=()=>{if(!selectedBlock){$('editHint').textContent='Select an orange added block by clicking or dragging it first.';return}const i=rects.indexOf(selectedBlock);if(i>=0)rects.splice(i,1);selectedBlock=null;blockDrag=null};
+$('clearBlocks').onclick=()=>{for(let i=rects.length-1;i>=0;i--)if(rects[i]._custom)rects.splice(i,1);selectedBlock=null;blockDrag=null;$('editHint').textContent='All added blocks removed. Built-in room obstacles remain.'};
 
-function toggleEstop(){estop=!estop;parkTh=null;didArrive=false;if(estop){active=false;path=[];T.vx=T.vy=T.w=0;recovery=null;stuckTime=0}else setSt('E-stop released - press Come to me','')}
+function toggleEstop(){estop=!estop;parkTh=null;didArrive=false;if(estop){active=false;path=[];T.vx=T.vy=T.w=0;manualDrive={...manualDrive,x:0,y:0,turn:0};recovery=null;stuckTime=0}else setSt('E-stop released - press Come to me','')}
 addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();if(!estop)toggleEstop()}});
 function ahead(dd){for(const q of path)if(Math.hypot(q.x-T.x,q.y-T.y)>=dd)return q;return{x:T.x+Math.cos(T.th)*dd,y:T.y+Math.sin(T.th)*dd}}
 $('es').onclick=toggleEstop;
