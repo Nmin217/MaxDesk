@@ -50,6 +50,16 @@ const server=require('http').createServer((req,res)=>{
     else if(url==='/v1/sim/cord')command={type:'cord',plugged:!!body.plugged};
     else return send(res,404,{error:'not found'});
     if(!browserState||Date.now()-browserStateAt>=3000)return send(res,503,{accepted:false,status:'Simulator page is not connected. Open /simulator and keep it running.'});
+    if(command.type==='stop'){
+      // Stop supersedes queued motion commands; do not let an old joystick packet run after it.
+      pendingCommands=pendingCommands.filter(c=>!['drive','summon','return','learn'].includes(c.type));
+    }else if(['summon','return'].includes(command.type)){
+      // Navigation commands replace stale manual-drive packets and older navigation requests.
+      pendingCommands=pendingCommands.filter(c=>!['drive','summon','return','learn'].includes(c.type));
+    }else if(command.type==='drive'){
+      // Keep only the newest joystick state instead of accumulating stale input.
+      pendingCommands=pendingCommands.filter(c=>c.type!=='drive');
+    }
     const queued={id:nextCommandId++,...command,created_at:Date.now()};
     pendingCommands.push(queued);
     send(res,200,{accepted:true,status:'Command sent to simulator',severity:'info',command_id:queued.id});
