@@ -145,7 +145,7 @@ let warp=1,peakA=0,deskH=1.05,userH=1.05,estop=false,T,people,path=[],goal=null,
 let stuckTime=0,recovery=null,recoveryT=0;
 let headTarget=0.3, headState='SETTLED';
 // Phone joystick commands are simulation-only; values are normalized to [-1, 1].
-let manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35};
+let manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35,lastCommandAt:0};
 let peopleInPathCount=0, safetyHolds=0, holdLatch=false, squeeze=false, squeezeUntil=0;
 const user={x:700,y:430,r:13};
 const modAng=[0,0,0,0];
@@ -849,6 +849,12 @@ if($('ar').checked&&didArrive&&mode==='user'&&!active&&!estop&&parkTh===null){
 }
 
 // ---- Manual drive override (from the phone Drive sim tab) ----
+// Drop held joystick input if phone/API updates disappear; a lost connection must not
+// leave the simulator driving on the last command indefinitely. This is simulation-only.
+if(manualDrive.enabled && manualDrive.lastCommandAt && Date.now()-manualDrive.lastCommandAt>750){
+  manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
+  setSt('Manual drive timed out — input lost','warn');
+}
 // Robot-frame: joystick "up" moves the desk toward its FRONT arrow (local -y).
 // Runs before the supervisor, so swept-footprint and yaw checks still apply.
 if(manualDrive.enabled && !estop && !active && !recovery && parkTh===null && !cordLock()){
@@ -1221,7 +1227,7 @@ cam.position.set(TX+Math.sin(yaw)*Math.cos(pit)*R,TY+Math.sin(pit)*R,TZ+Math.cos
   function mapSnapshot(){const rows=[];for(let y=0;y<GH;y++){let row='';for(let x=0;x<GW;x++){const i=y*GW+x;row+=smap[i]>0?'#':traffic[i]>2?'+':seen[i]?'_':'.'}rows.push(row)}return {width_m:W*px,height_m:H*px,cell_m:CS*px,gw:GW,gh:GH,rows}}
   function apply(c){
     if(c.type==='summon'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;user.x=c.x/px;user.y=c.y/px;$('go').click()}
-    else if(c.type==='drive'){active=false;path=[];parkTh=null;mode='manual';manualDrive.enabled=true;manualDrive.x=c.x;manualDrive.y=c.y;manualDrive.turn=c.turn;manualDrive.speed=c.speed;if(estop){manualDrive.x=manualDrive.y=manualDrive.turn=0;setSt('E-STOP engaged — manual drive blocked','bad')}}
+    else if(c.type==='drive'){active=false;path=[];parkTh=null;mode='manual';manualDrive.enabled=true;manualDrive.lastCommandAt=Date.now();manualDrive.x=c.x;manualDrive.y=c.y;manualDrive.turn=c.turn;manualDrive.speed=c.speed;if(estop){manualDrive.x=manualDrive.y=manualDrive.turn=0;setSt('E-STOP engaged — manual drive blocked','bad')}}
     else if(c.type==='return'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;$('back').click()}
     else if(c.type==='learn')$('learn').click();
     else if(c.type==='stop'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;$('stop').click()}
