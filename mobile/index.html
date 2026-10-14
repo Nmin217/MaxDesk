@@ -61,6 +61,37 @@ html[data-theme="teal"] .card{background:linear-gradient(150deg,rgba(23,53,59,.9
 html[data-theme="teal"] .theme-toggle{background:#214247}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
+
+/* Desktop command-center layout: full browser width on wide screens;
+   medium and narrow windows retain the compact app-like layout. */
+@media (min-width:1081px){
+  body{padding-left:clamp(18px,2.2vw,36px);padding-right:clamp(18px,2.2vw,36px)}
+  main{width:100%;max-width:1560px;margin:0 auto;padding:22px 0 36px}
+  .top{margin-bottom:18px}
+  .top h1{font-size:29px}
+  .tabs{width:100%;margin-bottom:16px}
+  .tab{padding:11px 18px;font-size:13px}
+  #tab-control .layout{grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;align-items:stretch}
+  #tab-control .layout>.section-kicker{display:none}
+  #tab-control .layout>.hero{grid-column:span 7;padding:22px}
+  #tab-control .layout>.action-card{grid-column:span 5;padding:22px;display:flex;flex-direction:column;justify-content:center}
+  #tab-control .layout>.mapcard{grid-column:span 6}
+  #tab-control .layout>.diagnostics-card{grid-column:span 3}
+  #tab-control .layout>.target-card,#tab-control .layout>.advanced-card{grid-column:span 6}
+  #tab-control .layout .card{padding:20px;border-radius:18px}
+  #tab-control .layout .hero{padding:24px}
+  #tab-control .layout .hero .metric{font-size:clamp(27px,2vw,36px)}
+  #tab-control .layout .actions{gap:12px}
+  #tab-control .layout .btn{min-height:54px;font-size:14px}
+  #tab-control .layout .map{aspect-ratio:1.65;min-height:320px}
+  .drive-hero,.lidar-card{width:100%;padding:22px}
+  .drive-grid{grid-template-columns:minmax(280px,1fr) minmax(260px,.8fr);gap:28px;align-items:center}
+  .stick-pad{width:min(100%,390px);height:auto;aspect-ratio:1}
+  .lidar-wrap{height:min(65vh,680px);min-height:420px}
+  .links{margin-top:18px}
+  .footer{margin-top:26px}
+}
+
 </style>
 </head>
 <body><main>
