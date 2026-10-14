@@ -852,7 +852,7 @@ if($('ar').checked&&didArrive&&mode==='user'&&!active&&!estop&&parkTh===null){
 // Robot-frame: joystick "up" moves the desk toward its FRONT arrow (local -y).
 // Runs before the supervisor, so swept-footprint and yaw checks still apply.
 if(manualDrive.enabled && !estop && !active && !recovery && parkTh===null && !cordLock()){
-  const mspd=VMAX*Math.max(0,Math.min(0.45,manualDrive.speed));
+  const mspd=VMAX*Math.max(0,Math.min(1,manualDrive.speed));
   const ix=Math.max(-1,Math.min(1,manualDrive.x));
   const iy=Math.max(-1,Math.min(1,manualDrive.y));
   const cosT=Math.cos(T.th), sinT=Math.sin(T.th);
