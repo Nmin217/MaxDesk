@@ -5,6 +5,8 @@ let lastT=Date.now();
 // When the visual browser simulator is open, it is the authoritative simulation state.
 let browserState=null,browserStateAt=0,browserMap=null,browserMapAt=0;
 let pendingCommands=[],nextCommandId=1,browserLidar=null,browserLidarAt=0;
+// Server-side duplicate suppression: the UI guard alone is not sufficient when stale tabs or repeated events exist.
+let lastNavSignature='',lastNavAt=0,lastStopAt=0;
 setInterval(()=>{const n=Date.now();const dt=Math.min(.05,(n-lastT)/1000);lastT=n;update(dt)},16);
 function stateJSON(){
   let ns=0,no=0;for(let i=0;i<GW*GH;i++){if(seen[i])ns++;if(smap[i]>0)no++}
@@ -56,6 +58,20 @@ const server=require('http').createServer((req,res)=>{
     if(movementTypes.has(command.type)&&browserState.cord?.plugged&&browserState.cord?.interlock_on){
       return send(res,423,{accepted:false,status:'Movement refused: desk cord is plugged in. Unplug the cord before moving.',severity:'bad'});
     }
+    const now=Date.now();
+    if(['summon','return','learn'].includes(command.type)){
+      const signature=command.type==='summon'?JSON.stringify({type:command.type,x:command.x,y:command.y}):command.type;
+      // Reject rapid repeats from repeated taps, stale tabs, or duplicate browser handlers.
+      if(signature===lastNavSignature&&now-lastNavAt<2000){
+        return send(res,409,{accepted:false,status:'Duplicate navigation command ignored. Wait for the current command to finish.',severity:'warn'});
+      }
+      lastNavSignature=signature;lastNavAt=now;
+    }
+    // Coalesce repeated software-stop clicks for 250 ms, while always allowing the first Stop through.
+    if(command.type==='stop'&&now-lastStopAt<250){
+      return send(res,429,{accepted:false,status:'Stop already sent.',severity:'warn'});
+    }
+    if(command.type==='stop')lastStopAt=now;
     if(command.type==='stop'){
       // Stop supersedes queued motion commands; do not let an old joystick packet run after it.
       pendingCommands=pendingCommands.filter(c=>!['drive','summon','return','learn'].includes(c.type));
