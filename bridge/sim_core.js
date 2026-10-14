@@ -769,7 +769,9 @@ if($('ar').checked&&didArrive&&mode==='user'&&!active&&!estop&&parkTh===null){
 // ---- Manual drive override (from the phone Drive sim tab) ----
 // Drop held joystick input if phone/API updates disappear; a lost connection must not
 // leave the simulator driving on the last command indefinitely. This is simulation-only.
+let manualDriveTimedOut=false;
 if(manualDrive.enabled && manualDrive.lastCommandAt && Date.now()-manualDrive.lastCommandAt>750){
+  manualDriveTimedOut=true;
   manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
   setSt('Manual drive timed out — input lost','warn');
 }
@@ -789,6 +791,7 @@ if(manualDrive.enabled && !estop && !active && !recovery && parkTh===null && !co
 // Safety supervisor (swept footprint vs live lidar points)
 let held=false;
 [cx,cy,w,held]=supervise(cx,cy,w);
+if(manualDriveTimedOut)held=true; // use emergency deceleration when joystick updates go stale
 if(held&&active&&!estop&&!recovery&&low&&du>(mode==='user'?80:10))setSt('Safety hold - something in the swept path','warn');
 
 // Charging-cord lock: while plugged in (interlock on) the wheels get NO command, every frame, whatever else asked for motion.
