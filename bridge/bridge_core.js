@@ -43,7 +43,7 @@ const server=require('http').createServer((req,res)=>{
     }else if(url==='/v1/drive'){
       const x=Number(body.x),y=Number(body.y),turn=Number(body.turn),speed=Number(body.speed);
       if(![x,y,turn,speed].every(Number.isFinite))return send(res,422,{accepted:false,status:'Drive values must be numbers'});
-      command={type:'drive',x:Math.max(-1,Math.min(1,x)),y:Math.max(-1,Math.min(1,y)),turn:Math.max(-1,Math.min(1,turn)),speed:Math.max(0.08,Math.min(0.45,speed))};
+      command={type:'drive',x:Math.max(-1,Math.min(1,x)),y:Math.max(-1,Math.min(1,y)),turn:Math.max(-1,Math.min(1,turn)),speed:Math.max(0.08,Math.min(1,speed))};
     }else if(url==='/v1/return')command={type:'return'};
     else if(url==='/v1/learn')command={type:'learn'};
     else if(url==='/v1/stop')command={type:'stop'};
