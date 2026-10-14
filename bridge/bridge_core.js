@@ -7,6 +7,9 @@ let browserState=null,browserStateAt=0,browserMap=null,browserMapAt=0;
 let pendingCommands=[],nextCommandId=1,browserLidar=null,browserLidarAt=0;
 // Server-side duplicate suppression: the UI guard alone is not sufficient when stale tabs or repeated events exist.
 let lastNavSignature='',lastNavAt=0,lastStopAt=0;
+// Command epoch: bumped when the simulator was stale and has just come back.
+// Commands may carry the client's last-seen epoch; a mismatch is rejected.
+let epoch=1,lastBrowserStateAt=0;
 setInterval(()=>{const n=Date.now();const dt=Math.min(.05,(n-lastT)/1000);lastT=n;update(dt)},16);
 function stateJSON(){
   let ns=0,no=0;for(let i=0;i<GW*GH;i++){if(seen[i])ns++;if(smap[i]>0)no++}
@@ -27,16 +30,29 @@ const server=require('http').createServer((req,res)=>{
   if(req.method==='GET'&&(url==='/'||url==='/app'||url==='/app/'))return sendFile(res,'mobile/index.html','text/html; charset=utf-8');
   if(req.method==='GET'&&url==='/manifest.webmanifest')return sendFile(res,'mobile/manifest.webmanifest','application/manifest+json; charset=utf-8');
   if(req.method==='GET'&&url==='/simulator')return sendFile(res,'robot/simulator/summon_table_sim.html','text/html; charset=utf-8');
-  if(req.method==='GET'&&url==='/v1/health')return send(res,200,{ok:true,name:'summon-desk-bridge (simulator)',version:1});
+  if(req.method==='GET'&&url==='/v1/health')return send(res,200,{ok:true,name:'summon-desk-bridge (simulator)',version:1,epoch:epoch});
   if((req.headers.authorization||'')!=='Bearer '+TOKEN)return send(res,401,{error:'unauthorized'});
-  if(req.method==='GET'&&url==='/v1/state'){const live=!!browserState&&(Date.now()-browserStateAt<3000);return send(res,200,{...(live?browserState:stateJSON()),simulator_connected:live})}
-  if(req.method==='GET'&&url==='/v1/map')return send(res,200,browserMap&&(Date.now()-browserMapAt<5000)?browserMap:mapJSON());
-  if(req.method==='GET'&&url==='/v1/lidar'){const live=!!browserLidar&&(Date.now()-browserLidarAt<3000);const points=live?browserLidar:(hits||[]).filter(h=>h&&h.hit&&Number.isFinite(h.d)&&h.d>0).map(h=>({angle:+(((h.a-T.th)*180/Math.PI+540)%360-180).toFixed(2),range:+(h.d*PX).toFixed(3),type:h.type||'obstacle'}));return send(res,200,{source:live?'simulator-live':'bridge-sim-core',simulator_connected:live,max_range:5.2,frame:'robot',units:'meters',points,updated_at:Date.now()})}
-  if(req.method==='GET'&&url==='/v1/sim/poll'){const commands=pendingCommands.splice(0);return send(res,200,{commands,server_time:Date.now()})}
-  if(req.method==='POST'&&(url==='/v1/sim/state'||url==='/v1/sim/map'))return readBody(req,body=>{if(body===null)return send(res,400,{error:'bad json'});if(url==='/v1/sim/state'){browserState=body;browserStateAt=Date.now();if(Array.isArray(body.lidar)){browserLidar=body.lidar;browserLidarAt=Date.now()}}else{browserMap=body;browserMapAt=Date.now()}return send(res,200,{ok:true})});
+  if(req.method==='GET'&&url==='/v1/state'){const live=!!browserState&&(Date.now()-browserStateAt<3000);return send(res,200,{...(live?browserState:stateJSON()),simulator_connected:live,epoch:epoch})}
+  if(req.method==='GET'&&url==='/v1/map')return send(res,200,{...(browserMap&&(Date.now()-browserMapAt<5000)?browserMap:mapJSON()),epoch:epoch});
+  if(req.method==='GET'&&url==='/v1/lidar'){const live=!!browserLidar&&(Date.now()-browserLidarAt<3000);const points=live?browserLidar:(hits||[]).filter(h=>h&&h.hit&&Number.isFinite(h.d)&&h.d>0).map(h=>({angle:+(((h.a-T.th)*180/Math.PI+540)%360-180).toFixed(2),range:+(h.d*PX).toFixed(3),type:h.type||'obstacle'}));return send(res,200,{source:live?'simulator-live':'bridge-sim-core',simulator_connected:live,max_range:5.2,frame:'robot',units:'meters',points,updated_at:Date.now(),epoch:epoch})}
+  if(req.method==='GET'&&url==='/v1/sim/poll'){const commands=pendingCommands.splice(0);return send(res,200,{commands,server_time:Date.now(),epoch:epoch})}
+  if(req.method==='POST'&&(url==='/v1/sim/state'||url==='/v1/sim/map'))return readBody(req,body=>{
+    if(body===null)return send(res,400,{error:'bad json'});
+    if(url==='/v1/sim/state'){
+      const wasStale=!lastBrowserStateAt||(Date.now()-lastBrowserStateAt>=3000);
+      browserState=body;browserStateAt=Date.now();lastBrowserStateAt=browserStateAt;
+      if(wasStale){epoch++;console.log('simulator (re)connected, epoch='+epoch)}
+      if(Array.isArray(body.lidar)){browserLidar=body.lidar;browserLidarAt=Date.now()}
+    }else{browserMap=body;browserMapAt=Date.now()}
+    return send(res,200,{ok:true,epoch:epoch})
+  });
   if(req.method!=='POST')return send(res,404,{error:'not found'});
   readBody(req,body=>{
     if(body===null)return send(res,400,{error:'bad json'});
+    // Reject commands explicitly tied to an earlier simulator session.
+    if(body.epoch!=null&&body.epoch!==epoch){
+      return send(res,409,{accepted:false,status:'Stale command from an earlier session. Refresh and try again.',severity:'warn',stale_epoch:true,current_epoch:epoch});
+    }
     let command=null;
     if(url==='/v1/summon'){
       const x=+body.x,y=+body.y;
@@ -82,9 +98,9 @@ const server=require('http').createServer((req,res)=>{
       // Keep only the newest joystick state instead of accumulating stale input.
       pendingCommands=pendingCommands.filter(c=>c.type!=='drive');
     }
-    const queued={id:nextCommandId++,...command,created_at:Date.now()};
+    const queued={id:nextCommandId++,...command,created_at:Date.now(),epoch:epoch};
     pendingCommands.push(queued);
     send(res,200,{accepted:true,status:'Command sent to simulator',severity:'info',command_id:queued.id});
   });
 });
-server.listen(PORT,'0.0.0.0',()=>console.log('Summon Desk local web app + simulator bridge on port '+PORT+' (token configured)'));
+server.listen(PORT,'0.0.0.0',()=>console.log('Summon Desk local web app + simulator bridge on port '+PORT+' (token configured, epoch='+epoch+')'));
