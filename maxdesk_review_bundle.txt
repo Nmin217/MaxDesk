@@ -1,0 +1,2183 @@
+===== GIT STATUS =====
+ M .vscode/tasks.json
+ D "Start Summon Desk.bat"
+ D "Stop Summon Desk.bat"
+ M mobile/index.html
+?? maxdesk_review_bundle.txt
+
+===== CURRENT BRANCH =====
+feature/compact-mobile-dashboard
+
+===== RECENT COMMITS =====
+12002a6 Suppress duplicate navigation and stop commands at bridge
+a97f4f4 Guard duplicate commands and classify interlock refusals
+ffa5546 Reject movement commands while cord interlock is active
+5241f16 Add local event history to control dashboard
+16eb65f Add responsive full-width desktop command center layout
+1b948e8 Remove failed registration for missing service worker
+7a6c30b Regenerate simulator core with watchdog braking
+de80151 Use emergency deceleration when manual-drive watchdog expires
+67bdf84 Avoid stale battery telemetry and clarify speed limit warnings
+35b9795 Regenerate simulator core from source of truth
+
+===== FILE TREE =====
+./bridge/bridge_core.js
+./bridge/bridge_sim.js
+./bridge/run-bridge.cmd
+./bridge/sim_core.js
+./CODESPACES-QUICKSTART.md
+./deepseek_svg_20261014_d9ff06.svg
+./.devcontainer/devcontainer.json
+./docs/API.md
+./docs/DRIVER-STATION-DRIVE.md
+./docs/Summon_Desk_BOM.xlsx
+./docs/summon_desk_proposal.html
+./.gitignore
+./ios/Info-additions.txt
+./ios/README.md
+./ios/SummonDesk/ContentView.swift
+./ios/SummonDesk/Keychain.swift
+./ios/SummonDesk/Models.swift
+./ios/SummonDesk/RobotClient.swift
+./ios/SummonDesk/RobotViewModel.swift
+./ios/SummonDesk/SettingsView.swift
+./ios/SummonDesk/SummonDeskApp.swift
+./maxdesk_review_bundle.txt
+./mobile/index.html
+./mobile/manifest.webmanifest
+./Open Phone Controller.url
+./README.md
+./README-NO-VBS.txt
+./robot/java-core/README.md
+./robot/java-core/src/main/java/frc/robot/summon/core/Config.java
+./robot/java-core/src/main/java/frc/robot/summon/core/DriveIO.java
+./robot/java-core/src/main/java/frc/robot/summon/core/Geometry.java
+./robot/java-core/src/main/java/frc/robot/summon/core/OccupancyMemory.java
+./robot/java-core/src/main/java/frc/robot/summon/core/OrientationPlanner.java
+./robot/java-core/src/main/java/frc/robot/summon/core/PowerIO.java
+./robot/java-core/src/main/java/frc/robot/summon/core/SafetySupervisor.java
+./robot/java-core/src/main/java/frc/robot/summon/core/Waypoint.java
+./robot/java-core/src/test/java/frc/robot/summon/core/CoreTests.java
+./robot/java-core/tools/Build.java
+./robot/java-core/wpilib-glue/DriverStationSafetyDriveCommand.java
+./robot/java-core/wpilib-glue/SummonSubsystem.java
+./robot/simulator/summon_table_sim.html
+./scripts/check_swift.py
+./scripts/sync_sim_core.py
+./scripts/verify.sh
+./Start Summon Desk.vbs
+./STARTUP-TROUBLESHOOTING.txt
+./Summon_Desk_IRL_Hardware_Package/docs/first_power_on.md
+./Summon_Desk_IRL_Hardware_Package/docs/safety_checklist.md
+./Summon_Desk_IRL_Hardware_Package/docs/troubleshooting.md
+./Summon_Desk_IRL_Hardware_Package/docs/wiring_checklist.md
+./Summon_Desk_IRL_Hardware_Package/hardware/raspberry_pi/lidar_reader.py
+./Summon_Desk_IRL_Hardware_Package/hardware/raspberry_pi/nt_client.py
+./Summon_Desk_IRL_Hardware_Package/hardware/raspberry_pi/README.md
+./Summon_Desk_IRL_Hardware_Package/hardware/raspberry_pi/requirements.txt
+./Summon_Desk_IRL_Hardware_Package/hardware/raspberry_pi/safety_monitor.py
+./Summon_Desk_IRL_Hardware_Package/hardware/roborio/README.md
+./Summon_Desk_IRL_Hardware_Package/hardware/roborio/src/main/java/frc/robot/Constants.java
+./Summon_Desk_IRL_Hardware_Package/hardware/roborio/src/main/java/frc/robot/Drivetrain.java
+./Summon_Desk_IRL_Hardware_Package/hardware/roborio/src/main/java/frc/robot/MAXSwerveModule.java
+./Summon_Desk_IRL_Hardware_Package/hardware/roborio/src/main/java/frc/robot/NetworkTablesReceiver.java
+./Summon_Desk_IRL_Hardware_Package/hardware/roborio/src/main/java/frc/robot/Robot.java
+./Summon_Desk_IRL_Hardware_Package/hardware/roborio/src/main/java/frc/robot/SafetyStateMachine.java
+./Summon_Desk_IRL_Hardware_Package/hardware-tests/config.example.json
+./Summon_Desk_IRL_Hardware_Package/hardware-tests/lidar/lidar_scan_test.py
+./Summon_Desk_IRL_Hardware_Package/hardware-tests/lidar/README.md
+./Summon_Desk_IRL_Hardware_Package/hardware-tests/lidar/requirements.txt
+./Summon_Desk_IRL_Hardware_Package/hardware-tests/maxswerve/README.md
+./Summon_Desk_IRL_Hardware_Package/hardware-tests/maxswerve/SingleModuleTest.java
+./Summon_Desk_IRL_Hardware_Package/hardware-tests/README.md
+./Summon_Desk_IRL_Hardware_Package/integration/communication_protocol.md
+./Summon_Desk_IRL_Hardware_Package/integration/existing_project_integration.md
+./Summon_Desk_IRL_Hardware_Package/integration/README.md
+./Summon_Desk_IRL_Hardware_Package/README.md
+./Summon_Desk_IRL_Hardware_Package.zip
+./tests/sim/common.js
+./tests/sim/env.js
+./tests/sim/run.js
+./tests/sim/scenarios/battery.js
+./tests/sim/scenarios/cord.js
+./tests/sim/scenarios/matrix.js
+./tests/sim/scenarios/parking.js
+./tests/sim/scenarios/roundtrip.js
+./tests/sim/scenarios/slots.js
+./tools/check3d.js
+./.vscode/tasks.json
+
+===== KEY FILE CONTENTS =====
+----- mobile/index.html -----
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b171b"><meta name="description" content="Local Summon Desk simulator controller"><link rel="manifest" href="/manifest.webmanifest"><title>MaxSwerve Desk · Control</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#09151d;--panel:#102530;--panel2:#163440;--line:#294a55;--text:#f1f8f8;--muted:#9bb6bd;--blue:#55a7d4;--teal:#63dbc0;--green:#63dbc0;--red:#ff6979;--amber:#f2bd68}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 50% -15%,#17464a 0,#0a1921 52%,#071219 100%);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text);min-height:100vh;padding:env(safe-area-inset-top) 14px env(safe-area-inset-bottom)}
+main{max-width:760px;margin:auto;padding:15px 0 32px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 17px}.brand{display:flex;align-items:center;gap:11px;min-width:0}.logo{width:43px;height:43px;flex:0 0 43px;border-radius:13px;background:linear-gradient(145deg,#73e0c6,#58a9d2);display:grid;place-items:center;font-size:23px;font-weight:900;color:#08232b;box-shadow:0 5px 22px #53d1b826}.eyebrow{font-size:10px;letter-spacing:.17em;color:#8dd9cd;text-transform:uppercase}.top h1{font-size:23px;line-height:1.1;margin:3px 0 0;letter-spacing:-.04em}.pill{border:1px solid var(--line);background:#102630;border-radius:99px;padding:7px 10px;font-size:10px;color:var(--muted);white-space:nowrap;max-width:48%;overflow:hidden;text-overflow:ellipsis}.pill:before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);margin-right:6px}.pill.online:before{background:var(--teal);box-shadow:0 0 8px #63dbc099}
+.layout{display:grid;grid-template-columns:1fr;gap:12px}.card{background:linear-gradient(150deg,rgba(19,43,54,.98),rgba(12,30,40,.99));border:1px solid var(--line);border-radius:20px;padding:15px;min-width:0;box-shadow:0 12px 30px #0002}.card h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;margin:0 0 12px;color:#b8d5d8}.hero{position:relative;overflow:hidden;padding:18px;background:linear-gradient(125deg,#153c43,#102a38 68%,#153344)}.hero:after{content:'';position:absolute;width:180px;height:180px;border:1px solid #73e0c61a;border-radius:50%;right:-76px;top:-92px;box-shadow:0 0 0 22px #73e0c608,0 0 0 45px #73e0c605;pointer-events:none}.herohead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;position:relative;z-index:1}.hero h2{margin:0 0 7px}.metric{font-size:28px;font-weight:780;letter-spacing:-.045em;line-height:1.15;overflow-wrap:anywhere}.small{font-size:12px;color:var(--muted)}.value{font-size:13px;font-weight:680;overflow-wrap:anywhere}.status-chip{border:1px solid #47746e;background:#123d3b;color:#aaf2df;border-radius:9px;padding:5px 8px;font-size:10px;font-weight:750;white-space:nowrap}.herofoot{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px;position:relative;z-index:1}.hero-stat{border-top:1px solid #ffffff17;padding-top:11px}.hero-stat .small{display:block;margin-bottom:3px}.bar{height:7px;border-radius:99px;background:#294550;overflow:hidden;margin-top:8px}.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--teal));width:0%;transition:width .3s}.section-kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8fb0b8;margin:3px 2px 0}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.btn{min-height:52px;border:1px solid var(--line);border-radius:14px;font-size:13px;font-weight:760;color:var(--text);background:#203d49;cursor:pointer;touch-action:manipulation;padding:11px 9px;transition:transform .12s,filter .12s}.btn:active{transform:scale(.985)}.btn:disabled{opacity:.45}.btn.primary{background:linear-gradient(125deg,#70e0c5,#4ba9ca);border-color:#7be6d0;color:#08272e;box-shadow:0 7px 20px #53d1b81a}.btn.return{background:#163949;border-color:#3d7184;color:#e4f7fa}.btn.stop{background:#51242e;border-color:#b44c5b;color:#ffe3e6;min-height:48px}.btn.subtle{background:#102631}.btn.full{grid-column:1/-1}.toast{font-size:12px;color:var(--muted);min-height:18px;margin:10px 2px 0}.danger{color:#ff9aa4}.good{color:var(--green)}.mapcard{padding:14px}.maphead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.maphead h2{margin-bottom:4px}.map-live{font-size:10px;color:#83dfc8;white-space:nowrap}.map{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:2px;aspect-ratio:1.25;background:#08151c;padding:7px;border:1px solid #294650;border-radius:13px;overflow:hidden}.cell{background:#192f3a;border-radius:2px;min-height:4px}.cell.free{background:#34766f}.cell.obstacle{background:#e7ae57}.cell.busy{background:#d75d70}.maplegend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-top:9px}.dot{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:4px}.mapinfo{margin-top:7px}.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.mini{background:#0c202a;border:1px solid #24434e;border-radius:14px;padding:12px}.mini-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}.mini .value{font-size:15px}.mini .subvalue{font-size:11px;color:var(--muted);margin-top:3px}.safety-list{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}.statusline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0}.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px;margin:8px 0}.field label{font-size:12px;color:var(--muted)}input{width:100%;min-height:43px;border:1px solid var(--line);border-radius:11px;background:#091a23;color:var(--text);padding:9px 11px;font:inherit}details summary{cursor:pointer;color:#c9e2e5;font-weight:680;font-size:13px;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px}details summary::-webkit-details-marker{display:none}details summary:after{content:'＋';font-size:16px;color:var(--teal)}details[open] summary:after{content:'−'}details[open] summary{margin-bottom:12px}.notice{padding:10px 12px;border-radius:12px;background:#17313e;border:1px solid #315a67;color:#c8e5e9;font-size:11px;margin-top:11px}.notice.warn{border-color:#765a32;color:#ffdda5;background:#302719}.links{display:flex;gap:12px;flex-wrap:wrap;margin:13px 3px}.links a{color:#7bd9ca;font-size:12px;text-decoration:none}.footer{text-align:center;color:#78939e;font-size:10px;margin:20px 0 0}.target-card,.advanced-card{padding:14px}.target-card .small{line-height:1.5}
+@media(min-width:600px){main{padding-top:23px}.top h1{font-size:27px}.layout{grid-template-columns:1fr 1fr}.hero,.action-card,.mapcard,.target-card,.advanced-card,.settings-card{grid-column:1/-1}.hero{padding:22px}.metric{font-size:32px}.card{padding:18px}.map{aspect-ratio:1.8}.stats-grid{grid-template-columns:repeat(4,1fr)}}@media(max-width:360px){body{padding-left:9px;padding-right:9px}.card{padding:12px;border-radius:16px}.top h1{font-size:20px}.pill{font-size:9px;padding:6px 8px}.btn{font-size:12px;padding:9px 6px}.metric{font-size:25px}.maplegend{gap:7px}}
+
+/* MaxSwerve identity and view tabs */
+:root{--brand-primary:#006769;--brand-secondary:#134b70;--brand-action:#40a578;--brand-accent:#e8501f}
+.logo-mark{width:44px;height:44px;flex:0 0 44px;filter:drop-shadow(0 3px 8px rgba(0,103,105,.22))}.logo-mark svg{display:block;width:100%;height:100%}
+.tabs{display:flex;gap:4px;margin:0 0 14px;border-bottom:2px solid #dce7e3;overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{appearance:none;border:0;border-bottom:2px solid transparent;margin-bottom:-2px;background:transparent;color:#6b7f85;font:700 12px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.08em;text-transform:uppercase;padding:12px 18px;cursor:pointer;touch-action:manipulation;white-space:nowrap}.tab.active{color:var(--brand-primary);border-bottom-color:var(--brand-primary)}.tab-panel{display:none;animation:tabfade .18s ease}.tab-panel.active{display:block}@keyframes tabfade{from{opacity:.75;transform:translateY(2px)}to{opacity:1;transform:none}}
+/* Keep the prior mobile-first hierarchy but blend in the supplied light dashboard palette. */
+body{background:#f7faf9;color:#1a2e35}.top h1{color:#1a2e35}.eyebrow{color:#6b7f85}.pill{background:#fff;border-color:#e2e8e5;color:#6b7f85}.layout .card{background:#fff;border-color:#e2e8e5;box-shadow:0 2px 12px rgba(0,0,0,.04)}.layout .hero{background:linear-gradient(125deg,#eaf6f2,#f4faf9 70%,#eef6fa)}.hero h2,.card h2{color:#006769}.hero .metric,.mini .value{color:#1a2e35}.hero .small,.mini-label,.mini .subvalue,.section-kicker,.small{color:#6b7f85}.hero-stat{border-top-color:#dce8e4}.status-chip{border-color:#b7dfd0;background:#e9f7f0;color:#287552}.bar{background:#e5efeb}.mini{background:#f8fbfa;border-color:#e2e8e5}.btn{background:#fff;border-color:#d8e4df;color:#1a2e35}.btn.primary{background:linear-gradient(125deg,#006769,#00897b);border-color:#006769;color:#fff;box-shadow:0 4px 14px rgba(0,103,105,.17)}.btn.return{background:#fff;border-color:#134b70;color:#134b70}.btn.stop{background:#fff5f3;border-color:#e0b4b0;color:#b8382d}.btn.subtle{background:#fff;color:#134b70}.notice{background:#eef8f3;border-color:#c5e3d5;color:#2a6e4f}.notice.warn{background:#fdf6e3;border-color:#eed9a3;color:#8a6516}.toast{color:#6b7f85}.links a{color:#006769}.footer{color:#8a9a96}.map{background:#f4f8f7;border-color:#e2e8e5}.cell{background:#e4ecea}.cell.free{background:#6bbfae}.cell.obstacle{background:#e0a83e}.cell.busy{background:#d75d70}.maplegend{color:#6b7f85}
+.lidar-card{padding:15px!important}.lidar-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.lidar-head h2{margin:0 0 4px}.lidar-head p{margin:0}.lidar-badge{flex-shrink:0;border-radius:999px;padding:6px 9px;font-size:9px;font-weight:800;letter-spacing:.06em;border:1px solid #e7d6b3;background:#fff8e8;color:#916a19}.lidar-badge.live{border-color:#b9dfce;background:#eaf8f0;color:#26734e}.lidar-badge.error{border-color:#e5c0bd;background:#fff0ef;color:#a33b34}.lidar-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px}.lidar-stats>div{min-width:0;background:#f5f9f7;border:1px solid #e2e8e5;border-radius:10px;padding:9px 10px}.lidar-stat-label{display:block;font-size:9px;color:#6b7f85;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}.lidar-stats strong{font-size:14px;color:#1a2e35;overflow-wrap:anywhere}.lidar-wrap{position:relative;aspect-ratio:1/1;width:100%;max-height:68vh;min-height:260px;overflow:hidden;background:#0e1a20;border:1px solid #1e323c;border-radius:15px;box-shadow:0 6px 22px rgba(6,32,30,.16)}.lidar-wrap canvas{display:block;width:100%;height:100%;touch-action:none}.lidar-legend{position:absolute;right:9px;top:9px;display:grid;gap:5px;padding:7px 8px;border:1px solid rgba(125,190,176,.2);border-radius:8px;background:rgba(8,26,32,.78);color:#b7d1d4;font-size:9px;line-height:1.3}.lidar-legend span{display:flex;align-items:center;gap:5px}.lidar-key{display:inline-block;width:7px;height:7px;border-radius:50%;background:#53d1b8}.lidar-key.robot{background:#e8501f}.lidar-key.wall{background:#e0a83e}.lidar-crosshair-label{position:absolute;top:10px;left:10px;font:700 9px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:#91c6b9;background:rgba(8,26,32,.7);border:1px solid rgba(125,190,176,.2);border-radius:6px;padding:6px 7px}.lidar-status{font-size:11px;color:#49666b;margin-top:10px;padding:9px 10px;background:#f4f8f7;border:1px solid #e2e8e5;border-radius:9px}.lidar-note{line-height:1.55;margin:11px 2px 0}.lidar-note code{color:#006769;background:#eef6f3;border-radius:4px;padding:1px 4px}
+/* Simulation drive pad */
+.drive-hero{background:radial-gradient(circle at 80% 0%,#e0f4ed,#fff 58%)!important}.drive-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:14px;align-items:center}.stick-pad{position:relative;width:min(100%,290px);aspect-ratio:1;border-radius:50%;margin:auto;background:radial-gradient(circle,#fff 0 16%,#e6f4ef 17% 38%,#d2e9e2 39% 40%,#f4f8f6 41% 66%,#d9e7e2 67% 68%,#eef5f2 69%);border:1px solid #c8ddd5;box-shadow:inset 0 2px 18px #144a3520,0 8px 20px #173d2b10;touch-action:none;user-select:none}.stick-pad:before,.stick-pad:after{content:"";position:absolute;background:#b6d2c8}.stick-pad:before{width:1px;height:72%;left:50%;top:14%}.stick-pad:after{height:1px;width:72%;top:50%;left:14%}.stick-knob{position:absolute;left:50%;top:50%;width:31%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:linear-gradient(145deg,#008c83,#006769);border:3px solid #fff;box-shadow:0 6px 16px #00676955;z-index:1;pointer-events:none}.stick-label{position:absolute;font-size:10px;font-weight:800;letter-spacing:.08em;color:#50746b;z-index:2}.stick-label.up{top:7%;left:50%;transform:translateX(-50%)}.stick-label.down{bottom:7%;left:50%;transform:translateX(-50%)}.stick-label.left{left:7%;top:50%;transform:translateY(-50%)}.stick-label.right{right:7%;top:50%;transform:translateY(-50%)}.turn-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}.turn-btn{min-height:54px;border:1px solid #cbded6;background:#f4faf7;color:#134b46;border-radius:14px;font-size:12px;font-weight:800;touch-action:none}.drive-readout{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;background:#f5f9f7;border:1px solid #e2e8e5;border-radius:11px}.drive-readout strong{font-size:12px;color:#006769}.drive-speed{margin-top:15px}.drive-speed input{accent-color:#006769}.drive-panel-note{font-size:11px;line-height:1.5;color:#6b7f85;margin-top:12px}.drive-safety{padding:10px 12px;border:1px solid #eed9a3;border-radius:12px;background:#fdf6e3;color:#8a6516;font-size:11px;margin-top:12px}@media(max-width:420px){.drive-grid{grid-template-columns:1fr}.stick-pad{width:min(100%,260px)}.drive-side{display:grid;grid-template-columns:1fr 1fr;gap:10px}.drive-side .drive-speed{grid-column:1/-1}}
+@media(max-width:360px){.logo-mark{width:38px;height:38px;flex-basis:38px}.tab{padding:11px 13px}.lidar-stats{gap:5px}.lidar-stats>div{padding:8px}.lidar-stats strong{font-size:12px}.lidar-wrap{min-height:230px}}
+
+
+/* SUMMON DESK COMMAND-CENTER REDESIGN — real UI styling, not a mockup */
+:root{color-scheme:dark;--bg:#07141b;--panel:#0d222c;--panel2:#122d38;--line:#254551;--text:#eaf5f6;--muted:#8daab3;--blue:#54b6df;--teal:#51dfc1;--green:#51dfad;--red:#ff687b;--amber:#f2b85c;--brand-primary:#00a6a0;--brand-secondary:#134b70;--brand-action:#40a578;--brand-accent:#f07842}
+html{background:var(--bg)}body{background:radial-gradient(ellipse at 45% -18%,#16404a 0,#0a1a23 43%,#071219 78%);color:var(--text);padding:env(safe-area-inset-top) 22px env(safe-area-inset-bottom)}
+main{max-width:1240px;padding:28px 0 42px}.top{padding:0 0 20px;margin:0 0 18px;border-bottom:1px solid #284752}.logo-mark{width:52px;height:52px;flex-basis:52px;filter:drop-shadow(0 0 18px #00a6a044)}.eyebrow{color:#62cfc5;font-size:10px;letter-spacing:.22em}.top h1{color:#f1fbfb;font-size:30px;letter-spacing:-.055em}.pill{background:#0e2832;border-color:#2b4d58;color:#a7c3ca;padding:9px 12px;font-size:11px}.tabs{display:flex;gap:6px;border:1px solid #274853;border-radius:15px;background:#0b2029;padding:5px;margin:0 0 18px;width:max-content;max-width:100%;border-bottom:1px solid #274853}.tab{border:1px solid transparent;border-radius:10px;margin:0;padding:12px 19px;color:#89a7b0;font-size:11px;letter-spacing:.12em}.tab.active{color:#eafffb;background:linear-gradient(135deg,#087c7b,#135b69);border-color:#218d8a;box-shadow:0 4px 18px #00a69b22}.tab-panel.active{animation:tabfade .18s ease}.layout{grid-template-columns:minmax(0,1.15fr) minmax(330px,.85fr);gap:14px}.card,.layout .card{position:relative;overflow:hidden;min-width:0;background:linear-gradient(145deg,rgba(15,37,47,.98),rgba(10,27,36,.99));border:1px solid #254551;border-radius:18px;padding:18px;box-shadow:0 12px 34px #0002}.card:before{content:"";position:absolute;left:0;top:0;width:3px;height:42px;background:linear-gradient(var(--teal),transparent);opacity:.7}.card h2{color:#a7cbd0;font-size:10px;letter-spacing:.16em;margin-bottom:14px}.hero,.layout .hero{background:linear-gradient(120deg,#10343c,#0e2836 72%,#10232e);border-color:#2a5960;padding:23px}.hero:after{border-color:#55dfc112;box-shadow:0 0 0 22px #55dfc108,0 0 0 45px #55dfc105}.hero .metric{color:#f2ffff;font-size:34px}.hero .small,.small{color:var(--muted)}.hero .herofoot{gap:22px}.hero-stat{border-top-color:#ffffff19}.hero-stat .metric{font-size:29px}.status-chip{background:#123b3b;border-color:#286b66;color:#8ef0d7;padding:7px 10px}.bar{background:#203d47}.bar span{background:linear-gradient(90deg,#208fba,#55dfc1)}.section-kicker{display:none}.action-card .actions{grid-template-columns:1fr 1fr;gap:10px}.btn{border-radius:12px;background:#163541;border-color:#315462;color:#dceef1;min-height:52px}.btn.primary{background:linear-gradient(125deg,#0eaaa0,#167c96);border-color:#37c8b8;color:#f4fffe;box-shadow:0 6px 22px #00a69b22}.btn.return{background:#143b50;border-color:#276780;color:#d9f3ff}.btn.stop{background:#4a202c;border-color:#a84558;color:#ffe6e9}.btn.subtle{background:#102934}.notice{background:#2c251b;border-color:#6b5330;color:#f4d9a2}.mapcard{background:#0b1d26!important}.maphead{margin-bottom:13px}.map-live{color:#64e3c1;font-size:10px;letter-spacing:.1em}.map{background:#061219;border-color:#294954;border-radius:13px;gap:3px;min-height:300px;aspect-ratio:1.1;padding:9px}.cell{background:#142a34}.cell.free{background:#23534f}.cell.obstacle{background:#b57a2c}.cell.busy{background:#bd465a}.maplegend{font-size:10px;color:#91adb5}.mini{background:#0a1c25;border-color:#254550;border-radius:12px}.mini-label{color:#87a8b2}.mini .value{color:#e7f5f6;font-size:17px}.mini .subvalue{color:#7e9ca6}.statusline .value{color:#cfe7e8}.good{color:#58dfad!important}.danger{color:#ff8290!important}.controls input,input{background:#071820;border-color:#2a4b56;color:#effafa}.links{margin:17px 3px;gap:18px}.links a{color:#69d8cc}.settings-card{background:#0d222c!important}.settings-card .small{line-height:1.6}.drive-hero{background:linear-gradient(145deg,#0e2732,#0b1d27)!important}.stick-pad{background:radial-gradient(circle,#1a4d55 0 16%,#143943 17% 38%,#2c6570 39% 40%,#102d38 41% 66%,#28515b 67% 68%,#0d2630 69%);border-color:#3a6872;box-shadow:inset 0 2px 25px #0005,0 8px 25px #0003}.stick-pad:before,.stick-pad:after{background:#356570}.stick-knob{background:linear-gradient(145deg,#19bfae,#087c87);border-color:#d9fffa;box-shadow:0 6px 20px #00b9a955}.stick-label{color:#9ec8ca}.turn-btn{background:#112f3b;border-color:#2c5864;color:#d8f5f1;border-radius:12px}.drive-readout,.lidar-stats>div{background:#091c25;border-color:#274752}.drive-readout strong{color:#65dfcb}.drive-speed input{accent-color:#18b7a7}.drive-safety{background:#30271b;border-color:#725631;color:#f4d8a1}.lidar-badge{background:#332a1b;border-color:#725b34;color:#f5ce82}.lidar-badge.live{background:#123a32;border-color:#287565;color:#86f0c8}.lidar-stats strong{color:#e5f6f7}.lidar-stat-label{color:#8daab3}.lidar-status{background:#0a202a;border-color:#284c58;color:#a6c6ce}.lidar-note code{color:#72e4d0;background:#12343a}.lidar-wrap{border-color:#2b535f;box-shadow:0 10px 32px #0003}.lidar-legend,.lidar-crosshair-label{border-color:#31515a}.footer{color:#65838d}
+@media(min-width:760px){main{padding-top:32px}.top h1{font-size:32px}.layout{grid-template-columns:minmax(0,1.12fr) minmax(330px,.88fr);align-items:stretch}.layout .hero{grid-column:1;grid-row:1;padding:23px}.layout .action-card{grid-column:1;grid-row:2}.layout .mapcard{grid-column:2;grid-row:1 / span 3;align-self:stretch}.layout .map{aspect-ratio:auto;min-height:380px;height:calc(100% - 80px)}.layout .mapcard{display:flex;flex-direction:column}.layout .maplegend{margin-top:auto;padding-top:12px}.layout>section:nth-of-type(4){grid-column:1;grid-row:3}.layout>section:nth-of-type(5){grid-column:2;grid-row:4}.layout .target-card{grid-column:1;grid-row:4}.layout .advanced-card{grid-column:2;grid-row:5}.stats-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.hero .herofoot{grid-template-columns:1fr 1fr}}
+@media(max-width:759px){body{padding-left:12px;padding-right:12px}main{padding-top:15px}.top{gap:8px}.logo-mark{width:44px;height:44px;flex-basis:44px}.top h1{font-size:23px}.eyebrow{font-size:9px}.tabs{width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:3px}.tab{padding:12px 7px;font-size:10px}.layout{grid-template-columns:1fr;gap:11px}.layout .hero,.layout .action-card,.layout .mapcard,.layout>section:nth-of-type(4),.layout>section:nth-of-type(5),.layout .target-card,.layout .advanced-card{grid-column:1;grid-row:auto}.layout .map{min-height:280px;aspect-ratio:1.1;height:auto}.hero .metric{font-size:28px}.card,.layout .card{padding:15px;border-radius:15px}.drive-grid{grid-template-columns:minmax(0,1fr) minmax(0,.95fr);gap:12px}.stick-pad{width:min(100%,290px)}}
+@media(max-width:430px){.drive-grid{grid-template-columns:1fr}.drive-side{display:grid;grid-template-columns:1fr 1fr;gap:10px}.drive-side .drive-speed{grid-column:1/-1}.stick-pad{width:min(100%,265px)}.hero .herofoot{gap:12px}.hero .hero-stat .metric{font-size:24px}.lidar-wrap{min-height:255px}.pill{max-width:46%;font-size:9px}}
+
+/* Split-screen / narrow desktop: stack the grid in one column so the map isn't squished. */
+@media(min-width:760px) and (max-width:1080px){
+  .layout{grid-template-columns:1fr}
+  .layout .hero,.layout .action-card,.layout .mapcard,
+  .layout>section:nth-of-type(4),.layout>section:nth-of-type(5),
+  .layout .target-card,.layout .advanced-card{grid-column:1;grid-row:auto}
+  .layout .map{aspect-ratio:1.5;min-height:280px;height:auto}
+}
+
+/* Compact mobile command dashboard + optional dark-teal theme */
+:root{--bg:#080f12;--panel:#101b20;--panel2:#17262c;--line:#293a40;--text:#f2f7f7;--muted:#a1b2b7;--blue:#69a8c7;--teal:#65d6c0;--green:#65d6a4;--red:#ff727d;--amber:#f2c16c}
+body{background:radial-gradient(ellipse at 50% -18%,#183239 0,#0b1418 48%,#070c0f 100%);padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
+main{max-width:680px;padding-top:10px;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+.top{margin:2px 0 10px;gap:8px}.top h1{font-size:21px}.logo-mark{width:38px;height:38px;flex-basis:38px}.eyebrow{font-size:9px;letter-spacing:.13em}
+.header-tools{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0}.pill{padding:6px 8px;font-size:9px;max-width:48%}.theme-toggle{border:1px solid var(--line);border-radius:9px;padding:7px 9px;background:var(--panel2);color:var(--text);font:600 10px/1.1 system-ui,-apple-system,sans-serif;white-space:nowrap;min-height:32px}
+.tabs{position:sticky;top:env(safe-area-inset-top);z-index:10;margin-bottom:10px;padding:4px;background:#10191deF;border:1px solid var(--line);border-radius:13px;backdrop-filter:blur(16px)}
+.tab{padding:9px 7px;border-radius:9px;font-size:11px}.layout{gap:9px}.card,.layout .card{padding:12px;border-radius:15px;box-shadow:0 8px 20px #0002}.hero{padding:14px;background:linear-gradient(135deg,#14252b,#101a20 78%)}.hero h2{font-size:10px;margin-bottom:5px}.metric{font-size:25px}.hero .herofoot{margin-top:12px;gap:12px}.hero-stat{padding-top:9px}.hero-stat .small{font-size:10px}.hero .hero-stat .metric{font-size:23px}.bar{height:6px;margin-top:6px}.upsbar span{background:linear-gradient(90deg,#6ca9c7,var(--teal))}
+.section-kicker{margin:1px 2px -2px;font-size:9px;letter-spacing:.14em}.action-card .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.btn{min-height:44px;border-radius:12px;font-size:12px;padding:11px 10px}.btn.primary{background:linear-gradient(135deg,#2b9d8b,#237b75)}.btn.return{background:#24363d}.btn.stop{grid-column:1/-1;min-height:48px;background:#9b343d;border:1px solid #bf4a53;font-weight:800;letter-spacing:.025em}.notice{margin-top:9px;padding:8px 10px;border-radius:10px;font-size:10px;line-height:1.4}.toast{margin-top:8px;padding:7px 9px;font-size:11px;border-radius:9px}
+.battery-warnings{display:grid;gap:6px;margin-top:10px}.battery-warning{display:flex;flex-direction:column;gap:2px;padding:9px 10px;border:1px solid #795e32;border-radius:10px;background:#2a2418;color:#f4d49a;font-size:11px;line-height:1.35}.battery-warning strong{font-size:11px}.battery-warning.danger{border-color:#843b43;background:#2d191d;color:#ffb4ba}.battery-warning span{opacity:.92}.bar span.low{background:var(--red)!important}
+.speed-warning{margin-top:8px;padding:9px 10px;border-radius:10px;border:1px solid #795e32;background:#2a2418;color:#f4d49a;font-size:11px;line-height:1.4;font-weight:650}.speed-warning.critical{border-color:#843b43;background:#2d191d;color:#ffb4ba}.speed-warning[hidden]{display:none}
+.layout .mapcard{margin-top:0}.layout .mapcard summary,.target-card summary,.advanced-card summary{font-size:12px}.layout .card h2{margin-bottom:9px}.stats-grid{gap:7px}.mini{padding:9px}.mini-label,.subvalue{font-size:10px}
+@media(max-width:430px){body{padding-left:9px;padding-right:9px}main{padding-top:8px}.top h1{font-size:19px}.logo-mark{width:35px;height:35px;flex-basis:35px}.header-tools{gap:4px}.pill{font-size:8px;padding:6px;max-width:46%}.theme-toggle{font-size:9px;padding:7px 6px}.hero .metric{font-size:24px}.hero .hero-stat .metric{font-size:21px}.card,.layout .card{padding:11px}.action-card .actions{gap:7px}.btn{font-size:11px;padding:10px 7px}.btn.stop{min-height:46px}}
+@media(min-width:760px){.top h1{font-size:23px}.layout{gap:10px}.card,.layout .card{padding:14px}}
+html[data-theme="teal"]{color-scheme:dark;--bg:#0b1b1e;--panel:#122a2e;--panel2:#1a383c;--line:#31545a;--text:#f0f8f7;--muted:#a4c1c1;--blue:#73b9d4;--teal:#6adcc5;--green:#6adcb0;--red:#ff7785;--amber:#f3c477}
+html[data-theme="teal"] body{background:radial-gradient(ellipse at 50% -18%,#205056 0,#10272b 48%,#0a171a 100%)}
+html[data-theme="teal"] .hero{background:linear-gradient(135deg,#194247,#132c32 78%)}
+html[data-theme="teal"] .tabs{background:#13272beF}
+html[data-theme="teal"] .card{background:linear-gradient(150deg,rgba(23,53,59,.98),rgba(16,39,44,.99))}
+html[data-theme="teal"] .theme-toggle{background:#214247}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+
+/* Desktop command-center layout: full browser width on wide screens;
+   medium and narrow windows retain the compact app-like layout. */
+@media (min-width:1081px){
+  body{padding-left:clamp(18px,2.2vw,36px);padding-right:clamp(18px,2.2vw,36px)}
+  main{width:100%;max-width:1560px;margin:0 auto;padding:22px 0 36px}
+  .top{margin-bottom:18px}
+  .top h1{font-size:29px}
+  .tabs{width:100%;margin-bottom:16px}
+  .tab{padding:11px 18px;font-size:13px}
+  #tab-control .layout{grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;align-items:stretch}
+  #tab-control .layout>.section-kicker{display:none}
+  #tab-control .layout>.hero{grid-column:span 7;padding:22px}
+  #tab-control .layout>.action-card{grid-column:span 5;padding:22px;display:flex;flex-direction:column;justify-content:center}
+  #tab-control .layout>.mapcard{grid-column:span 6}
+  #tab-control .layout>.diagnostics-card{grid-column:span 3}
+  #tab-control .layout>.target-card,#tab-control .layout>.advanced-card{grid-column:span 6}
+  #tab-control .layout .card{padding:20px;border-radius:18px}
+  #tab-control .layout .hero{padding:24px}
+  #tab-control .layout .hero .metric{font-size:clamp(27px,2vw,36px)}
+  #tab-control .layout .actions{gap:12px}
+  #tab-control .layout .btn{min-height:54px;font-size:14px}
+  #tab-control .layout .map{aspect-ratio:1.65;min-height:320px}
+  .drive-hero,.lidar-card{width:100%;padding:22px}
+  .drive-grid{grid-template-columns:minmax(280px,1fr) minmax(260px,.8fr);gap:28px;align-items:center}
+  .stick-pad{width:min(100%,390px);height:auto;aspect-ratio:1}
+  .lidar-wrap{height:min(65vh,680px);min-height:420px}
+  .links{margin-top:18px}
+  .footer{margin-top:26px}
+}
+
+
+/* Event history: compact, local-only audit trail */
+.event-log-list{display:grid;gap:8px;max-height:340px;overflow:auto}
+.event-entry{display:grid;grid-template-columns:74px minmax(0,1fr);gap:9px;padding:9px 10px;border:1px solid #294752;border-radius:10px;background:#091c25}
+.event-time{font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#8daab3}
+.event-title{font-size:12px;font-weight:750;color:#eaf5f6}
+.event-detail{font-size:11px;color:#8daab3;margin-top:2px;overflow-wrap:anywhere}
+.event-entry.warn{border-color:#725631}.event-entry.warn .event-title{color:#f2bd68}
+.event-entry.danger{border-color:#8c3f4c}.event-entry.danger .event-title{color:#ff8290}
+.event-log-tools{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.event-log-tools .btn{min-height:34px;padding:7px 10px;font-size:11px}
+.event-log-empty{font-size:12px;color:#8daab3;padding:12px 0}
+@media(min-width:1081px){#tab-control .layout>.event-log-card{grid-column:span 6}}
+
+
+/* Targeted desktop layout correction */
+@media (min-width: 1081px) {
+  main {
+    width: 100%;
+    max-width: 1180px;
+    margin-inline: auto;
+    padding-top: 24px;
+  }
+
+  #tab-control .layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+  }
+
+  /* Clear older desktop column spans and fixed row placements */
+  #tab-control .layout > * {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    min-width: 0;
+  }
+
+  /* Keep the main controls and status panels at consistent widths */
+  #tab-control .layout > .hero,
+  #tab-control .layout > .action-card,
+  #tab-control .layout > .mapcard,
+  #tab-control .layout > .diagnostics-card,
+  #tab-control .layout > .target-card,
+  #tab-control .layout > .advanced-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #tab-control .layout .map {
+    width: 100%;
+    height: auto;
+    min-height: 260px;
+    aspect-ratio: 1.45;
+  }
+
+  /* Let event history use the full row for readable entries */
+  #tab-control .layout > .event-log-card {
+    grid-column: 1 / -1 !important;
+  }
+
+  /* Prevent the header and tabs from spreading awkwardly */
+  .top {
+    gap: 16px;
+  }
+
+  .tabs {
+    width: fit-content;
+    max-width: 100%;
+  }
+}
+</style>
+</head>
+<body><main>
+<header class="top"><div class="brand"><div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 48 48" role="img"><defs><linearGradient id="hexg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00787a"/><stop offset="1" stop-color="#00a88c"/></linearGradient></defs><polygon points="24,1.5 44.5,13 44.5,35 24,46.5 3.5,35 3.5,13" fill="url(#hexg)" stroke="#004d4f" stroke-width="1.2"/><polygon points="24,5 41,14.5 41,33.5 24,43 7,33.5 7,14.5" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1"/><text x="24" y="30.5" text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="17" font-weight="900" fill="#ffffff" letter-spacing="-0.8">MS</text><rect x="15" y="34.5" width="18" height="3" rx="1.5" fill="#e8501f"/></svg></div><div><div class="eyebrow">Mobile workspace system</div><h1>Summon Desk</h1></div></div><div class="header-tools"><div id="connection" class="pill">Connecting</div><button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to dark teal theme" title="Switch theme">Teal mode</button></div></header>
+<div class="tabs" role="tablist" aria-label="Dashboard views"><button class="tab active" data-tab="control" role="tab" aria-selected="true" aria-controls="tab-control">Control</button><button class="tab" data-tab="drive" role="tab" aria-selected="false" aria-controls="tab-drive">Drive sim</button><button class="tab" data-tab="lidar" role="tab" aria-selected="false" aria-controls="tab-lidar">LiDAR 3D</button></div>
+<section id="tab-control" class="tab-panel active" role="tabpanel">
+<div class="layout">
+ <section class="card hero"><div class="herohead"><div><h2>System overview</h2><div id="status" class="metric">Connecting…</div><div class="small" id="mode">Waiting for bridge</div></div><div id="active" class="status-chip">—</div></div><div class="herofoot"><div class="hero-stat"><span class="small">Robot battery</span><div class="metric"><span id="battery">—</span><span class="small">%</span></div><div class="bar"><span id="batterybar"></span></div></div><div class="hero-stat"><span class="small">Desk / UPS power</span><div class="metric"><span id="ups">—</span><span class="small">%</span></div><div class="bar upsbar"><span id="upsbar"></span></div><div class="statusline"><span class="small">Charging</span><span class="value" id="charging">—</span></div></div></div><div id="batteryWarnings" class="battery-warnings" aria-live="polite" aria-atomic="true"></div></section>
+ <div class="section-kicker">Movement controls</div>
+ <section class="card action-card"><div class="actions"><button class="btn primary" id="summon">⌖ &nbsp; Summon desk</button><button class="btn return" id="return">↶ &nbsp; Return to dock</button><button class="btn stop full" id="stop">■ &nbsp; Stop movement</button></div><div class="notice warn">Software stop only — not a hardware emergency stop. Keep the physical E-stop accessible whenever real hardware is operated.</div><div id="message" class="toast" role="status" aria-live="polite">Connecting to local simulator…</div></section>
+ <section class="card mapcard"><details><summary>Live room map</summary><div id="map" class="map" aria-label="Occupancy map"></div><div class="maplegend"><span><i class="dot" style="background:#192f3a"></i>Unknown</span><span><i class="dot" style="background:#34766f"></i>Clear</span><span><i class="dot" style="background:#e7ae57"></i>Obstacle</span><span><i class="dot" style="background:#d75d70"></i>Busy</span></div><div class="small mapinfo" id="mapinfo">Map updates with simulator state.</div></details></section>
+ <section class="card diagnostics-card"><details><summary>Robot telemetry</summary><div class="stats-grid"><div class="mini"><div class="mini-label">Position X</div><div class="value" id="px">—</div><div class="subvalue">meters</div></div><div class="mini"><div class="mini-label">Position Y</div><div class="value" id="py">—</div><div class="subvalue">meters</div></div><div class="mini"><div class="mini-label">Heading</div><div class="value" id="heading">—</div><div class="subvalue">degrees</div></div><div class="mini"><div class="mini-label">Map explored</div><div class="value" id="explored">—</div><div class="subvalue">coverage</div></div></div></details></section>
+ <section class="card diagnostics-card"><details><summary>Safety & dock diagnostics</summary><div class="safety-list"><div class="statusline"><span class="small">E-stop</span><span class="value" id="estop">—</span></div><div class="statusline"><span class="small">Cord</span><span class="value" id="cord">—</span></div><div class="statusline"><span class="small">Interlock</span><span class="value" id="interlock">—</span></div><div class="statusline"><span class="small">Navigation</span><span class="value">Robot state</span></div></div></details></section>
+ <section class="card target-card"><details><summary>Custom summon target</summary><p class="small">Set a destination in meters relative to the simulator room. The Summon button uses these coordinates.</p><div class="controls"><div class="field"><label for="x">Target X · meters</label><input id="x" type="number" step="0.1" min="0.5" value="4.0" inputmode="decimal"></div><div class="field"><label for="y">Target Y · meters</label><input id="y" type="number" step="0.1" min="0.5" value="3.0" inputmode="decimal"></div></div><div class="small">Choose a target inside the mapped room. Coordinates are relative to the simulator room.</div></details></section>
+ <section class="card advanced-card"><details><summary>Advanced simulator controls</summary><p class="small">These controls change simulated sensors only. They do not control real hardware.</p><div class="actions"><button id="cordIn" class="btn subtle">Connect simulated cord</button><button id="cordOut" class="btn subtle">Unplug simulated cord</button><button id="learn" class="btn subtle full">Start mapping tour</button></div></details></section>
+ <section class="card event-log-card"><details id="eventLogDetails"><summary>Event history</summary><div class="event-log-tools"><span class="small">Recent commands and safety/connection changes · saved in this browser</span><button id="clearEventLog" class="btn subtle" type="button">Clear history</button></div><div id="eventLogList" class="event-log-list" aria-live="polite"><div class="event-log-empty">No events recorded yet.</div></div></details></section>
+</div>
+</section>
+
+<section id="tab-drive" class="tab-panel" role="tabpanel" aria-label="Manual simulation drive">
+ <section class="card drive-hero"><div class="lidar-head"><div><h2>Manual drive · simulation</h2><p class="small">Touch joystick · holonomic translation · independent rotation</p></div><span class="lidar-badge demo">SIM ONLY</span></div>
+  <div class="drive-grid"><div><div class="stick-pad" id="stickPad" role="application" aria-label="Virtual movement joystick"><span class="stick-label up">FORWARD</span><span class="stick-label down">BACK</span><span class="stick-label left">LEFT</span><span class="stick-label right">RIGHT</span><div class="stick-knob" id="stickKnob"></div></div><div class="small" style="text-align:center;margin-top:8px">Drag the pad; release to stop translating</div></div>
+  <div class="drive-side"><div><div class="mini-label">Rotate chassis</div><div class="turn-controls"><button type="button" class="turn-btn" id="turnLeft">↶ &nbsp; Rotate left</button><button type="button" class="turn-btn" id="turnRight">Rotate right &nbsp; ↷</button></div><div class="drive-readout"><span class="small">Command</span><strong id="driveVector">X 0.00 · Y 0.00 · Ω 0.00</strong></div></div><div class="drive-speed"><label for="driveSpeed" class="mini-label">Maximum speed <strong id="driveSpeedValue">35%</strong></label><input id="driveSpeed" type="range" min="8" max="100" value="35" step="1" aria-describedby="speedWarning speedLimitNote"><div id="speedLimitNote" class="small">35% of the simulator’s configured maximum. Real robot speed limits require separate validation.</div><div id="speedWarning" class="speed-warning" role="status" aria-live="polite" hidden></div></div></div></div>
+  <div class="drive-safety">Testing only: the simulator applies its simulated LiDAR footprint checks. This is not a real robot safety certification. Use the Stop button to cancel manual commands; a real robot still needs a physical E-stop.</div>
+  <div id="driveStatus" class="lidar-status" role="status" aria-live="polite">Manual drive idle. Open the simulator tab to connect.</div>
+ </section>
+</section>
+<section id="tab-lidar" class="tab-panel" role="tabpanel" aria-label="3D room view from LiDAR">
+ <section class="card lidar-card">
+  <div class="lidar-head"><div><h2>3D room model</h2><p class="small">Live occupancy grid · drag to orbit · pinch to zoom</p></div><span id="lidarBadge" class="lidar-badge demo">BUILDING…</span></div>
+  <div class="lidar-stats"><div><span class="lidar-stat-label">Obstacles</span><strong id="lidarPoints">—</strong></div><div><span class="lidar-stat-label">Room size</span><strong id="lidarRange">—</strong></div><div><span class="lidar-stat-label">Update</span><strong id="lidarAge">Waiting</strong></div></div>
+  <div class="lidar-wrap"><canvas id="lidarCanvas" aria-label="3D room model built from the live occupancy grid"></canvas><div class="lidar-legend"><span><i class="lidar-key wall"></i>Obstacle</span><span><i class="lidar-key"></i>Mapped floor</span><span><i class="lidar-key robot"></i>Robot</span></div></div>
+  <div id="lidarStatus" class="lidar-status" role="status" aria-live="polite">Waiting for the map…</div>
+  <p class="small lidar-note">Built from the live occupancy grid (<code>/v1/map</code>) and robot pose (<code>/v1/state</code>). Visualisation only — not an obstacle-detection or safety system.</p>
+ </section>
+</section>
+<nav class="links"><a href="/simulator" target="_blank" rel="noopener">Open full simulator ↗</a><a href="/v1/health" target="_blank" rel="noopener">Bridge health ↗</a><a href="#settings" id="settingsLink">Connection settings</a></nav>
+<section class="card settings-card" id="settings"><details><summary>Connection settings</summary><div class="field"><label for="token">API token (local simulator default: dev-token)</label><input id="token" type="password" autocomplete="off" value="dev-token"></div><button class="btn subtle full" id="saveToken">Apply token</button><p class="small">This page is hosted by the bridge. On your phone, open the computer's local address, for example http://192.168.1.25:8787. Keep both devices on the same trusted Wi-Fi network. Do not port-forward this service to the internet.</p></details></section>
+<div class="footer">Summon Desk · local network only · simulation mode</div>
+</main><script>
+(()=>{'use strict';let token='dev-token',busy=false,lastMap=0,lastMapSignature='';const $=id=>document.getElementById(id);const fmt=(n,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d):'—';const say=(s,kind='')=>{ $('message').textContent=s;$('message').className='toast '+kind};
+const EVENT_LOG_KEY='summonDeskEventLogV1';let eventItems=[],lastObservedState=null;
+function renderEventLog(){
+ const host=$('eventLogList');if(!host)return;host.replaceChildren();
+ if(!eventItems.length){const empty=document.createElement('div');empty.className='event-log-empty';empty.textContent='No events recorded yet.';host.appendChild(empty);return}
+ for(const item of eventItems){const row=document.createElement('div');row.className='event-entry '+(item.kind||'');const time=document.createElement('div');time.className='event-time';time.textContent=item.time;const content=document.createElement('div');const title=document.createElement('div');title.className='event-title';title.textContent=item.title;content.appendChild(title);if(item.detail){const detail=document.createElement('div');detail.className='event-detail';detail.textContent=item.detail;content.appendChild(detail)}row.append(time,content);host.appendChild(row)}
+}
+function logEvent(title,detail='',kind=''){
+ const item={time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}),title:String(title),detail:String(detail||''),kind};
+ eventItems.unshift(item);eventItems=eventItems.slice(0,40);
+ try{localStorage.setItem(EVENT_LOG_KEY,JSON.stringify(eventItems))}catch(_){}
+ renderEventLog();
+}
+function initEventLog(){
+ try{const saved=JSON.parse(localStorage.getItem(EVENT_LOG_KEY)||'[]');if(Array.isArray(saved))eventItems=saved.filter(x=>x&&typeof x.title==='string'&&typeof x.time==='string').slice(0,40)}catch(_){eventItems=[]}
+ renderEventLog();
+}
+function observeState(s){
+ const next={connected:s.simulator_connected!==false,cord:!!s.cord?.plugged,interlock:!!s.cord?.interlock_on,estop:!!s.estop,moving:!!s.active,status:String(s.status||'')};
+ if(!lastObservedState){logEvent('Monitor started',next.connected?'Simulator connected':'Simulator disconnected',next.connected?'':'warn')}
+ else{
+  if(next.connected!==lastObservedState.connected)logEvent(next.connected?'Simulator connected':'Simulator disconnected',next.connected?'Live simulator updates resumed':'Telemetry is unavailable',next.connected?'':'warn');
+  if(next.cord!==lastObservedState.cord)logEvent(next.cord?'Cord plugged in':'Cord unplugged',next.cord?'Movement should remain interlocked while plugged in':'Cord interlock released',next.cord?'warn':'');
+  if(next.interlock!==lastObservedState.interlock)logEvent('Cord interlock '+(next.interlock?'enabled':'disabled'),'',next.interlock?'warn':'');
+  if(next.estop!==lastObservedState.estop)logEvent(next.estop?'Simulator E-stop engaged':'Simulator E-stop released',next.estop?'Motion should be blocked':'Verify the area before resuming',next.estop?'danger':'warn');
+  if(next.moving!==lastObservedState.moving)logEvent(next.moving?'Desk movement started':'Desk movement stopped',next.status,next.moving?'warn':'');
+  if(next.status&&next.status!==lastObservedState.status)logEvent('Simulator status changed',next.status,next.status.toLowerCase().includes('stop')?'warn':'');
+ }
+ lastObservedState=next;
+}
+
+async function api(path,method='GET',body){const r=await fetch(path,{method,headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});let data={};try{data=await r.json()}catch{}if(!r.ok){const e=new Error(data.status||data.error||('HTTP '+r.status));e.statusCode=r.status;e.response=data;throw e}return data}
+function setText(id,v){$(id).textContent=v}
+function render(s){observeState(s);const connected=$('connection');connected.textContent=s.simulator_connected===false?'Bridge online · simulator offline':'Bridge + simulator connected';connected.classList.toggle('online',s.simulator_connected!==false);setText('status',s.status||'Unknown');$('status').style.color=s.severity==='bad'?'var(--red)':s.severity==='warn'?'var(--amber)':'var(--green)';setText('mode',s.simulator_connected===false?'Open /simulator on another tab to connect':'Mode: '+(s.mode||'—'));setText('active',s.simulator_connected===false?'Unknown':s.active?'Moving':'Stationary');const rb=Number(s.battery?.robot_pct),ub=Number(s.battery?.ups_pct),robotKnown=s.simulator_connected!==false&&Number.isFinite(rb)&&s.battery?.robot_pct!==null&&s.battery?.robot_pct!==undefined,upsKnown=s.simulator_connected!==false&&Number.isFinite(ub)&&s.battery?.ups_pct!==null&&s.battery?.ups_pct!==undefined;setText('battery',robotKnown?fmt(rb):'—');$('batterybar').style.width=(robotKnown?Math.max(0,Math.min(100,rb)):0)+'%';$('batterybar').classList.toggle('low',robotKnown&&rb<=20);setText('ups',upsKnown?fmt(ub):'—');$('upsbar').style.width=(upsKnown?Math.max(0,Math.min(100,ub)):0)+'%';$('upsbar').classList.toggle('low',upsKnown&&ub<=20);setText('charging',typeof s.charging==='boolean'?(s.charging?'Yes':'No'):'Unknown');const warnings=[];if(s.simulator_connected===false)warnings.push({kind:'warn',title:'Simulator disconnected',body:'Open /simulator and keep it running to update controls and telemetry.'});if(!robotKnown)warnings.push({kind:'warn',title:'Robot battery unavailable',body:'No valid robot battery reading is available.'});else if(rb<=20)warnings.push({kind:'danger',title:'Robot battery low',body:'Battery is at '+fmt(rb)+'%. Recharge before the next run.'});if(!upsKnown)warnings.push({kind:'warn',title:'Desk / UPS battery unavailable',body:'No valid desk/UPS battery reading is available.'});else if(ub<=20)warnings.push({kind:'danger',title:'Desk / UPS battery low',body:'Battery is at '+fmt(ub)+'%. Check the power station.'});$('batteryWarnings').replaceChildren(...warnings.map(w=>{const el=document.createElement('div');el.className='battery-warning '+w.kind;const title=document.createElement('strong');title.textContent=w.title;const body=document.createElement('span');body.textContent=w.body;el.append(title,body);return el}));setText('px',fmt(s.pose?.x,2)+' m');setText('py',fmt(s.pose?.y,2)+' m');setText('heading',fmt((Number(s.pose?.theta)||0)*180/Math.PI,0)+'°');setText('estop',s.simulator_connected===false?'Unknown':s.estop?'ACTIVE':'Not active');$('estop').className='value '+(s.simulator_connected===false?'warn':s.estop?'danger':'good');setText('cord',s.cord?.plugged?'Plugged in':'Unplugged');setText('interlock',s.cord?.interlock_on?'On':'Off');setText('explored',fmt(s.explored_pct,0)+'%');if(!$('x').dataset.edited){$('x').value=fmt(s.user?.x,1);$('y').value=fmt(s.user?.y,1)} }
+// ============ LiDAR 3D room view (Three.js) ============
+var lidarTimer=null, lidarRenderer=null, lidarScene=null, lidarCamera=null;
+var lidarRoom=null, lidarRobot=null, lidarGrid=null;
+var lidarYaw=0.9, lidarPitch=0.55, lidarRadius=8;
+var lidarDragging=false, lidarLastX=0, lidarLastY=0;
+var lidarPinchDist=0, lidarPinchRadius=0;
+
+function initLidar3D(){
+  if(lidarRenderer) return true;
+  if(!window.THREE) return false;
+  var canvas=$('lidarCanvas');
+  if(!canvas) return false;
+  var rect=canvas.getBoundingClientRect();
+  if(rect.width<2||rect.height<2) return false;
+
+  lidarRenderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
+  lidarRenderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+  lidarRenderer.setSize(rect.width,rect.height,false);
+  lidarRenderer.setClearColor(0x0e1a20,1);
+
+  lidarScene=new THREE.Scene();
+  lidarScene.fog=new THREE.Fog(0x0e1a20,7,24);
+  lidarCamera=new THREE.PerspectiveCamera(50,rect.width/rect.height,0.1,120);
+
+  lidarScene.add(new THREE.AmbientLight(0xffffff,0.55));
+  var d1=new THREE.DirectionalLight(0xa8e8df,0.9); d1.position.set(3,6,4); lidarScene.add(d1);
+  var d2=new THREE.DirectionalLight(0x4b9dd1,0.45); d2.position.set(-4,3,-3); lidarScene.add(d2);
+
+  lidarGrid=new THREE.GridHelper(20,40,0x2b535f,0x1d3a44);
+  lidarScene.add(lidarGrid);
+
+  lidarRoom=new THREE.Group(); lidarScene.add(lidarRoom);
+
+  lidarRobot=new THREE.Group(); lidarScene.add(lidarRobot);
+  var body=new THREE.Mesh(
+    new THREE.BoxGeometry(0.56,0.10,0.36),
+    new THREE.MeshStandardMaterial({color:0x8a5a2b,roughness:0.6,metalness:0.2})
+  );
+  body.position.y=0.05; lidarRobot.add(body);
+  var arrow=new THREE.Mesh(
+    new THREE.ConeGeometry(0.09,0.22,4),
+    new THREE.MeshStandardMaterial({color:0x51dfc1,emissive:0x1a7a6c,emissiveIntensity:0.6})
+  );
+  arrow.rotation.x=-Math.PI/2; arrow.position.set(0,0.05,0.28); lidarRobot.add(arrow);
+
+  canvas.addEventListener('pointerdown',function(e){
+    lidarDragging=true; lidarLastX=e.clientX; lidarLastY=e.clientY;
+    try{canvas.setPointerCapture(e.pointerId)}catch(_){}
+  });
+  canvas.addEventListener('pointermove',function(e){
+    if(!lidarDragging) return;
+    lidarYaw-=(e.clientX-lidarLastX)*0.008;
+    lidarPitch=Math.max(0.12,Math.min(1.35,lidarPitch+(e.clientY-lidarLastY)*0.008));
+    lidarLastX=e.clientX; lidarLastY=e.clientY;
+  });
+  canvas.addEventListener('pointerup',function(){lidarDragging=false});
+  canvas.addEventListener('pointercancel',function(){lidarDragging=false});
+  canvas.addEventListener('wheel',function(e){
+    e.preventDefault();
+    lidarRadius=Math.max(2.5,Math.min(22,lidarRadius*(1+Math.sign(e.deltaY)*0.12)));
+  },{passive:false});
+  canvas.addEventListener('touchstart',function(e){
+    if(e.touches.length===2){
+      var dx=e.touches[0].clientX-e.touches[1].clientX;
+      var dy=e.touches[0].clientY-e.touches[1].clientY;
+      lidarPinchDist=Math.hypot(dx,dy); lidarPinchRadius=lidarRadius;
+    }
+  },{passive:true});
+  canvas.addEventListener('touchmove',function(e){
+    if(e.touches.length===2 && lidarPinchDist>0){
+      var dx=e.touches[0].clientX-e.touches[1].clientX;
+      var dy=e.touches[0].clientY-e.touches[1].clientY;
+      var d=Math.hypot(dx,dy);
+      lidarRadius=Math.max(2.5,Math.min(22,lidarPinchRadius*lidarPinchDist/d));
+    }
+  },{passive:true});
+
+  window.addEventListener('resize',function(){
+    if(!lidarRenderer) return;
+    if(!$('tab-lidar').classList.contains('active')) return;
+    var r=canvas.getBoundingClientRect();
+    if(r.width<2||r.height<2) return;
+    lidarRenderer.setSize(r.width,r.height,false);
+    lidarCamera.aspect=r.width/r.height; lidarCamera.updateProjectionMatrix();
+  });
+
+  return true;
+}
+
+function buildRoom3D(m,s){
+  if(!lidarRoom) return;
+  while(lidarRoom.children.length){
+    var c=lidarRoom.children[0];
+    lidarRoom.remove(c);
+    if(c.geometry)c.geometry.dispose();
+    if(c.material)c.material.dispose();
+  }
+
+  var cell=m.cell_m||0.2, wallH=0.65;
+  var gw=m.gw, gh=m.gh;
+  var ox=-gw*cell/2, oz=-gh*cell/2;
+  var maxInst=gw*gh;
+
+  var wallGeo=new THREE.BoxGeometry(cell,wallH,cell);
+  var wallMat=new THREE.MeshStandardMaterial({color:0xb57a2c,roughness:0.75,metalness:0.1});
+  var busyGeo=new THREE.BoxGeometry(cell*0.85,0.25,cell*0.85);
+  var busyMat=new THREE.MeshStandardMaterial({color:0xbd465a,roughness:0.85,transparent:true,opacity:0.55});
+  var floorGeo=new THREE.BoxGeometry(cell,0.02,cell);
+  var floorMat=new THREE.MeshStandardMaterial({color:0x1a3a44,roughness:0.9,metalness:0.05});
+
+  var iw=new THREE.InstancedMesh(wallGeo,wallMat,maxInst);
+  var ib=new THREE.InstancedMesh(busyGeo,busyMat,maxInst);
+  var iff=new THREE.InstancedMesh(floorGeo,floorMat,maxInst*2);
+  var dummy=new THREE.Object3D();
+  var wi=0,bi=0,fi=0;
+
+  for(var y=0;y<gh;y++){
+    var row=m.rows[y];
+    for(var x=0;x<gw;x++){
+      var ch=row[x];
+      var wx=ox+(x+0.5)*cell;
+      var wz=oz+(y+0.5)*cell;
+      if(ch==='_'||ch==='#'||ch==='+'){
+        dummy.position.set(wx,0.01,wz); dummy.rotation.set(0,0,0); dummy.scale.set(1,1,1);
+        dummy.updateMatrix(); iff.setMatrixAt(fi++,dummy.matrix);
+      }
+      if(ch==='#'){
+        dummy.position.set(wx,wallH/2,wz); dummy.updateMatrix();
+        iw.setMatrixAt(wi++,dummy.matrix);
+      } else if(ch==='+'){
+        dummy.position.set(wx,0.125,wz); dummy.updateMatrix();
+        ib.setMatrixAt(bi++,dummy.matrix);
+      }
+    }
+  }
+  iw.count=wi; ib.count=bi; iff.count=fi;
+  iw.instanceMatrix.needsUpdate=true;
+  ib.instanceMatrix.needsUpdate=true;
+  iff.instanceMatrix.needsUpdate=true;
+  lidarRoom.add(iff); lidarRoom.add(iw); lidarRoom.add(ib);
+
+  if(s&&s.pose&&lidarRobot){
+    var rx=(s.pose.x - m.width_m/2);
+    var rz=(s.pose.y - m.height_m/2);
+    lidarRobot.position.set(rx,0,rz);
+    lidarRobot.rotation.y = -(s.pose.theta||0) + Math.PI;
+  }
+}
+
+function renderLidar3D(){
+  if(!lidarRenderer||!lidarScene||!lidarCamera) return;
+  var canvas=$('lidarCanvas'); if(!canvas) return;
+  var r=canvas.getBoundingClientRect();
+  if(r.width<2||r.height<2) return;
+  var wantW=Math.round(r.width*lidarRenderer.getPixelRatio());
+  var wantH=Math.round(r.height*lidarRenderer.getPixelRatio());
+  if(canvas.width!==wantW||canvas.height!==wantH){
+    lidarRenderer.setSize(r.width,r.height,false);
+    lidarCamera.aspect=r.width/r.height; lidarCamera.updateProjectionMatrix();
+  }
+  var cx=Math.sin(lidarYaw)*Math.cos(lidarPitch)*lidarRadius;
+  var cy=Math.sin(lidarPitch)*lidarRadius+1.6;
+  var cz=Math.cos(lidarYaw)*Math.cos(lidarPitch)*lidarRadius;
+  lidarCamera.position.set(cx,cy,cz);
+  lidarCamera.lookAt(0,0.3,0);
+  lidarRenderer.render(lidarScene,lidarCamera);
+}
+
+function pollLidar(){
+  Promise.all([api('/v1/map'),api('/v1/state')]).then(function(res){
+    var m=res[0], s=res[1];
+    if(!initLidar3D()){
+      var el=$('lidarStatus'); if(el) el.textContent='Waiting for WebGL canvas…';
+      return;
+    }
+    buildRoom3D(m,s);
+    var badge=$('lidarBadge');
+    badge.textContent='LIVE 3D'; badge.className='lidar-badge live';
+    var wallCount=0;
+    for(var y=0;y<m.gh;y++)for(var x=0;x<m.gw;x++)if(m.rows[y][x]==='#')wallCount++;
+    setText('lidarPoints',String(wallCount));
+    setText('lidarRange',fmt(m.width_m,1)+' × '+fmt(m.height_m,1)+' m');
+    setText('lidarAge','Just now');
+    var st=$('lidarStatus'); if(st) st.textContent='Live 3D room model from the occupancy grid.';
+    renderLidar3D();
+  }).catch(function(e){
+    var badge=$('lidarBadge');
+    if(badge){badge.textContent='NO MAP'; badge.className='lidar-badge error'}
+    var st=$('lidarStatus'); if(st) st.textContent='Could not load map: '+e.message;
+  });
+}
+
+var lidarRAF=0;
+function lidarLoop(){
+  if(lidarRenderer && $('tab-lidar').classList.contains('active')) renderLidar3D();
+  lidarRAF=requestAnimationFrame(lidarLoop);
+}
+function startLidar(){
+  if(lidarTimer){clearInterval(lidarTimer); lidarTimer=null}
+  pollLidar();
+  lidarTimer=setInterval(pollLidar,1200);
+  if(!lidarRAF) lidarLoop();
+}
+function stopLidar(){
+  if(lidarTimer){clearInterval(lidarTimer); lidarTimer=null}
+  if(lidarRAF){cancelAnimationFrame(lidarRAF); lidarRAF=0}
+}
+function activateTab(name){document.querySelectorAll('.tab').forEach(t=>{const on=t.dataset.tab===name;t.classList.toggle('active',on);t.setAttribute('aria-selected',on?'true':'false')});document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));if(name==='lidar'){requestAnimationFrame(()=>startLidar())}else stopLidar()}
+async function refresh(){try{const s=await api('/v1/state');render(s);if(!lastMap||Date.now()-lastMap>4000)await refreshMap()}catch(e){$('connection').textContent='Disconnected';$('connection').classList.remove('online');setText('status','Offline');setText('mode','Check bridge / Wi-Fi');say(e.message,'danger');render({simulator_connected:false})}}
+async function refreshMap(){try{const m=await api('/v1/map');const signature=[m.gw,m.gh,m.width_m,m.height_m,...m.rows].join('|');lastMap=Date.now();if(signature===lastMapSignature)return;lastMapSignature=signature;const host=$('map');host.style.gridTemplateColumns=`repeat(${m.gw},minmax(0,1fr))`;host.replaceChildren();for(const row of m.rows){for(const c of row){const cell=document.createElement('i');cell.className='cell'+(c==='_'?' free':c==='#'?' obstacle':c==='+'?' busy':'');host.appendChild(cell)}}setText('mapinfo',`${fmt(m.width_m,1)} m × ${fmt(m.height_m,1)} m · ${m.gw} × ${m.gh} cells`)}catch{}}
+async function command(path,body,msg,buttonId){const button=buttonId?$(buttonId):null;if(busy||(button&&button.disabled))return;busy=true;if(button)button.disabled=true;say(msg+'…');try{const r=await api(path,'POST',body);const failed=r.accepted===false;say(r.status||'Command accepted',failed?'danger':'good');logEvent((failed?'Command refused: ':'Command accepted: ')+msg,r.status||path,failed?'warn':'');await refresh()}catch(e){const refused=Number(e.statusCode)>=400&&Number(e.statusCode)<500;say(e.message,'danger');logEvent((refused?'Command refused: ':'Command failed: ')+msg,e.message,refused?'warn':'danger')}finally{busy=false;if(button)button.disabled=false}}
+async function urgentCommand(path,body,msg){say(msg+'…');try{const r=await api(path,'POST',body);const failed=r.accepted===false;say(r.status||'Command accepted',failed?'danger':'good');logEvent((failed?'Command refused: ':'Command accepted: ')+msg,r.status||path,failed?'warn':'');await refresh()}catch(e){const refused=Number(e.statusCode)>=400&&Number(e.statusCode)<500;say(e.message,'danger');logEvent((refused?'Command refused: ':'Command failed: ')+msg,e.message,refused?'warn':'danger')}}
+function applyTheme(theme){const chosen=theme==='teal'?'teal':'deep';document.documentElement.dataset.theme=chosen;const b=$('themeToggle');if(b){b.textContent=chosen==='deep'?'Teal mode':'Deep dark';b.setAttribute('aria-label',chosen==='deep'?'Switch to dark teal theme':'Switch to deep dark mode');b.title=b.getAttribute('aria-label')}try{localStorage.setItem('summonDeskTheme',chosen)}catch(_){}}
+function initTheme(){let saved='deep';try{saved=localStorage.getItem('summonDeskTheme')||'deep'}catch(_){}applyTheme(saved)}
+// Virtual joystick sends only to the browser simulator bridge. Releasing any control sends zero commands.
+let stickPointer=null,driveX=0,driveY=0,driveTurn=0,driveActive=false,driveLoop=null;
+function drivePayload(){return {x:driveX,y:driveY,turn:driveTurn,speed:Number($('driveSpeed').value)/100}}
+function updateSpeedWarning(){const pct=Number($('driveSpeed').value),box=$('speedWarning'),note=$('speedLimitNote');$('driveSpeedValue').textContent=pct+'%';note.textContent=pct+'% of the simulator’s configured maximum. Real robot speed limits require separate validation.';box.hidden=false;box.className='speed-warning';if(pct>=80){box.classList.add('critical');box.textContent='VERY HIGH SPEED LIMIT SELECTED · '+pct+'%. If used, expect longer stopping distances and increased collision risk. Confirm the test area is clear.'}else if(pct>=50){box.classList.add('caution');box.textContent='HIGH SPEED LIMIT SELECTED · '+pct+'%. Higher speed increases stopping distance and collision risk.'}else{box.hidden=true;box.textContent=''}}
+async function pushDrive(){try{const r=await api('/v1/drive','POST',drivePayload());$('driveStatus').textContent=r.status||'Manual command queued';$('driveVector').textContent=`X ${driveX.toFixed(2)} · Y ${driveY.toFixed(2)} · Ω ${driveTurn.toFixed(2)}`}catch(e){$('driveStatus').textContent='Drive unavailable: '+e.message}}
+function driveTickStart(){if(driveLoop)clearInterval(driveLoop);pushDrive();driveLoop=setInterval(()=>{if(driveActive)pushDrive()},120)}
+function releaseDrive(sendZero=true){driveActive=false;stickPointer=null;driveX=0;driveY=0;driveTurn=0;$('stickKnob').style.left='50%';$('stickKnob').style.top='50%';$('turnLeft').dataset.down='0';$('turnRight').dataset.down='0';if(driveLoop){clearInterval(driveLoop);driveLoop=null}if(sendZero)pushDrive();$('driveVector').textContent='X 0.00 · Y 0.00 · Ω 0.00';}
+function moveStick(e){const r=$('stickPad').getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,lim=r.width*.34;let dx=e.clientX-cx,dy=e.clientY-cy,d=Math.hypot(dx,dy);if(d>lim){dx=dx/d*lim;dy=dy/d*lim}driveX=dx/lim;driveY=-dy/lim;$('stickKnob').style.left=`${50+dx/r.width*100}%`;$('stickKnob').style.top=`${50+dy/r.height*100}%`;$('driveVector').textContent=`X ${driveX.toFixed(2)} · Y ${driveY.toFixed(2)} · Ω ${driveTurn.toFixed(2)}`}
+$('stickPad').addEventListener('pointerdown',e=>{if(stickPointer!==null)return;stickPointer=e.pointerId;driveActive=true;$('stickPad').setPointerCapture(e.pointerId);moveStick(e);driveTickStart()});$('stickPad').addEventListener('pointermove',e=>{if(e.pointerId===stickPointer){moveStick(e);pushDrive()}});$('stickPad').addEventListener('pointerup',e=>{if(e.pointerId===stickPointer)releaseDrive()});$('stickPad').addEventListener('pointercancel',releaseDrive);
+function turnDown(dir,e){e.preventDefault();try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}driveActive=true;driveTurn=dir;driveTickStart()}function turnUp(){driveTurn=0;if(Math.abs(driveX)<.02&&Math.abs(driveY)<.02)releaseDrive();else pushDrive()}$('turnLeft').addEventListener('pointerdown',e=>turnDown(-1,e));$('turnRight').addEventListener('pointerdown',e=>turnDown(1,e));for(const id of ['turnLeft','turnRight']){const b=$(id);b.addEventListener('pointerup',turnUp);b.addEventListener('pointercancel',turnUp);b.addEventListener('pointerleave',e=>{if(e.buttons===0)turnUp()})}
+$('driveSpeed').addEventListener('input',()=>{updateSpeedWarning();if(driveActive)pushDrive()});updateSpeedWarning();window.addEventListener('blur',()=>{if(driveActive)releaseDrive()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&driveActive)releaseDrive()});
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.tab)));
+initEventLog();$('clearEventLog').addEventListener('click',()=>{eventItems=[];try{localStorage.removeItem(EVENT_LOG_KEY)}catch(_){}renderEventLog()});
+$('themeToggle').addEventListener('click',()=>applyTheme(document.documentElement.dataset.theme==='deep'?'teal':'deep'));initTheme();
+$('summon').addEventListener('click',()=>{const x=Number($('x').value),y=Number($('y').value);if(!Number.isFinite(x)||!Number.isFinite(y)){say('Enter valid X and Y coordinates.','danger');return}command('/v1/summon',{x,y},'Sending summon command','summon')});for(const id of ['x','y'])$(id).addEventListener('input',()=>{$(id).dataset.edited='1'});
+$('return').onclick=()=>{releaseDrive(false);command('/v1/return',{},'Returning to dock','return')};$('stop').onclick=()=>{releaseDrive(false);urgentCommand('/v1/stop',{},'Sending software stop')};$('learn').onclick=()=>command('/v1/learn',{},'Starting mapping tour','learn');$('cordIn').onclick=()=>command('/v1/sim/cord',{plugged:true},'Connecting simulated cord','cordIn');$('cordOut').onclick=()=>command('/v1/sim/cord',{plugged:false},'Disconnecting simulated cord','cordOut');$('saveToken').onclick=()=>{token=$('token').value.trim();say('Token applied. Checking connection…');refresh()};$('settingsLink').onclick=()=>{$('settings').scrollIntoView({behavior:'smooth',block:'center'});$('settings').querySelector('details').open=true};refresh();setInterval(()=>{refresh()},1500);
+// Offline caching is not configured: avoid registering a missing /sw.js endpoint.
+})();
+</script></body></html>
+----- robot/simulator/summon_table_sim.html -----
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Summon Table – swerve + lidar simulator</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f6f5f1;--fg:#1d1d1b;--mut:#6b6a63;--card:#fff;--line:#d9d6cc;--acc:#2f6fed;--ok:#1f9d55;--bad:#d64545;--warn:#b07800;--room:#efece4;--obs:#b9b3a3;--hit:#e0561f;--tbl:#8a5a2b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#ecebe6;--mut:#a09f96;--card:#201f1d;--line:#3a3935;--acc:#6b9bff;--ok:#41c17b;--bad:#ff7070;--warn:#e6b23a;--room:#1b1a18;--obs:#57534a;--hit:#ff7a45;--tbl:#c48a4f}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#ecebe6;--mut:#a09f96;--card:#201f1d;--line:#3a3935;--acc:#6b9bff;--ok:#41c17b;--bad:#ff7070;--warn:#e6b23a;--room:#1b1a18;--obs:#57534a;--hit:#ff7a45;--tbl:#c48a4f}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:18px 14px 28px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:var(--mut);margin:0 0 14px}
+canvas{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:12px;touch-action:none;background:var(--room)}
+.editor{flex:1 1 100%}.editor-grid{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.editor-grid label{min-width:110px;flex:1}.editor-grid input,.editor-grid select{max-width:100%;width:100%;box-sizing:border-box}.hint{font-size:13px;color:var(--mut);margin:6px 0 0}
+.row{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.phone{flex:1 1 230px}.stats{flex:1 1 200px}.how{flex:2 1 300px}
+button{font:inherit;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:8px 12px;cursor:pointer}
+button.go{width:100%;background:var(--acc);color:#fff;border:0;font-size:18px;font-weight:600;padding:14px;border-radius:14px;margin:8px 0}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button.es{background:var(--bad);margin-top:0}
+button.back{width:100%;background:var(--card);color:var(--fg);border:2px solid var(--acc);font-size:16px;font-weight:600;padding:11px;border-radius:14px;margin:0 0 6px}
+#st{font-weight:600}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+label{display:block;color:var(--mut);margin-top:6px}
+h2{font-size:14px;margin:0 0 6px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+ol{margin:0;padding-left:18px}li{margin-bottom:3px}
+</style></head><body><main>
+<h1>Summon Table</h1>
+<p class="sub">Top-down sim, now at 1x with a safety supervisor so the desk can't drive into things. Default scene: 2 people seated at desks, 2 standing and talking, 2 walking around. Drag the orange dot (you) anywhere. Set a desk height, then press Come to me. Moving people: wait. Someone still for 5 s: route around. Objects: route around. The red button on the table is the E-stop.</p>
+<canvas id="c" width="1600" height="1000"></canvas>
+<div class="row">
+<div class="card editor"><h2>Simulation room editor</h2>
+<div class="editor-grid">
+<label>Room appearance<select id="roomStyle"><option value="office">Office floor</option><option value="wood">Wood floor</option><option value="tile">Light tile</option><option value="warehouse">Workshop / concrete</option><option value="dark">Dark lab</option></select></label>
+<label>Block width (px)<input id="blockW" type="number" min="10" max="300" value="60"></label>
+<label>Block height (px)<input id="blockH" type="number" min="10" max="300" value="40"></label>
+<label>Slot gap (px)<input id="slotGap" type="number" min="56" max="160" value="70"></label>
+<label>Slot orientation<select id="slotDirection"><option value="horizontal">Horizontal wall (desk crosses up/down)</option><option value="vertical">Vertical wall (desk crosses left/right)</option></select></label>
+</div>
+<div class="btns" style="margin-top:10px"><button id="placeMode">Place blocks: off</button><button id="deleteBlock">Remove selected block</button><button id="clearBlocks">Clear added blocks</button><button id="runSlot">Build slot test</button></div>
+<p class="hint" id="editHint">Choose “Place blocks” then click the room to add a block. Select and drag an added block to reposition it. Added blocks affect the simulator's collision and route planning. These edits are for simulation only.</p>
+</div>
+<div class="card phone"><h2>Your phone</h2>
+<button class="go" id="go">Come to me</button>
+<button class="back" id="back">Return to start</button>
+<button class="back" id="learn">Learn the room</button>
+<button class="back" id="forget" style="border-color:var(--line);font-weight:500;font-size:14px;padding:8px">Forget map</button>
+<button class="back" id="cord">Plug in cord</button>
+<label style="display:flex;gap:8px;align-items:center;margin:0 0 6px;font-size:14px">Dock type <select id="dm"><option value="manual" selected>Manual cord</option><option value="auto">Auto contacts</option></select></label>
+<label style="display:flex;gap:8px;align-items:center;margin:0 0 8px;font-size:14px"><input type="checkbox" id="il" checked> Interlock: refuse to drive while plugged in</label>
+<label style="display:flex;gap:8px;align-items:center;margin:0 0 8px;font-size:14px"><input type="checkbox" id="ar"> Return automatically 10 s after arriving</label>
+<button class="go es" id="es">E-STOP</button>
+<label>Sim speed <select id="wp"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option><option value="4">4x</option></select></label>
+<label>Desk height: <b id="hv">105</b> cm<input type="range" id="hs" min="63" max="128" value="105" style="width:100%"></label>
+<div>Status: <span id="st">Idle</span></div>
+<div class="btns" style="margin-top:8px"><button id="stop">Stop</button><button id="rst">Reset scene</button><button id="slot">Slot test</button></div>
+<div class="btns" style="margin-top:8px"><button id="add">+ Walker</button><button id="walk">Walker crosses path</button><button id="sit">Walker stops in path</button><button id="talk">Add talking pair</button><button id="obs">Drop a box</button></div></div>
+<div class="card stats"><h2>Safety log</h2>
+<div>Desk height now: <b id="dh">105 cm</b></div>
+<div>Peak acceleration: <b id="pa">0.00</b> m/s&sup2;</div>
+<div>Slip margin: <b id="sl">–</b> <small style="color:var(--mut)">(vs 2.5 m/s&sup2; slip/tip threshold)</small></div>
+<div>Contacts: <b id="ct">0</b> <small style="color:var(--mut)">(real desk footprint)</small></div><div>Safety holds: <b id="sh">0</b> <small style="color:var(--mut)">(supervisor braked)</small></div><div>Robot battery: <b id="rb">-</b></div><div>UPS battery: <b id="ab">-</b></div><div>Dock: <b id="dk">-</b></div><div>Cord: <b id="cs">-</b></div><div>Room explored: <b id="ex">-</b></div><div>Remembered obstacles: <b id="rm">-</b></div><div>Closest gap: <b id="gp">–</b></div>
+<div>Recovery: <b id="rc">–</b></div>
+<div>Heading: <b id="hg">–</b></div>
+<div>People in path: <b id="pp">–</b></div>
+<div style="color:var(--mut);font-size:13px;margin-top:6px">Person dots: <b style="color:#d62fd6">magenta</b> = moving (wait), <b style="color:#f5c400">yellow</b> = stopped &lt;5 s (wait), <b style="color:var(--hit)">orange</b> = stopped &gt;5 s or object (route). Labels: sit / talk / walk.</div>
+<label><input type="checkbox" id="ray" checked> Show lidar rays</label>
+<label><input type="checkbox" id="cost"> Show remembered hits</label></div>
+<div class="card how"><h2>How it works</h2><ol>
+<li>Two corner lidars each sweep a full 360°; the desk's own body masks rays aimed inward, and the two opposite mounts together cover every direction.</li>
+<li>Hits go into a grid map. Obstacles are grown by the desk's real rectangle, once for each of 8 orientations, so the planner knows what fits through a gap and which way the desk must face to do it.</li>
+<li>A* searches over position <i>and</i> orientation to a spot about arm's length from you, re-planned 5× per second. It can turn the desk in place wherever there's room and prefers keeping the long axis along the direction of travel. Blue ghost outlines show where it plans to turn.</li>
+<li>The follower drives to each planned turn point, stops, rotates to the planned orientation, then carries on, and it won't drive while facing the wrong way for the gap ahead.</li>
+<li><b>Person classification:</b> each tracked blob has a still timer. Moving → wait. Still &lt;5 s → wait; they might move again. Still &gt;5 s, or never moved → routable; the path bends around them.</li>
+<li>Speed is capped by a stopping-distance model (v = √(2·a·gap)) over the swept corridor.</li>
+<li>If the desk commands motion but doesn't move for a second, recovery kicks in: rotate to align, back off, or spin to re-scan.</li>
+<li>The desk no longer lowers before driving. It stays at your height for the whole trip, so nothing has to be wired into the Humanscale controls. A tall desk is top-heavy, so keep loose items off it and expect the speed and braking limits to matter more on real hardware.</li>
+<li>Acceleration is capped well below the slip threshold of typical desk items.</li><li><b>Safety supervisor:</b> just before the wheels, the desk's real 2-by-1 footprint is swept along its motion against the live lidar points, and speed is capped so it can always stop in time. Yaw that would swing a corner into something is refused. If no route fits with the full margin, it re-plans with a tighter one.</li><li><b>Parking:</b> the desk's forward is the back of its monitor, so you stand on the keyboard side. It aims for the spot directly above or below you, so the table ends up horizontal on screen, then turns to face you (horizontal when it can, broadside to you otherwise). It turns while it drives (swerve), and only stops for a turn if the plan has no room to do it on the move.</li><li><b>Charging:</b> the start spot is a dock pad. When the desk is parked there, still and facing forward, charging starts by itself for both the robot battery and the UPS battery. If either gets low while it's idle, it drives itself back to the dock.</li><li><b>Getting stuck:</b> a short align / back-off / spin first. If it gets stuck again soon after, it backs out along the trail it came in on (those positions and orientations are known to be clear) and re-plans. If a moving person has held it up for ~8 s without clearing, it stops waiting and routes around them.</li><li><b>Map memory:</b> obstacles the lidar sees steadily are remembered between trips (and between visits, in this browser) until a later lidar ray passes through that spot. The planner prefers routes through space it has already seen and avoids places where people often are. <i>Learn the room</i> drives a mapping tour; <i>Forget map</i> wipes it. Tick Costmap to see what it knows: purple = remembered obstacles, orange = busy, grey = never seen.</li><li><b>Charging station (manual cord):</b> pick <i>Manual cord</i> and use Plug in cord / Unplug cord. With the interlock on, the wheels get no command at all while the cord is plugged in (any trip is cancelled, even one already under way) and the desk flashes an alert. Turn the interlock off to see the second layer: the breakaway connector lets go at about 0.9 m and the trip continues. <i>Auto contacts</i> keeps the earlier hands-free dock.</li><li><b>Return:</b> <i>Return to start</i> sends it back to the dashed outline with the same lowering, driving, safety and turning logic, and it parks there horizontal with the monitor's back forward. The checkbox does it automatically 10 s after it has arrived and raised.</li></ol></div>
+</div>
+<div class="card" style="margin-top:12px"><h2>Concept model - drag to rotate</h2><div id="m" style="height:400px"></div><button id="zm" style="margin-top:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:13px;cursor:pointer">Zoom to a swerve module</button><ul style="margin:8px 0 0;padding-left:18px;color:var(--mut);font-size:14px"><li>Standing desk top on lift columns, over an FRC-style frame of 2x1 aluminum tube. Four 3 in MAXSwerve modules sit inboard of the rails, drawn to REV's published dimensions (133.1 mm tabs, 100.5 mm body, 171.5 mm tall with the NEO, 3 in x 7/8 in wheel). Motor sizes and plate details are approximate. Use <i>Zoom to a swerve module</i> for a close look.</li><li><b>Line-interactive UPS</b> bolted under the desktop, so it rides up and down with the desk. It powers the computer, lidars and desk and recharges itself whenever the dock gives it wall power. It adds to the load on the lift columns and raises the center of gravity a little, compared with mounting it low in the frame.</li><li>Robot's own FRC 12V pack on the front rail, drivetrain only.</li><li>Two lidars on outriggers at opposite frame corners, at a fixed low height. They do not move when the desk height changes, so they always scan the same plane.</li><li>Red E-stop on top. Wire it to cut wheels and desk motors in hardware, not code.</li></ul></div></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const W=800,H=500,CS=10,GW=80,GH=50,TR=34,INF=56,HW=28,HH=18;
+const VMAX=40, VSLOW=14, ABRAKE=60;            // VMAX was 60 px/s (~1.2 m/s); 40 px/s is ~0.8 m/s
+const SAFE_DEC=45, STOP_GAP=5, SAFE_M=2, INF_T=TR+8, EMERG_DEC=120; // emergency brake 120 px/s^2 (2.4 m/s^2), just under SLIP_A // safety supervisor + relaxed re-plan inflation
+const LIDAR_RAYS=90;
+const LIDARS=[[HW*0.85, HH*0.85],[-HW*0.85,-HH*0.85]];
+const REC_ALIGN_T=1.2, REC_BACKOFF_T=1.2, REC_SPIN_T=2.0;
+const STUCK_TRIGGER=1.0;
+const YAW_RATE_MAX=1.8, YAW_GAIN=3.2;   // swerve: yaw is independent of translation (was 1.1 rad/s)
+const HEADING_FILTER_TC=1.5, HEADING_COMMIT=0.35, HEADING_SETTLE=0.06, SPEED_DRIVE_MIN=5;
+const MOVE_THRESH=3, STAND_WAIT=5.0;
+const SLIP_A=2.5;
+// ---------------------------------------------------------------------------
+const rects=[{x:220,y:170,w:40,h:150},{x:450,y:60,w:150,h:40},{x:520,y:300,w:120,h:70}];
+const RECTS0=rects.map(r=>({...r}));
+let placeBlocks=false, selectedBlock=null, blockDrag=null, roomStyle='office';
+const HOME={x:85,y:95};   // starting spot (centre of the grid cell the desk starts in); parks horizontal, monitor-back forward
+const circs=[{x:400,y:260,r:18}];
+const CIRCS0=circs.map(c=>({...c}));
+const offs=[];for(let a=-5;a<=5;a++)for(let b=-5;b<=5;b++)if(a*a+b*b<=INF*INF/CS/CS)offs.push([a,b]);
+const offsT=[];for(let a=-5;a<=5;a++)for(let b=-5;b<=5;b++)if(a*a+b*b<=INF_T*INF_T/CS/CS)offsT.push([a,b]);
+const last=new Float32Array(GW*GH).fill(-99);
+const $=id=>document.getElementById(id);
+const since=new Float32Array(GW*GH).fill(-99),ESX=-14,HMIN=.63,LIFT=.05;
+// Static map. The old costmap forgot every lidar hit after 1.2 s, so walls beyond lidar range (260 px) vanished and
+// the desk would drive off, rediscover them, and come back, forever. Now: a cell seen occupied for >=1 s (and not a
+// moving person) is remembered for up to 90 s, and any lidar ray that passes through it clears it.
+const smap=new Float32Array(GW*GH); let clrRays=[];
+// Long-term memory. smap = static obstacles (kept until a lidar ray passes through the cell). seen = cells the lidar has
+// ever covered. traffic = where people tend to be. All three persist between trips and, in this browser, between visits.
+const seen=new Uint8Array(GW*GH), traffic=new Float32Array(GW*GH);
+let sceneKey='default',mapChanged=false,lastSaveT=0,mapCalls=0,tourI=0,tourT=0,readyPending=false,wasCharging=false,cordIn=false,breakaways=0,alertT=0;
+const RISK=new Float32Array(GW*GH), UNK_PEN=.15, TRAF_K=.015, TRAF_MAX=.4;
+const TOURS={default:[[160,430],[420,430],[700,420],[730,240],[540,200],[330,140],[330,340],[150,260]],
+             slot:[[160,120],[620,120],[400,200],[400,330],[180,430],[650,430]]};
+function tourPts(){return TOURS[sceneKey]||TOURS.default}
+function dest(){
+  if(mode==='home')return HOME;
+  if(mode==='tour'){const p=tourPts()[Math.min(tourI,tourPts().length-1)];return{x:p[0],y:p[1]}}
+  return user;
+}
+function mapKey(){return 'summonMap:'+sceneKey}
+function clearMapArrays(){smap.fill(0);seen.fill(0);traffic.fill(0);mapChanged=false}
+function forgetMap(){clearMapArrays();try{localStorage.removeItem(mapKey())}catch(e){}}
+function saveMap(){
+  try{
+    const n=GW*GH,a=new Uint8Array(3*n);
+    for(let i=0;i<n;i++){a[i]=smap[i]>0?1:0;a[n+i]=seen[i];a[2*n+i]=Math.min(255,Math.round(traffic[i]*6))}
+    let s='';for(let i=0;i<a.length;i+=4096)s+=String.fromCharCode.apply(null,a.subarray(i,i+4096));
+    localStorage.setItem(mapKey(),btoa(s));
+  }catch(e){}
+}
+function loadMap(){
+  try{
+    const raw=localStorage.getItem(mapKey());if(!raw)return false;
+    const s=atob(raw),n=GW*GH;if(s.length!==3*n)return false;
+    for(let i=0;i<n;i++){smap[i]=s.charCodeAt(i)?.001:0;seen[i]=s.charCodeAt(n+i);traffic[i]=s.charCodeAt(2*n+i)/6}
+    return true;
+  }catch(e){return false}
+}
+let warp=1,peakA=0,deskH=1.05,userH=1.05,estop=false,T,people,path=[],goal=null,hits=[],time=0,active=false,contacts=0,inC=false,minGap=1e9,rp=0,drag=false,parkTh=null,parkT=0,mode='user',didArrive=false,arT=0,bat={r:80,a:70},charging=false,lowT=0,prevDeskH=1.05,trail=[],retreats=0,waitT=0,retreatD=0,noPathT=0,lowSpeedT=0,patientUntil=0,lastRecEnd=-99;
+let stuckTime=0,recovery=null,recoveryT=0;
+let headTarget=0.3, headState='SETTLED';
+// Phone joystick commands are simulation-only; values are normalized to [-1, 1].
+let manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35,lastCommandAt:0};
+let peopleInPathCount=0, safetyHolds=0, holdLatch=false, squeeze=false, squeezeUntil=0;
+const user={x:700,y:430,r:13};
+const modAng=[0,0,0,0];
+
+// --- Person factory functions ---
+function mkWalker(x,y){return{x,y,r:13,tx:x,ty:y,t:0,sp:22+Math.random()*10,type:'walker',
+  lastX:x,lastY:y,stillTime:0,settled:false,convertOnArrival:false};}
+function mkSitter(x,y){return{x,y,r:13,tx:x,ty:y,t:1e9,sp:0,type:'sitter',
+  lastX:x,lastY:y,stillTime:999,settled:true};}
+function mkTalker(x,y){return{x,y,r:13,tx:x,ty:y,t:1e9,sp:2.5,type:'talker',
+  anchorX:x,anchorY:y,jitterPhase:Math.random()*6.28,lastX:x,lastY:y,stillTime:0,settled:false};}
+
+function setSt(t,c){$('st').textContent=t;$('st').className=c||''}
+
+function reset(){
+  manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35};
+  rects.length=0;for(const r of RECTS0)rects.push({...r});   // Reset scene also restores the normal room
+  selectedBlock=null;blockDrag=null;placeBlocks=false;if($('placeMode'))$('placeMode').textContent='Place blocks: off';
+  T={x:HOME.x,y:HOME.y,th:0,vx:0,vy:0,w:0};   // starts docked on the charging pad
+  people=[
+    // Two people seated at the two "desks" (rects). Stationary, already routable.
+    mkSitter(285, 220),
+    mkSitter(525, 135),
+    // Two people standing and talking. Just started — will settle after 5 s.
+    mkTalker(340, 375),
+    mkTalker(378, 385),
+    // Two people walking around.
+    mkWalker(620, 400),
+    mkWalker(160, 380),
+  ];
+  last.fill(-99); since.fill(-99); clrRays=[]; circs.length=0; for(const c of CIRCS0)circs.push({...c}); parkTh=null; mode='user'; didArrive=false; arT=0; readyPending=false; cordIn=false; breakaways=0; alertT=0; bat.r=80; bat.a=70; charging=false; lowT=0; trail=[]; retreats=0; waitT=0; lowSpeedT=0; patientUntil=0; lastRecEnd=-99;
+  estop=false; deskH=userH=1.05;
+  $('hs').value=105; $('hv').textContent='105';
+  path=[]; goal=null; active=false; contacts=0; minGap=1e9; peakA=0;
+  user.x=700; user.y=430;
+  stuckTime=0; recovery=null; recoveryT=0; safetyHolds=0; holdLatch=false; squeeze=false; squeezeUntil=0;
+  headTarget=T.th; headState='SETTLED';
+  setSt('Idle',''); $('rc').textContent='–'; $('hg').textContent='–'; $('sl').textContent='–'; $('pp').textContent='–';
+}
+
+const ang=(a,b)=>{let d=a-b;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d};
+
+function hitTestInfo(x,y){
+  if(x<0||y<0||x>W||y>H)return {type:'wall'};
+  for(const r of rects)if(x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)return {type:'rect'};
+  for(const c of circs)if(Math.hypot(x-c.x,y-c.y)<c.r)return {type:'circ'};
+  for(const p of people)if(Math.hypot(x-p.x,y-p.y)<p.r)return {type:'person',person:p};
+  if(Math.hypot(x-user.x,y-user.y)<user.r)return {type:'user'};
+  return null;
+}
+function hitTest(x,y){return hitTestInfo(x,y)!==null}
+
+function clearance(x,y){let m=1e9;
+for(const r of rects){const cx=Math.max(r.x,Math.min(x,r.x+r.w)),cy=Math.max(r.y,Math.min(y,r.y+r.h));m=Math.min(m,Math.hypot(x-cx,y-cy))}
+for(const c of circs)m=Math.min(m,Math.hypot(x-c.x,y-c.y)-c.r);
+for(const p of people)m=Math.min(m,Math.hypot(x-p.x,y-p.y)-p.r);
+return Math.min(m,Math.hypot(x-user.x,y-user.y)-user.r)}
+
+function rayExitBox(ox,oy,dx,dy,hx,hy,lx,ly){
+  // distance along (dx,dy) from (ox,oy) to leave the box [lx,hx]x[ly,hy]; default box is centred: [-hx,hx]x[-hy,hy]
+  if(lx===undefined){lx=-hx;ly=-hy}
+  let t=1e9;
+  if(dx>1e-6) t=Math.min(t,(hx-ox)/dx); else if(dx<-1e-6) t=Math.min(t,(lx-ox)/dx);
+  if(dy>1e-6) t=Math.min(t,(hy-oy)/dy); else if(dy<-1e-6) t=Math.min(t,(ly-oy)/dy);
+  return t;
+}
+
+// Analytic lidar: exact ray/shape intersections (the old version stepped 3 px at a time through every object).
+function spanCircle(ox,oy,c,s,cx,cy,r){
+  const dx=cx-ox,dy=cy-oy,b=dx*c+dy*s,cc=dx*dx+dy*dy-r*r,disc=b*b-cc;
+  if(disc<0)return null;const q=Math.sqrt(disc);return [b-q,b+q];
+}
+function spanRect(ox,oy,c,s,r){
+  let t0=-1e9,t1=1e9;
+  if(Math.abs(c)<1e-9){if(ox<r.x||ox>r.x+r.w)return null}
+  else{let a=(r.x-ox)/c,b=(r.x+r.w-ox)/c;if(a>b){const q=a;a=b;b=q}t0=Math.max(t0,a);t1=Math.min(t1,b)}
+  if(Math.abs(s)<1e-9){if(oy<r.y||oy>r.y+r.h)return null}
+  else{let a=(r.y-oy)/s,b=(r.y+r.h-oy)/s;if(a>b){const q=a;a=b;b=q}t0=Math.max(t0,a);t1=Math.min(t1,b)}
+  return t0>t1?null:[t0,t1];
+}
+function mapUpdate(){
+  for(const[ox,oy,c,s,d0,d1]of clrRays)for(let d=d0;d<d1;d+=5){
+    const gx=(ox+c*d)/CS|0,gy=(oy+s*d)/CS|0;
+    if(gx>=0&&gx<GW&&gy>=0&&gy<GH){const k=gy*GW+gx;if(smap[k]){smap[k]=0;mapChanged=true}if(!seen[k]){seen[k]=1;mapChanged=true}}
+  }
+  for(const q of hits){
+    const gx=q.x/CS|0,gy=q.y/CS|0;
+    if(!(gx>=0&&gx<GW&&gy>=0&&gy<GH))continue;
+    const k=gy*GW+gx;
+    if(!seen[k]){seen[k]=1;mapChanged=true}
+    if(q.type==='person'){traffic[k]=Math.min(40,traffic[k]+.01);continue}   // people are tracked separately, never stored as furniture
+    if(q.type==='user')continue;
+    if(time-since[k]>=1){if(!smap[k])mapChanged=true;smap[k]=time}
+  }
+  if((++mapCalls)%60===0)for(let i=0;i<GW*GH;i++)if(traffic[i]>0)traffic[i]*=.9982;   // busy spots fade slowly (~9 min)
+  if(time-lastSaveT>10){lastSaveT=time;if(mapChanged){saveMap();mapChanged=false}}
+}
+function scan(){
+  hits=[]; peopleInPathCount=0; clrRays=[];
+  const R=260;
+  const c0=Math.cos(T.th), s0=Math.sin(T.th);
+  for(const L of LIDARS){
+    const oxw=T.x+c0*L[0]-s0*L[1];
+    const oyw=T.y+s0*L[0]+c0*L[1];
+    for(let i=0;i<LIDAR_RAYS;i++){
+      const aw=T.th+i/LIDAR_RAYS*6.2832;
+      const c=Math.cos(aw), s=Math.sin(aw);
+      const al=aw-T.th;
+      const tExit=rayExitBox(L[0],L[1],Math.cos(al),Math.sin(al),HW,HH);
+      const d0=Math.max(tExit+2,3);          // rays start outside the desk's own body
+      let best=1e9,info=null;
+      const consider=(sp,inf)=>{ if(!sp||sp[1]<d0)return; const t=Math.max(sp[0],d0); if(t<best){best=t;info=inf} };
+      for(const r of rects)consider(spanRect(oxw,oyw,c,s,r),{type:'rect'});
+      for(const q of circs)consider(spanCircle(oxw,oyw,c,s,q.x,q.y,q.r),{type:'circ'});
+      for(const p of people)consider(spanCircle(oxw,oyw,c,s,p.x,p.y,p.r),{type:'person',person:p});
+      consider(spanCircle(oxw,oyw,c,s,user.x,user.y,user.r),{type:'user'});
+      const tw=rayExitBox(oxw,oyw,c,s,W,H,0,0);   // map border
+      if(tw>=d0&&tw<best){best=tw+0.5;info={type:'wall'}}
+      clrRays.push([oxw,oyw,c,s,d0,(info&&best<R)?best-12:R]);   // free space up to just before the hit
+      if(!info||best>=R)continue;
+      const d=best,x=oxw+c*d,y=oyw+s*d;
+      const isPerson=info.type==='person';
+      const settled=isPerson&&info.person.settled;
+      hits.push({a:aw,d,hit:true,x,y,ox:oxw,oy:oyw,dyn:isPerson&&!settled,settledPerson:settled,type:info.type});
+      const gx=x/CS|0, gy=y/CS|0;
+      if(gx>=0&&gx<GW&&gy>=0&&gy<GH){
+        const k=gy*GW+gx;
+        if(time-last[k]>.4) since[k]=time;
+        last[k]=time;
+      }
+    }
+  }
+}
+
+function astar(blk,s,g){const N=GW*GH,G=new Float32Array(N).fill(1e9),P=new Int32Array(N).fill(-1),C=new Uint8Array(N),Hp=[];
+const hf=i=>{const dx=Math.abs(i%GW-g%GW),dy=Math.abs((i/GW|0)-(g/GW|0));return Math.max(dx,dy)+0.414*Math.min(dx,dy)};
+const push=(f,i)=>{Hp.push([f,i]);let k=Hp.length-1;while(k>0){const p=(k-1)>>1;if(Hp[p][0]<=Hp[k][0])break;[Hp[p],Hp[k]]=[Hp[k],Hp[p]];k=p}};
+const pop=()=>{const t=Hp[0],l=Hp.pop();if(Hp.length){Hp[0]=l;let k=0;for(;;){const a=2*k+1,b=a+1;let m=k;if(a<Hp.length&&Hp[a][0]<Hp[m][0])m=a;if(b<Hp.length&&Hp[b][0]<Hp[m][0])m=b;if(m===k)break;[Hp[m],Hp[k]]=[Hp[k],Hp[m]];k=m}}return t};
+G[s]=0;push(hf(s),s);
+while(Hp.length){const i=pop()[1];if(C[i])continue;C[i]=1;if(i===g)break;const x=i%GW,y=i/GW|0;
+for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;
+const j=ny*GW+nx;if(blk[j]||C[j])continue;if(dx&&dy&&(blk[y*GW+nx]||blk[ny*GW+x]))continue;
+const ng=G[i]+(dx&&dy?1.414:1);if(ng<G[j]){G[j]=ng;P[j]=i;push(ng+hf(j),j)}}}
+if(!C[g])return null;const out=[];for(let i=g;i!==-1;i=P[i])out.push({x:(i%GW+.5)*CS,y:((i/GW|0)+.5)*CS});return out.reverse()}
+
+// ===== Orientation-aware planning =====
+// State = (cell, orientation). The desk is a 2*HW x 2*HH rectangle, so what fits through a gap depends on
+// which way it faces. Orientation k means the long axis points at k*22.5 deg (the desk is symmetric, so mod 180).
+// Each orientation gets its own blocked grid: every obstacle cell is grown by the real rotated footprint
+// (plus a margin). A* then moves in 8 directions and can also rotate in place +-22.5 deg wherever both
+// orientations are free, so it inserts a turn exactly where there is room for one.
+const NKF=8, NK=16, DK=Math.PI/NKF, ALIGN_PEN=0.25, ROT_COST=1.0, ROT_MOVE=0.5, MG_STRICT=7, MG_TIGHT=2;
+const DIRS=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+const STEPC=[];for(let k=0;k<NK;k++)STEPC.push(DIRS.map(([dx,dy])=>Math.hypot(dx,dy)*(1+ALIGN_PEN*Math.abs(Math.sin(Math.atan2(dy,dx)-k*DK)))));
+function makeKernels(mg){
+  const out=[];
+  for(let k=0;k<NKF;k++){
+    const c=Math.cos(k*DK),s=Math.sin(k*DK),ac=Math.abs(c),as=Math.abs(s),hc=CS/2;
+    const ex=(HW+mg)*ac+(HH+mg)*as+hc, ey=(HW+mg)*as+(HH+mg)*ac+hc;
+    const hu=HW+mg+hc*(ac+as), hv=HH+mg+hc*(ac+as), R=Math.ceil(Math.max(ex,ey)/CS)+1, list=[];
+    for(let b=-R;b<=R;b++)for(let a=-R;a<=R;a++){
+      const dx=a*CS,dy=b*CS;
+      if(Math.abs(dx)>ex||Math.abs(dy)>ey)continue;
+      if(Math.abs(dx*c+dy*s)>hu||Math.abs(-dx*s+dy*c)>hv)continue;
+      list.push([a,b]);
+    }
+    out.push(list);
+  }
+  return out;
+}
+const KERN_STRICT=makeKernels(MG_STRICT), KERN_TIGHT=makeKernels(MG_TIGHT);
+function angleNear(thPlan,thCur){return thPlan+Math.round((thCur-thPlan)/(2*Math.PI))*2*Math.PI}   // full turn: the side that faces you matters
+
+function buildOccupancy(){
+  const occ=new Uint8Array(GW*GH);
+  for(let i=0;i<GW*GH;i++)if((time-last[i]<1.2&&last[i]-since[i]>=1)||smap[i]>0)occ[i]=1;
+  // Moving people are waited for, not routed around: drop only THEIR own cells (not the furniture next to them).
+  for(const p of people){
+    if(p.settled||(time<patientUntil&&Math.hypot(p.x-T.x,p.y-T.y)<150))continue;
+    const cx=p.x/CS|0,cy=p.y/CS|0,rr=p.r+3,r=Math.ceil(rr/CS);
+    for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+      if(Math.hypot(dx*CS,dy*CS)>rr)continue;const x=cx+dx,y=cy+dy;
+      if(x>=0&&x<GW&&y>=0&&y<GH)occ[y*GW+x]=0;
+    }
+  }
+  // Settled people are obstacles, with a comfort margin.
+  for(const p of people){
+    if(!(p.settled||(time<patientUntil&&Math.hypot(p.x-T.x,p.y-T.y)<150)))continue;
+    const cx=p.x/CS|0,cy=p.y/CS|0,rr=p.r+8,r=Math.ceil(rr/CS);
+    for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+      if(Math.hypot(dx*CS,dy*CS)>rr)continue;const x=cx+dx,y=cy+dy;
+      if(x>=0&&x<GW&&y>=0&&y<GH)occ[y*GW+x]=1;
+    }
+  }
+  return occ;
+}
+function buildBlocked(occ,kern,mg){
+  const NC=GW*GH,B=[];for(let k=0;k<NKF;k++)B.push(new Uint8Array(NC));
+  for(let i=0;i<NC;i++){
+    if(!occ[i])continue;const cx=i%GW,cy=i/GW|0;
+    for(let k=0;k<NKF;k++){const bk=B[k];for(const[a,b]of kern[k]){const x=cx+a,y=cy+b;if(x>=0&&x<GW&&y>=0&&y<GH)bk[y*GW+x]=1}}
+  }
+  for(let k=0;k<NKF;k++){
+    const ac=Math.abs(Math.cos(k*DK)),as=Math.abs(Math.sin(k*DK)),ex=HW*ac+HH*as+mg,ey=HW*as+HH*ac+mg;
+    for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){const px=(x+.5)*CS,py=(y+.5)*CS;if(px<ex||px>W-ex||py<ey||py>H-ey)B[k][y*GW+x]=1}
+  }
+  const sx=T.x/CS|0,sy=T.y/CS|0;
+  for(let k=0;k<NKF;k++)for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const x=sx+a,y=sy+b;if(x>=0&&x<GW&&y>=0&&y<GH)B[k][y*GW+x]=0}
+  return B;
+}
+const _NS=GW*GH*NK,_G=new Float32Array(_NS),_P=new Int32Array(_NS),_Cl=new Uint8Array(_NS),_HF=new Float32Array(_NS*10),_HI=new Int32Array(_NS*10);
+const HW_W=1.5, SECTOR_PEN=45, MAX_POPS=64000;   // heuristic weight, cost of NOT parking above/below you, search cap
+function planOri(B,Bt){
+  const NC=GW*GH,G=_G,P=_P,Cl=_Cl;G.fill(1e9);P.fill(-1);Cl.fill(0);
+  const goHome=mode==='home'||mode==='tour',dd=dest(),gx=dd.x,gy=dd.y;
+  // goal = (cell, orientation). Near you: a ring cell AND the parking orientation for that cell, so the turn to face
+  // you is planned (and footprint-checked) on the way in. Cells directly above/below you (table horizontal) are free;
+  // other ring cells carry a penalty, so the desk takes them only when the horizontal spots mean a big detour.
+  const ring=new Uint8Array(NC),kPk=new Int8Array(NC).fill(-1),gpen=new Float32Array(NC),hfa=new Float32Array(NC);
+  for(let c=0;c<NC;c++)hfa[c]=HW_W*Math.max(0,(Math.hypot((c%GW+.5)*CS-gx,((c/GW|0)+.5)*CS-gy)-(goHome?0:76))/CS);
+  if(goHome){const hc=(Math.max(0,Math.min(GH-1,gy/CS|0)))*GW+(Math.max(0,Math.min(GW-1,gx/CS|0)));ring[hc]=1;kPk[hc]=mode==='tour'?-2:0}
+  else for(let c=0;c<NC;c++){
+    const cx=(c%GW+.5)*CS,cy=((c/GW|0)+.5)*CS,d=Math.hypot(cx-user.x,cy-user.y);
+    if(Math.abs(d-70)<6){
+      ring[c]=1;gpen[c]=Math.abs(cx-user.x)<.7*Math.abs(cy-user.y)?0:SECTOR_PEN;
+      const u=Math.atan2(user.y-cy,user.x-cx),thP=u-Math.PI/2,thH=Math.sin(u)>0?0:Math.PI,t=Math.abs(ang(thP,thH))<=.65?thH:thP;
+      kPk[c]=((Math.round(t/DK)%NK)+NK)%NK;
+    }
+  }
+  let hn=0;
+  const push=(f,i)=>{let k=hn++;while(k>0){const p=(k-1)>>1;if(_HF[p]<=f)break;_HF[k]=_HF[p];_HI[k]=_HI[p];k=p}_HF[k]=f;_HI[k]=i};
+  const pop=()=>{const ri=_HI[0],lf=_HF[--hn],li=_HI[hn];if(hn>0){let k=0;for(;;){const a=2*k+1;if(a>=hn)break;let m=a;if(a+1<hn&&_HF[a+1]<_HF[a])m=a+1;if(_HF[m]>=lf)break;_HF[k]=_HF[m];_HI[k]=_HI[m];k=m}_HF[k]=lf;_HI[k]=li}return ri};
+  const sx=Math.max(0,Math.min(GW-1,T.x/CS|0)),sy=Math.max(0,Math.min(GH-1,T.y/CS|0));
+  const k0=((Math.round(T.th/DK)%NK)+NK)%NK;
+  const s0=k0*NC+sy*GW+sx;G[s0]=0;push(hfa[s0%NC],s0);
+  let goalS=-1,pops=0,bestS=-1,bestC=1e18;
+  while(hn>0){
+    const e=pop();
+    if(e<0){goalS=-e-1;break}                       // a goal entry reached the top: it is the cheapest total
+    const s=e;if(Cl[s])continue;Cl[s]=1;
+    if(++pops>MAX_POPS)break;
+    const c=s%NC,k=(s/NC)|0;
+    if(ring[c]&&(kPk[c]===-2||k===kPk[c])){const tc=G[s]+gpen[c];if(tc<bestC){bestC=tc;bestS=s}push(tc,-(s+1));continue}
+    const x=c%GW,y=c/GW|0,bk=B[k&7];
+    for(let d=0;d<8;d++){
+      const dx=DIRS[d][0],dy=DIRS[d][1],nx=x+dx,ny=y+dy;
+      if(nx<0||ny<0||nx>=GW||ny>=GH)continue;
+      const nc=ny*GW+nx;
+      for(let dk=-1;dk<=1;dk++){
+        const nk=(k+dk+NK)%NK,gn=ring[nc]===1&&(kPk[nc]===-2||nk===kPk[nc])&&!Bt[nk&7][nc];   // the final parking spot may be tighter than a travel lane
+        const bn=gn?Bt[nk&7]:B[nk&7],bo=gn?Bt[k&7]:bk;
+        if(bn[nc])continue;
+        if(dk!==0&&(ROOMY[c]||ROOMY[nc]))continue;   // moving turns only where there's lots of room (see buildRoomy)
+        if(dk!==0&&(bo[nc]||bn[c]))continue;     // turning while moving: the mixed old/new footprints must be free too
+        if(dx&&dy&&(bn[y*GW+nx]||bn[ny*GW+x]||bo[y*GW+nx]||bo[ny*GW+x]))continue;
+        const ns=nk*NC+nc;if(Cl[ns])continue;
+        const ng=G[s]+STEPC[nk][d]+(dk?ROT_MOVE:0)+RISK[nc];
+        if(ng<G[ns]){G[ns]=ng;P[ns]=s;push(ng+hfa[nc],ns)}
+      }
+    }
+    for(const dk of[1,NK-1]){   // pure in-place turn: only when no combined move gets there
+      const nk=(k+dk)%NK;if(B[nk&7][c]||ROTOK[c])continue;   // in-place turns only where it could turn to ANY angle with margin (no exception for the start cell)
+      const ns=nk*NC+c;if(Cl[ns])continue;
+      const ng=G[s]+ROT_COST;
+      if(ng<G[ns]){G[ns]=ng;P[ns]=s;push(ng+hfa[c],ns)}
+    }
+  }
+  if(goalS<0)goalS=bestS;                          // search was cut short: use the best goal found so far
+  if(goalS<0)return [];
+  const out=[];
+  for(let s=goalS;s!==-1;s=P[s]){const c=s%NC,k=(s/NC)|0;out.push({x:(c%GW+.5)*CS,y:((c/GW|0)+.5)*CS,th:k*DK,k})}
+  return out.reverse();
+}
+// Try the spot above/below you first (table ends up horizontal); use it unless it means a big detour.
+function planBest(B){return planOri(B)}
+// A cell is "roomy" if nothing is within the desk's circumscribed radius + 22 px, in ANY orientation. Only there may the plan
+// combine a turn with a move: the planner knows nothing about yaw rate, and near walls/gaps a turn must be a deliberate in-place one.
+const ROOMY_R=Math.hypot(HW,HH)+22, ROT_R=Math.hypot(HW,HH)+8, roomOffs=[], rotOffs=[];
+for(let a=-8;a<=8;a++)for(let b=-8;b<=8;b++){const d=Math.hypot(a*CS,b*CS);if(d<=ROOMY_R+CS/2)roomOffs.push([a,b]);if(d<=ROT_R+CS/2)rotOffs.push([a,b])}
+let ROOMY=new Uint8Array(GW*GH),ROTOK=new Uint8Array(GW*GH);   // 1 = NOT roomy / NOT safe to rotate here
+function buildRoomy(occ,offs,rad){
+  const R=new Uint8Array(GW*GH);
+  for(let i=0;i<GW*GH;i++){
+    if(!occ[i])continue;const cx=i%GW,cy=i/GW|0;
+    for(const[a,b]of offs){const x=cx+a,y=cy+b;if(x>=0&&x<GW&&y>=0&&y<GH)R[y*GW+x]=1}
+  }
+  for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){const px=(x+.5)*CS,py=(y+.5)*CS;if(px<rad||px>W-rad||py<rad||py>H-rad)R[y*GW+x]=1}
+  return R;
+}
+function plan(){
+  const occ=buildOccupancy();
+  for(let i=0;i<GW*GH;i++)RISK[i]=(seen[i]?0:UNK_PEN)+Math.min(TRAF_MAX,traffic[i]*TRAF_K);ROOMY=buildRoomy(occ,roomOffs,ROOMY_R);ROTOK=buildRoomy(occ,rotOffs,ROT_R);
+  const Bt=buildBlocked(occ,KERN_TIGHT,MG_TIGHT);
+  let r;
+  if(time<squeezeUntil){   // flipping between a strict route and a tight one every replan made the desk go back and forth
+    r=planOri(Bt,Bt);squeeze=true;
+    if(!r.length){r=planOri(buildBlocked(occ,KERN_STRICT,MG_STRICT),Bt);squeeze=false}
+  }else{
+    r=planOri(buildBlocked(occ,KERN_STRICT,MG_STRICT),Bt);squeeze=false;
+    if(!r.length){   // nothing fits with the full margin: retry tighter (the supervisor still guards contact)
+      const r2=planOri(Bt,Bt);
+      if(r2.length){r=r2;squeeze=true;squeezeUntil=time+3}
+    }
+  }
+  path=r;goal=r.length?{x:r[r.length-1].x,y:r[r.length-1].y}:null;
+}
+
+function pushOut(p){
+  for(const r of rects){const cx=Math.max(r.x,Math.min(p.x,r.x+r.w)),cy=Math.max(r.y,Math.min(p.y,r.y+r.h));let dx=p.x-cx,dy=p.y-cy,d=Math.hypot(dx,dy);
+  if(d<p.r){if(d<1e-6){dx=0;dy=-1;d=1}p.x=cx+dx/d*p.r;p.y=cy+dy/d*p.r}}
+  for(const c of circs){const dx=p.x-c.x,dy=p.y-c.y,d=Math.hypot(dx,dy)||1,m=c.r+p.r;if(d<m){p.x=c.x+dx/d*m;p.y=c.y+dy/d*m}}
+  p.x=Math.max(p.r,Math.min(W-p.r,p.x));p.y=Math.max(p.r,Math.min(H-p.r,p.y));
+}
+
+function pushFromDesk(p){
+  const c=Math.cos(-T.th),s=Math.sin(-T.th),dx=p.x-T.x,dy=p.y-T.y;
+  const lx=c*dx-s*dy,ly=s*dx+c*dy,qx=Math.max(-HW,Math.min(HW,lx)),qy=Math.max(-HH,Math.min(HH,ly));
+  let ox=lx-qx,oy=ly-qy,d=Math.hypot(ox,oy);
+  if(d>=p.r)return;
+  if(d<1e-6){ // centre is inside the footprint: leave through the nearest face
+    if(HW-Math.abs(lx)<HH-Math.abs(ly)){ox=Math.sign(lx)||1;oy=0}else{ox=0;oy=Math.sign(ly)||1}
+    d=1;const px=qx+(ox>0?HW-qx:ox<0?-HW-qx:0),py=qy+(oy>0?HH-qy:oy<0?-HH-qy:0);
+    ox=px+ox*p.r;oy=py+oy*p.r;
+  }else{ox=qx+ox/d*p.r;oy=qy+oy/d*p.r}
+  const cb=Math.cos(T.th),sb=Math.sin(T.th);
+  p.x=T.x+cb*ox-sb*oy;p.y=T.y+sb*ox+cb*oy;
+}
+
+// ---- true-footprint helpers (desk is a 2*HW x 2*HH rectangle, not a circle) ----
+function deskPoly(){const c=Math.cos(T.th),s=Math.sin(T.th);return[[-HW,-HH],[HW,-HH],[HW,HH],[-HW,HH]].map(([x,y])=>[T.x+c*x-s*y,T.y+s*x+c*y])}
+function satOverlap(A,B){for(const P of[A,B])for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],nx=-(b[1]-a[1]),ny=b[0]-a[0];
+  let a0=1e9,a1=-1e9,b0=1e9,b1=-1e9;for(const p of A){const d=p[0]*nx+p[1]*ny;a0=Math.min(a0,d);a1=Math.max(a1,d)}
+  for(const p of B){const d=p[0]*nx+p[1]*ny;b0=Math.min(b0,d);b1=Math.max(b1,d)}if(a1<b0||b1<a0)return false}return true}
+function deskTouchesCircle(cx,cy,r){const c=Math.cos(-T.th),s=Math.sin(-T.th),dx=cx-T.x,dy=cy-T.y,lx=c*dx-s*dy,ly=s*dx+c*dy;
+  return Math.hypot(lx-Math.max(-HW,Math.min(HW,lx)),ly-Math.max(-HH,Math.min(HH,ly)))<r}
+function footprintHit(){const d=deskPoly();
+  for(const r of rects)if(satOverlap(d,[[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h]]))return true;
+  for(const c of circs)if(deskTouchesCircle(c.x,c.y,c.r))return true;
+  for(const p of people)if(deskTouchesCircle(p.x,p.y,p.r))return true;
+  return false}
+
+// ---- Safety supervisor: last stage before the wheels. Uses only what the lidar can see. ----
+// Translation: sweep the real rectangular footprint along the commanded AND the actual velocity,
+// and cap speed so the desk can always stop (at SAFE_DEC, below its real 60 px/s^2) before contact.
+// Rotation: refuse yaw that would swing a corner into a lidar point.
+function sweepFree(pts,ux,uy,m){
+  const co=Math.cos(T.th),si=Math.sin(T.th),udx=co*ux+si*uy,udy=-si*ux+co*uy,hx=HW+m,hy=HH+m;
+  let free=1e9;
+  for(const p of pts){
+    const qx=p[2],qy=p[3];
+    if(p[0]*ux+p[1]*uy<=0&&Math.abs(qx)<=hx&&Math.abs(qy)<=hy)continue;   // touching but moving away: allowed
+    let t0=0,t1=1e9,ok=true;
+    for(const[q,u,hh]of[[qx,udx,hx],[qy,udy,hy]]){
+      if(Math.abs(u)<1e-9){if(Math.abs(q)>hh){ok=false;break}}
+      else{let a=(q-hh)/u,b=(q+hh)/u;if(a>b){const t=a;a=b;b=t}t0=Math.max(t0,a);t1=Math.min(t1,b)}
+    }
+    if(ok&&t0<=t1&&t1>=0)free=Math.min(free,Math.max(0,t0));
+  }
+  return free;
+}
+function supervise(cx,cy,w){
+  const co=Math.cos(T.th),si=Math.sin(T.th),pts=[];
+  for(const h of hits){const dx=h.x-T.x,dy=h.y-T.y;if(dx*dx+dy*dy>180*180)continue;pts.push([dx,dy,co*dx+si*dy,-si*dx+co*dy])}
+  let held=false;
+  const v=Math.hypot(cx,cy),va=Math.hypot(T.vx,T.vy);
+  if(v>1||va>3){
+    const m=SAFE_M+Math.min(8,Math.abs(w)*10);
+    if(v>1){
+      const f=sweepFree(pts,cx/v,cy/v,m),vAllow=Math.sqrt(2*SAFE_DEC*Math.max(0,f-STOP_GAP));
+      if(vAllow<v){const k=vAllow/v;cx*=k;cy*=k;if(k<.05)held=true}
+    }
+    if(va>3){   // the desk is still coasting along its real velocity: brake if that path is short
+      const f=sweepFree(pts,T.vx/va,T.vy/va,m),vAllow=Math.sqrt(2*SAFE_DEC*Math.max(0,f-STOP_GAP));
+      if(va>vAllow){cx=0;cy=0;held=true}
+    }
+  }
+  if(Math.abs(w)>.02){
+    const hx=HW+3,hy=HH+3,dir=Math.sign(w),look=.06+Math.abs(w)*.3;
+    const pen=a=>{const c=Math.cos(T.th+a),s=Math.sin(T.th+a);let b=0;for(const p of pts){const qx=c*p[0]+s*p[1],qy=-s*p[0]+c*p[1];
+      const d=Math.min(hx-Math.abs(qx),hy-Math.abs(qy));if(d>b)b=d}return b};
+    const p0=pen(0);let worst=p0;for(let k=1;k<=4;k++)worst=Math.max(worst,pen(dir*look*k/4));
+    if(worst>0&&worst>p0+.5){w=0;held=true}
+  }
+  if(held&&!holdLatch&&(v>8||Math.abs(w)>.1))safetyHolds++;
+  holdLatch=held;
+  return [cx,cy,w,held];
+}
+
+// The desk's forward is the BACK OF THE MONITOR (local -y); you stand on the keyboard side (local +y).
+// Parking turns the desk to face you with its keyboard side. When you're roughly above or below it, that is
+// exactly horizontal on screen (long axis along x), so snap to it.
+// ---- batteries + dock ----
+// Robot battery (12 V SLA): drive.  UPS battery: computer, lidars, desk power, peripherals. A UPS charges itself whenever it has wall power.
+// Charging starts BY ITSELF when the desk is parked on the dock pad (the start spot), stationary, facing forward.
+// Low battery while idle sends it back to the dock on its own.  (Rates are sim-accelerated, %/s of sim time.)
+// ---- Charging station: manual cord ----
+// One AC cord with a magnetic breakaway connector. Two independent layers protect a forgotten cord:
+//  1) INTERLOCK: if the cord is plugged in, the desk refuses to drive and raises an alert.
+//  2) BREAKAWAY: if it is driven anyway (interlock off or failed), the connector lets go at ~0.9 m instead of dragging the plug.
+function manualDock(){return $('dm').value==='manual'}
+function cordLock(){return manualDock()&&cordIn&&$('il').checked}   // true = the wheels must not be commanded
+function cordBlocks(){
+  if(manualDock()&&cordIn&&$('il').checked){setSt('Cord is still plugged in: unplug it first (the desk will not drive)','bad');alertT=4;return true}
+  return false;
+}
+function dockedNow(){
+  return Math.hypot(T.x-HOME.x,T.y-HOME.y)<=4&&!active&&parkTh===null&&Math.hypot(T.vx,T.vy)<2&&Math.abs(ang(0,T.th))<.25;
+}
+function batStep(dt){
+  const sp=Math.hypot(T.vx,T.vy),lifting=Math.abs(deskH-prevDeskH)>1e-7;prevDeskH=deskH;
+  charging=manualDock()?cordIn:dockedNow();   // with a manual cord, plugged in IS charging (the cord only reaches the dock)
+  if(alertT>0)alertT-=dt;
+  if(cordIn&&Math.hypot(T.x-HOME.x,T.y-HOME.y)>45){cordIn=false;breakaways++;setSt('Cord pulled out: the breakaway connector released safely','warn')}
+  if(charging&&!wasCharging&&!active&&!readyPending&&$('st').textContent.startsWith('Ready - back'))setSt('Ready - docked and charging, desk at '+Math.round(deskH*100)+' cm','ok');
+  wasCharging=charging;
+  if(charging){bat.r+=.9*dt;bat.a+=.6*dt}
+  else{bat.r-=(.03+.35*sp/VMAX+.08*Math.abs(T.w))*dt;bat.a-=(.04+(lifting?.5:0))*dt}
+  bat.r=Math.max(0,Math.min(100,bat.r));bat.a=Math.max(0,Math.min(100,bat.a));
+  if(!active&&!estop&&!charging&&mode==='user'&&parkTh===null&&(bat.r<25||bat.a<20)){
+    lowT+=dt;if(lowT>=3){startReturn();setSt('Low battery - returning to the dock to charge','warn')}
+  }else lowT=0;
+}
+function startTour(){
+  manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
+  if(cordBlocks())return;
+  if(estop){setSt('E-stop engaged - release it first','bad');return}
+  mode='tour';active=true;parkTh=null;didArrive=false;arT=0;tourI=0;tourT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;
+  stuckTime=0;recovery=null;recoveryT=0;headTarget=T.th;headState='SETTLED';setSt('Learning the room: point 1 of '+tourPts().length,'');
+}
+function startReturn(){
+  manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
+  if(cordBlocks())return;
+  if(estop){setSt('E-stop engaged - release it first','bad');return}
+  mode='home';active=true;parkTh=null;didArrive=false;arT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;
+  headTarget=T.th;headState='SETTLED';setSt('Returning to start…','');
+}
+function startParking(){
+  const u=Math.atan2(user.y-T.y,user.x-T.x);
+  const thP=u-Math.PI/2;                                  // local +y points at you
+  const thH=Math.sin(u)>0?0:Math.PI;                      // horizontal table: you below -> 0, you above -> PI
+  const t=Math.abs(ang(thP,thH))<=.65?thH:thP;
+  parkTh=t+Math.round((T.th-t)/(2*Math.PI))*2*Math.PI;parkT=8;   // mod 2*PI here: which SIDE faces you matters
+}
+function update(dt){time+=dt;
+
+// ============ PEOPLE ============
+for(const p of people){
+  if(p.type==='sitter'){
+    // Stationary from the start; already settled. Occasionally shift slightly
+    // to look alive, but never enough to reset the still timer.
+    p.stillTime += dt;
+    p.settled = true;
+    continue;
+  }
+  // Update target by type
+  if(p.type==='talker'){
+    p.tx = p.anchorX + Math.sin(time*0.35 + p.jitterPhase)*1.8;
+    p.ty = p.anchorY + Math.cos(time*0.45 + p.jitterPhase)*1.8;
+    p.sp = 2.5;
+  } else { // walker
+    p.t -= dt;
+    if(p.t<=0 || Math.hypot(p.tx-p.x, p.ty-p.y)<8){
+      if(p.convertOnArrival){
+        p.type='sitter';
+        p.sp=0; p.t=1e9;
+        p.stillTime=0; p.settled=false;
+        p.convertOnArrival=false;
+      } else {
+        p.tx=40+Math.random()*(W-80);
+        p.ty=40+Math.random()*(H-80);
+        p.t=4+Math.random()*4;
+      }
+    }
+  }
+  // Velocity command
+  const dx=p.tx-p.x, dy=p.ty-p.y, d=Math.hypot(dx,dy)||1;
+  let vx=dx/d*p.sp, vy=dy/d*p.sp;
+  // Flee from the bot — only for walkers
+  if(p.type==='walker'){
+    const tx=p.x-T.x, ty=p.y-T.y, td=Math.hypot(tx,ty)||1;
+    if(td<80){vx+=tx/td*35; vy+=ty/td*35}
+  }
+  p.x += vx*dt;
+  p.y += vy*dt;
+  pushOut(p);
+  pushFromDesk(p);
+  // Motion classification
+  const moved = Math.hypot(p.x-p.lastX, p.y-p.lastY)/Math.max(dt,1e-3);
+  if(moved > MOVE_THRESH){
+    p.stillTime = 0;
+    p.settled = false;
+  } else {
+    p.stillTime += dt;
+    if(p.stillTime > STAND_WAIT) p.settled = true;
+  }
+  p.lastX = p.x; p.lastY = p.y;
+}
+
+scan();mapUpdate();
+rp-=dt; if(active&&rp<=0){const t0=performance.now();plan();const pd=(performance.now()-t0)/1000;rp=path.length?Math.min(.5,Math.max(.2,10*pd)):.7}
+
+let cx=0,cy=0,w=0;
+const tgt=dest(),du=Math.hypot(tgt.x-T.x,tgt.y-T.y);
+const low=true;   // the desk no longer lowers before driving: it stays at the user's height the whole trip
+if(estop){active=false;path=[];T.vx=T.vy=T.w=0;manualDrive={...manualDrive,x:0,y:0,turn:0};setSt('E-STOP engaged - click the red button to release','bad')}
+let thTarget=null,rotHere=false;
+if(active){
+  if(mode==='tour'?du<=8:mode==='home'?du<=3:(du<=80&&(!goal||Math.hypot(T.x-goal.x,T.y-goal.y)<=22||du<=70))){
+   if(mode==='tour'){
+     tourI++;rp=0;path=[];trail=[];
+     if(tourI>=tourPts().length){startReturn();setSt('Room mapped - returning to the dock','ok')}
+     else setSt('Learning the room: point '+(tourI+1)+' of '+tourPts().length,'');
+   }else{
+    active=false;
+    if(mode==='home'){parkTh=Math.round(T.th/(2*Math.PI))*2*Math.PI;parkT=8;didArrive=false;readyPending=true;setSt('Arrived – back at start, turning to park','ok')}
+    else{startParking();didArrive=true;arT=0;readyPending=true;setSt('Arrived – turning to face you','ok')}
+   }
+  }
+  else if(!path.length)setSt('No safe path – waiting','warn')
+  else{
+    let bi=0,bd=1e9;
+    for(let i=0;i<path.length;i++){const d=Math.hypot(path[i].x-T.x,path[i].y-T.y);if(d<bd){bd=d;bi=i}}
+    // ---- orientation-aware following ----
+    // Swerve: the desk turns WHILE it drives. It only stops for a turn if the plan has an in-place one (same spot,
+    // new orientation), which A* now uses only where no moving turn fits. Otherwise the yaw target is simply the
+    // orientation planned for the next waypoint, and speed drops only if yaw falls well behind.
+    let tiLimit=path.length-1,dRcur=1e9,hasR=false;
+    for(;;){
+      let Rj=-1;
+      for(let j=bi+1;j<path.length;j++){if(path[j].k!==path[j-1].k&&Math.hypot(path[j].x-path[j-1].x,path[j].y-path[j-1].y)<1){Rj=j-1;break}}
+      if(Rj<0)break;
+      const R=path[Rj],dR=Math.hypot(R.x-T.x,R.y-T.y);
+      if(dR>7){tiLimit=Rj;dRcur=dR;hasR=true;break}
+      let e=Rj;while(e+1<path.length&&Math.hypot(path[e+1].x-R.x,path[e+1].y-R.y)<1)e++;
+      const thT=angleNear(path[e].th,T.th);
+      if(Math.abs(ang(thT,T.th))<.12){bi=e;continue}
+      rotHere=true;thTarget=thT;break;
+    }
+    if(!rotHere)thTarget=angleNear(path[bi].th,T.th);
+    let ti=bi;
+    for(let i=bi;i<=tiLimit;i++){ti=i;if(Math.hypot(path[i].x-T.x,path[i].y-T.y)>38)break}
+    const dx=path[ti].x-T.x,dy=path[ti].y-T.y,d=Math.hypot(dx,dy)||1,da=Math.atan2(dy,dx);
+    const ca=Math.cos(da),sa=Math.sin(da);
+    let sp=(mode==='home'||mode==='tour')?Math.min(VMAX,8+du*.5):Math.min(VMAX,15+(du-80)*.5),ms=1e9,md=1e9;
+    let movingPeopleSeen=0, stillPeopleSeen=0;
+    for(const h of hits){
+      if(!h.hit)continue;
+      if(Math.hypot(h.x-user.x,h.y-user.y)<user.r+5)continue;
+      const a2=Math.abs(ang(h.a,da));
+      if(h.dyn&&time>=patientUntil){ if(a2<1.05){md=Math.min(md,h.d); if(a2<0.6) movingPeopleSeen++; } }
+      else     { if(a2<0.45) ms=Math.min(ms,h.d); }
+    }
+    peopleInPathCount = movingPeopleSeen;
+    let vSafe=VMAX;
+    for(const h of hits){
+      if(!h.hit)continue;
+      if(Math.hypot(h.x-user.x,h.y-user.y)<user.r+5)continue;
+      const a2=Math.abs(ang(h.a,da));
+      const inCone = (h.dyn&&time>=patientUntil) ? (a2<1.05) : false;   // people keep a comfort gap; static obstacles are handled exactly by the swept-footprint supervisor
+      if(!inCone)continue;
+      const gap=Math.max(0,h.d-TR-8);
+      if(gap<=0){vSafe=0;break}
+      const vb=Math.sqrt(2*ABRAKE*gap); if(vb<vSafe)vSafe=vb;
+    }
+    sp=Math.min(sp,vSafe);
+    if(hasR)sp=Math.min(sp,5+Math.sqrt(2*40*Math.max(0,dRcur-7)));      // arrive at the turn point slowly
+    sp*=Math.max(0,Math.min(1,(.7-Math.abs(ang(rotHere?thTarget:angleNear(path[bi].th,T.th),T.th)))/.35));   // yaw must keep up with the orientation the plan assumes HERE (<=20 deg: full speed)   // don't drive while facing the wrong way
+    if(recovery==='ALIGN'){
+      const err=ang(da,T.th); cx=0;cy=0;w=Math.max(-.6,Math.min(.6,err*2.5));
+      setSt('Aligning to gap','warn');
+    } else if(recovery==='BACKOFF'){
+      cx=-ca*VSLOW;cy=-sa*VSLOW;w=0; setSt('Backing off','warn');
+    } else if(recovery==='SPIN'){
+      cx=0;cy=0;w=0.5; setSt('Re-scanning','warn');
+    } else {
+      cx=dx/d*sp;cy=dy/d*sp;
+      const sd=Math.max(0,Math.min(1,(md-TR-22)/70)),ss=1,sc=Math.min(sd,ss);
+      if(sd===0&&sc>0)setSt('Waiting for person to move','warn');
+      else if(ss===0&&sc>0)setSt('Blocked - re-routing','warn');
+      else if(sc<.99)setSt(sd<ss?'Slowing - person nearby':'Slowing - obstacle ahead','warn');
+      else setSt('Driving to you','');
+    }
+  }
+  // RETREAT: reverse along the trail we came in on, matching the orientation we had at each crumb
+  if(recovery==='RETREAT'){
+    while(trail.length>1&&Math.hypot(T.x-trail[trail.length-1].x,T.y-trail[trail.length-1].y)<10)trail.pop();
+    const tc=trail[trail.length-1];
+    const gi=T.x/CS|0,gj=T.y/CS|0,roomy=gi>=0&&gi<GW&&gj>=0&&gj<GH&&!ROOMY[gj*GW+gi];
+    if(!tc||(roomy&&recoveryT>1.5)||retreatD>=80||recoveryT>13){recovery=null;recoveryT=0;stuckTime=0;rp=0;waitT=1.2;trail=[];lastRecEnd=time}
+    else{
+      const dd=Math.hypot(tc.x-T.x,tc.y-T.y)||1;
+      cx=(tc.x-T.x)/dd*22;cy=(tc.y-T.y)/dd*22;retreatD+=22*dt;
+      w=Math.max(-1.8,Math.min(1.8,ang(angleNear(tc.th,T.th),T.th)*3));
+      setSt('Stuck - backing out the way it came in','warn');
+    }
+  }
+  if(waitT>0&&!recovery){waitT-=dt;cx=0;cy=0;w=0;thTarget=null;rotHere=false;setSt('Backed out - re-planning','warn')}
+  // Heading controller
+  if(rotHere&&!recovery){cx=0;cy=0}
+  if(low&&!recovery&&thTarget!==null){
+    const err=ang(thTarget,T.th);
+    headTarget=thTarget;
+    if(Math.abs(err)<.04){w=0;headState='SETTLED'}
+    else{w=Math.max(-YAW_RATE_MAX,Math.min(YAW_RATE_MAX,err*YAW_GAIN));headState='ALIGNING'}
+    if(rotHere)setSt('Rotating to fit through the gap','warn');
+  }
+  else if(low&&!recovery){
+    const sCmd=Math.hypot(cx,cy);
+    if(sCmd<SPEED_DRIVE_MIN){
+      if(headState!=='SETTLED'){
+        const err=ang(headTarget,T.th);
+        if(Math.abs(err)<HEADING_SETTLE){w=0;headState='SETTLED'}
+        else w=Math.max(-YAW_RATE_MAX,Math.min(YAW_RATE_MAX,err*YAW_GAIN));
+      } else w=0;
+    } else {
+      const rawDir=Math.atan2(cy,cx);
+      const errF=ang(rawDir,headTarget);
+      headTarget+=errF*Math.min(1,dt/HEADING_FILTER_TC);
+      const errT=ang(headTarget,T.th);
+      if(headState==='SETTLED'&&Math.abs(errT)>HEADING_COMMIT) headState='ALIGNING';
+      if(headState==='ALIGNING'&&Math.abs(errT)<HEADING_SETTLE) headState='SETTLED';
+      if(headState==='ALIGNING') w=Math.max(-YAW_RATE_MAX,Math.min(YAW_RATE_MAX,errT*YAW_GAIN));
+      else w=0;
+    }
+  }
+}
+
+// Parking turn (after arriving): rotate in place until the keyboard side faces you
+if(!active&&!estop&&parkTh!==null){
+  parkT-=dt;
+  const err=ang(parkTh,T.th);
+  if(Math.abs(err)<.04||parkT<=0){parkTh=null;w=0}
+  else{w=Math.max(-.8,Math.min(.8,err*YAW_GAIN));setSt(mode==='home'?'Parking - turning to face forward at the start':'Parking - turning keyboard side toward you','')}
+}
+
+// Tour: skip a waypoint that has no route for 5 s
+if(mode==='tour'&&active&&!estop&&!path.length){
+  tourT+=dt;
+  if(tourT>5){tourT=0;tourI++;rp=0;if(tourI>=tourPts().length){startReturn();setSt('Room mapped (some points were unreachable) - returning to the dock','warn')}}
+}else tourT=0;
+
+// Patience: if a MOVING person has held the desk up for ~8 s and still hasn't cleared, stop waiting for them. For 12 s they
+// count as an obstacle for planning (route around them) and the swept-footprint supervisor alone keeps the gap.
+{
+  const sp0=Math.hypot(T.vx,T.vy);
+  if(active&&!estop&&low&&path.length&&!recovery&&!rotHere&&sp0<3){
+    if(people.some(p=>!p.settled&&Math.hypot(p.x-T.x,p.y-T.y)<150))lowSpeedT+=dt;else lowSpeedT=Math.max(0,lowSpeedT-dt);
+  }else lowSpeedT=Math.max(0,lowSpeedT-2*dt);
+  if(lowSpeedT>8){patientUntil=time+12;lowSpeedT=0}
+}
+
+// Breadcrumb trail: positions AND orientations the desk has actually driven through (those states were collision-free)
+if(active&&!estop&&!recovery){
+  const lc=trail[trail.length-1];
+  if(!lc||Math.hypot(T.x-lc.x,T.y-lc.y)>=8){trail.push({x:T.x,y:T.y,th:T.th});if(trail.length>150)trail.shift()}
+}
+
+// Stuck detection
+{
+  const actualSpeed=Math.hypot(T.vx,T.vy);
+  const cmdSpeed=Math.hypot(cx,cy);
+  const shouldBeMoving = active && !estop && low && (cmdSpeed>8 || (thTarget!==null&&Math.abs(ang(thTarget,T.th))>.3&&Math.abs(T.w)<.05));
+  if(shouldBeMoving && actualSpeed<8) stuckTime+=dt;
+  else stuckTime=Math.max(0,stuckTime-dt*2);
+  {const gi=T.x/CS|0,gj=T.y/CS|0,tight=gi>=0&&gi<GW&&gj>=0&&gj<GH&&ROOMY[gj*GW+gi];
+   if(active&&!estop&&low&&!path.length&&!recovery&&tight)noPathT+=dt;else noPathT=0;
+   if(noPathT>3&&!recovery&&trail.length>=3&&retreats<4){recovery='RETREAT';retreats++;retreatD=0;recoveryT=0;noPathT=0}}
+  if(stuckTime>STUCK_TRIGGER && !recovery){
+    // First try to back out the way we came in (known-good states). Spinning/aligning inside a tight gap can't work.
+    if(trail.length>=3&&retreats<4&&time-lastRecEnd<8){recovery='RETREAT';retreats++;retreatD=0}else recovery='ALIGN';
+    recoveryT=0;stuckTime=STUCK_TRIGGER}
+  if(recovery){
+    recoveryT+=dt;
+    const lim = recovery==='RETREAT'?14:recovery==='SPIN'?REC_SPIN_T:(recovery==='ALIGN'?REC_ALIGN_T:REC_BACKOFF_T);
+    if(recoveryT>lim){
+      if(recovery==='ALIGN'){recovery='BACKOFF';recoveryT=0}
+      else if(recovery==='BACKOFF'){recovery='SPIN';recoveryT=0}
+      else{recovery=null;recoveryT=0;stuckTime=0;lastRecEnd=time}
+    }
+  } else if(!active||estop){stuckTime=0;recoveryT=0}
+  $('rc').textContent=recovery?recovery:'–';
+}
+
+batStep(dt);
+
+// Optional auto-return: 10 s after it has arrived, parked and finished raising
+if($('ar').checked&&didArrive&&mode==='user'&&!active&&!estop&&parkTh===null){
+  arT+=dt;
+  if(arT>=10)startReturn();
+  else setSt('Ready - returning to start in '+Math.ceil(10-arT)+' s','ok');
+}else arT=0;
+
+// Desk height: the robot never moves it any more. It only follows the height setting if YOU change it (manual desk).
+{
+  const dh=userH-deskH, still=Math.hypot(T.vx,T.vy)<3&&Math.abs(T.w)<.05;
+  if(!estop&&Math.abs(dh)>1e-4&&still)deskH+=Math.sign(dh)*Math.min(Math.abs(dh),LIFT*dt);
+  if(!active&&!estop&&readyPending){
+    if(parkTh!==null)setSt(mode==='home'?'Parking - turning to face forward at the start':'Parking - turning keyboard side toward you','');
+    else{setSt((mode==='home'?(charging?'Ready - docked and charging, desk at ':'Ready - back at start, desk at '):'Ready - parked facing you, desk at ')+Math.round(deskH*100)+' cm','ok');readyPending=false}
+  }
+}
+
+// ---- Manual drive override (from the phone Drive sim tab) ----
+// Drop held joystick input if phone/API updates disappear; a lost connection must not
+// leave the simulator driving on the last command indefinitely. This is simulation-only.
+let manualDriveTimedOut=false;
+if(manualDrive.enabled && manualDrive.lastCommandAt && Date.now()-manualDrive.lastCommandAt>750){
+  manualDriveTimedOut=true;
+  manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
+  setSt('Manual drive timed out — input lost','warn');
+}
+// Robot-frame: joystick "up" moves the desk toward its FRONT arrow (local -y).
+// Runs before the supervisor, so swept-footprint and yaw checks still apply.
+if(manualDrive.enabled && !estop && !active && !recovery && parkTh===null && !cordLock()){
+  const mspd=VMAX*Math.max(0,Math.min(1,manualDrive.speed));
+  const ix=Math.max(-1,Math.min(1,manualDrive.x));
+  const iy=Math.max(-1,Math.min(1,manualDrive.y));
+  const cosT=Math.cos(T.th), sinT=Math.sin(T.th);
+  cx=(cosT*ix + sinT*iy)*mspd;
+  cy=(sinT*ix - cosT*iy)*mspd;
+  w =Math.max(-1,Math.min(1,manualDrive.turn))*YAW_RATE_MAX*0.6;
+  if(Math.abs(cx)>.5||Math.abs(cy)>.5||Math.abs(w)>.05)setSt('Manual drive (simulation)','');
+}
+
+// Safety supervisor (swept footprint vs live lidar points)
+let held=false;
+[cx,cy,w,held]=supervise(cx,cy,w);
+if(manualDriveTimedOut)held=true; // use emergency deceleration when joystick updates go stale
+if(held&&active&&!estop&&!recovery&&low&&du>(mode==='user'?80:10))setSt('Safety hold - something in the swept path','warn');
+
+// Charging-cord lock: while plugged in (interlock on) the wheels get NO command, every frame, whatever else asked for motion.
+// A trip that is under way when the cord goes in is cancelled and the desk brakes hard (the cord is attached).
+if(cordLock()){
+  cx=0;cy=0;w=0;held=true;parkTh=null;
+  if(active){active=false;path=[];setSt('Cord plugged in: drive disabled, trip cancelled','bad');alertT=4}
+}
+
+// Integrate swerve
+const a=(Math.hypot(cx,cy)<Math.hypot(T.vx,T.vy)?(held?EMERG_DEC:60):25)*dt,ddx=cx-T.vx,ddy=cy-T.vy,dd=Math.hypot(ddx,ddy);
+if(dd>a&&dd>1e-6){T.vx+=ddx/dd*a;T.vy+=ddy/dd*a}else{T.vx=cx;T.vy=cy}
+T.w+=(w-T.w)*Math.min(1,dt*8);
+{const ex=HW*Math.abs(Math.cos(T.th))+HH*Math.abs(Math.sin(T.th)),ey=HW*Math.abs(Math.sin(T.th))+HH*Math.abs(Math.cos(T.th));
+ T.x=Math.max(ex,Math.min(W-ex,T.x+T.vx*dt));
+ T.y=Math.max(ey,Math.min(H-ey,T.y+T.vy*dt));}
+T.th+=T.w*dt;
+{const ax=Math.hypot(T.vx-(T._px||0),T.vy-(T._py||0))/Math.max(dt,1e-3)/50;T._px=T.vx;T._py=T.vy;if(ax>peakA&&ax<20)peakA=ax}
+
+const gap=clearance(T.x,T.y)-TR;
+if(gap<minGap)minGap=gap;
+const fh=footprintHit();
+if(fh&&!inC){contacts++;inC=true}else if(!fh)inC=false;   // real rectangle, not the old 34 px circle
+
+$('pa').textContent=peakA.toFixed(2);
+const slipRatio=SLIP_A/Math.max(peakA,0.01);
+$('sl').textContent=slipRatio.toFixed(1)+'×';
+$('sl').className = slipRatio>3?'ok':(slipRatio>1.5?'warn':'bad');
+$('es').textContent=estop?'Release E-stop':'E-STOP';
+$('dh').textContent=Math.round(deskH*100)+' cm';
+$('ct').textContent=contacts;$('sh').textContent=safetyHolds;
+$('rb').textContent=bat.r.toFixed(0)+'%';$('rb').className=bat.r<15?'bad':bat.r<30?'warn':'ok';
+$('ab').textContent=bat.a.toFixed(0)+'%';$('ab').className=bat.a<15?'bad':bat.a<30?'warn':'ok';
+{let ns=0,no=0;for(let i=0;i<GW*GH;i++){if(seen[i])ns++;if(smap[i]>0)no++}$('ex').textContent=Math.round(100*ns/(GW*GH))+'%';$('rm').textContent=no+' cells'}
+$('cord').style.display=manualDock()?'':'none';$('cord').textContent=cordIn?'Unplug cord':'Plug in cord';
+$('cs').textContent=manualDock()?((cordIn?'plugged in':'unplugged')+(breakaways?' ('+breakaways+' breakaway)':'')):'n/a (auto contacts)';
+const needPlug=manualDock()&&dockedNow()&&!cordIn;
+$('dk').textContent=needPlug?'docked: PLUG ME IN':charging?((bat.r>=99.5&&bat.a>=99.5)?'docked, full':'⚡ charging'):'off the dock';$('dk').className=needPlug?'warn':charging?'ok':'';$('ct').className=contacts?'bad':'ok';
+$('gp').textContent=minGap>1e8?'–':Math.round(minGap*2)+' cm';
+$('hg').textContent=(Math.round((headTarget*180/Math.PI+360)%360)+'°'+(headState==='SETTLED'?' ✓':' →'));
+$('pp').textContent = peopleInPathCount>0 ? peopleInPathCount+' (waiting)' : '0';
+}
+
+function draw(){
+  const S=getComputedStyle(document.documentElement),g=n=>S.getPropertyValue(n).trim();
+  const obs=g('--obs'),hitc=g('--hit'),acc=g('--acc'),tbl=g('--tbl'),fg=g('--fg');
+  ctx.setTransform(2,0,0,2,0,0);ctx.clearRect(0,0,W,H);
+  const floors={office:'#e8e5dc',wood:'#c69a68',tile:'#f4f2e9',warehouse:'#b9b8b2',dark:'#30343b'};
+  const floor=floors[roomStyle]||floors.office;ctx.fillStyle=floor;ctx.fillRect(0,0,W,H);
+  // Room finish / subtle floor pattern; purely visual, never part of collision geometry.
+  if(roomStyle==='tile'||roomStyle==='warehouse'){
+    ctx.strokeStyle=roomStyle==='tile'?'rgba(80,80,80,.12)':'rgba(40,40,40,.09)';ctx.lineWidth=.7;ctx.beginPath();
+    const step=roomStyle==='tile'?50:80;for(let x=0;x<=W;x+=step){ctx.moveTo(x,0);ctx.lineTo(x,H)}for(let y=0;y<=H;y+=step){ctx.moveTo(0,y);ctx.lineTo(W,y)}ctx.stroke();
+  } else if(roomStyle==='wood'){
+    ctx.strokeStyle='rgba(80,45,20,.12)';ctx.lineWidth=1;for(let y=0;y<H;y+=28){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  }
+  ctx.strokeStyle=roomStyle==='dark'?'#707985':'rgba(70,70,70,.45)';ctx.lineWidth=5;ctx.strokeRect(2.5,2.5,W-5,H-5);
+  // Obstacles. Custom blocks are visually distinct and selectable in editor mode.
+  for(const r of rects){ctx.fillStyle=r._custom?(r===selectedBlock?'#f59e0b':'#d97706'):obs;ctx.fillRect(r.x,r.y,r.w,r.h);if(r._custom){ctx.strokeStyle=r===selectedBlock?'#7c2d12':'rgba(70,35,0,.8)';ctx.lineWidth=1.5;ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1)}}
+  for(const c of circs){ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,7);ctx.fill()}
+  // Costmap
+  if($('cost').checked){   // what it knows: grey = never seen, orange = busy (people), purple = remembered obstacle, red = lidar right now
+    ctx.globalAlpha=.12;ctx.fillStyle='#808898';for(let i=0;i<GW*GH;i++)if(!seen[i])ctx.fillRect(i%GW*CS,(i/GW|0)*CS,CS,CS);
+    ctx.fillStyle='#f28c28';for(let i=0;i<GW*GH;i++)if(traffic[i]>.4){ctx.globalAlpha=Math.min(.5,traffic[i]/25);ctx.fillRect(i%GW*CS,(i/GW|0)*CS,CS,CS)}
+    ctx.globalAlpha=.4;ctx.fillStyle='#9b59d6';for(let i=0;i<GW*GH;i++)if(smap[i]>0)ctx.fillRect(i%GW*CS,(i/GW|0)*CS,CS,CS);
+    ctx.globalAlpha=.35;ctx.fillStyle=hitc;for(let i=0;i<GW*GH;i++)if(time-last[i]<1.2)ctx.fillRect(i%GW*CS,(i/GW|0)*CS,CS,CS);ctx.globalAlpha=1}
+  // Lidar rays
+  if($('ray').checked){
+    ctx.strokeStyle=acc;ctx.globalAlpha=.13;ctx.lineWidth=1;
+    ctx.beginPath();for(const h of hits){ctx.moveTo(h.ox,h.oy);ctx.lineTo(h.x,h.y)}ctx.stroke();
+    ctx.globalAlpha=1;
+    for(const h of hits)if(h.hit){
+      ctx.fillStyle = h.dyn ? '#d62fd6' : (h.settledPerson ? '#f5c400' : hitc);
+      ctx.fillRect(h.x-1.5,h.y-1.5,3,3);
+    }
+  }
+  // People: shape by type, color by state
+  for(const p of people){
+    if(p.type==='sitter'){
+      // Chair hint
+      ctx.fillStyle='rgba(140,110,80,0.30)';
+      ctx.beginPath();ctx.roundRect(p.x-18,p.y-18,36,36,4);ctx.fill();
+    }
+    const col = p.settled ? '#e0561f' : (p.stillTime>1 ? '#f5c400' : '#d62fd6');
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    if(p.type==='sitter'){
+      ctx.roundRect(p.x-p.r*0.75, p.y-p.r*0.75, p.r*1.5, p.r*1.5, 4);
+    } else {
+      ctx.arc(p.x, p.y, p.r, 0, 7);
+    }
+    ctx.fill();
+    // Settling ring for non-settled non-moving people
+    if(!p.settled && p.stillTime>0 && p.stillTime<STAND_WAIT){
+      ctx.strokeStyle='#f5c400';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r+3,0,7*Math.min(1,p.stillTime/STAND_WAIT));ctx.stroke();
+    }
+    // Small label
+    ctx.fillStyle=fg;ctx.font='9px system-ui';ctx.textAlign='center';
+    ctx.fillText(p.type==='sitter'?'sit':(p.type==='talker'?'talk':'walk'), p.x, p.y - p.r - 4);
+  }
+  // Path
+  if(path.length&&active){ctx.strokeStyle=acc;ctx.lineWidth=2;ctx.setLineDash([6,5]);ctx.beginPath();path.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();ctx.setLineDash([]);
+    // ghost desk where the plan rotates it
+    ctx.lineWidth=1.5;ctx.strokeStyle=acc;ctx.globalAlpha=.55;
+    for(let j=1;j<path.length;j++){
+      const nxt=path[j+1];
+      if(path[j].k!==path[j-1].k&&!(nxt&&nxt.k!==path[j].k)){
+        ctx.save();ctx.translate(path[j].x,path[j].y);ctx.rotate(path[j].th);ctx.beginPath();ctx.roundRect(-HW,-HH,2*HW,2*HH,5);ctx.stroke();ctx.restore();
+      }
+    }
+    ctx.globalAlpha=1}
+  // User
+  if(mode==='tour'&&active){tourPts().forEach((p,i)=>{ctx.beginPath();ctx.arc(p[0],p[1],i===tourI?7:4,0,7);ctx.strokeStyle=acc;ctx.lineWidth=i===tourI?2.5:1.5;ctx.stroke()})}
+  // charging station: wall socket + cord with breakaway connector
+  if(manualDock()){
+    ctx.save();ctx.fillStyle=fg;ctx.globalAlpha=.7;ctx.fillRect(0,58,7,26);ctx.restore();
+    if(cordIn){
+      const dxc=T.x-6,dyc=T.y-71,dc=Math.hypot(dxc,dyc),sag=Math.max(0,28-dc*.5);
+      ctx.save();ctx.strokeStyle=dc>38?'#d64545':'#222';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(7,71);
+      ctx.quadraticCurveTo((7+T.x)/2,(71+T.y)/2+sag,T.x,T.y);ctx.stroke();ctx.restore();
+    }
+  }
+  if(alertT>0){ctx.save();ctx.strokeStyle='#f0a000';ctx.lineWidth=4;ctx.globalAlpha=.4+.5*Math.abs(Math.sin(time*8));ctx.beginPath();ctx.arc(T.x,T.y,HW+14,0,7);ctx.stroke();ctx.restore()}
+  // start spot: dashed desk outline with the forward arrow (monitor back)
+  ctx.save();ctx.translate(HOME.x,HOME.y);ctx.globalAlpha=.5;ctx.strokeStyle=fg;ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+  ctx.beginPath();ctx.roundRect(-HW,-HH,2*HW,2*HH,5);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=fg;ctx.beginPath();ctx.moveTo(0,-HH+1.5);ctx.lineTo(-5.5,-HH+9.5);ctx.lineTo(5.5,-HH+9.5);ctx.fill();
+  ctx.font='10px system-ui';ctx.textAlign='center';ctx.fillText('start / dock',0,HH+12);ctx.restore();
+  // dock pad: charging coil/contacts under the start spot; pulses while charging
+  {const okc=getComputedStyle(document.documentElement).getPropertyValue('--ok').trim()||'#1f9d55';
+   ctx.save();ctx.translate(HOME.x,HOME.y);
+   ctx.globalAlpha=charging?.3+.2*Math.sin(time*5):.1;ctx.fillStyle=okc;ctx.beginPath();ctx.roundRect(-HW+4,-HH+4,2*HW-8,2*HH-8,5);ctx.fill();
+   if(charging){ctx.globalAlpha=.35+.3*Math.sin(time*5);ctx.strokeStyle=okc;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,HW+9,0,7);ctx.stroke()}
+   ctx.globalAlpha=.9;ctx.fillStyle=charging?okc:fg;
+   ctx.beginPath();ctx.moveTo(14,-9);ctx.lineTo(8,2);ctx.lineTo(12,2);ctx.lineTo(10,11);ctx.lineTo(18,-2);ctx.lineTo(14,-2);ctx.closePath();ctx.fill();
+   ctx.restore()}
+  ctx.fillStyle='#f28c28';ctx.beginPath();ctx.arc(user.x,user.y,user.r,0,7);ctx.fill();
+  ctx.fillStyle=fg;ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText('you',user.x,user.y-19);
+  // Robot
+  ctx.save();ctx.translate(T.x,T.y);ctx.rotate(T.th);
+  ctx.fillStyle=recovery?g('--warn')||'#b07800':tbl;
+  ctx.strokeStyle=fg;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.roundRect(-HW,-HH,2*HW,2*HH,5);ctx.fill();ctx.stroke();
+  // Forward = back of the monitor (local -y, up when th=0). The keyboard side (+y) is where you stand.
+  ctx.fillStyle='rgba(20,22,26,.9)';ctx.fillRect(-3,-9,26,4.5);            // monitor seen from above
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.fillRect(7,6,17,6);             // keyboard
+  ctx.fillStyle=fg;ctx.beginPath();ctx.moveTo(0,-HH+1.5);ctx.lineTo(-5.5,-HH+9.5);ctx.lineTo(5.5,-HH+9.5);ctx.fill();   // forward arrow
+  ctx.fillStyle='#f5c400';ctx.beginPath();ctx.arc(ESX,0,8,0,7);ctx.fill();
+  ctx.fillStyle=estop?'#7a0f0f':'#e5221f';ctx.beginPath();ctx.arc(ESX,0,estop?4.5:5.5,0,7);ctx.fill();
+  if(estop){ctx.strokeStyle='#ff2d2d';ctx.lineWidth=2.5;ctx.beginPath();ctx.roundRect(-HW-3,-HH-3,2*HW+6,2*HH+6,7);ctx.stroke()}
+  ctx.fillStyle='#30d0ff';for(const L of LIDARS){ctx.beginPath();ctx.arc(L[0],L[1],3.2,0,7);ctx.fill()}
+  ctx.restore();
+  // Swerve modules
+  const co=Math.cos(T.th),si=Math.sin(T.th);let k=0;
+  for(const[lx,ly]of[[22,13],[22,-13],[-22,13],[-22,-13]]){
+    const rx=co*lx-si*ly,ry=si*lx+co*ly,mx=T.x+rx,my=T.y+ry;
+    const vx=T.vx-T.w*ry,vy=T.vy+T.w*rx,sp=Math.hypot(vx,vy);
+    if(sp>3)modAng[k]=Math.atan2(vy,vx);
+    ctx.save();ctx.translate(mx,my);ctx.rotate(modAng[k]);
+    ctx.fillStyle='#222';ctx.strokeStyle=acc;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(-7,-3,14,6,2);ctx.fill();ctx.stroke();
+    if(sp>3){ctx.strokeStyle='#3ddc84';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(sp*.25,0);ctx.stroke()}
+    ctx.restore();k++;
+  }
+  ctx.fillStyle=fg;ctx.font='11px system-ui';ctx.textAlign='center';
+  ctx.fillText(Math.round(deskH*100)+' cm',T.x,T.y+TR+14);
+}
+
+let lt=performance.now();
+function loop(n){const dt=Math.max(0,Math.min(.05,(n-lt)/1000));lt=n;let rem=dt*warp;while(rem>1e-6){const s=Math.min(rem,1/60);update(s);rem-=s}draw();requestAnimationFrame(loop)}
+function pos(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*W,y:(e.clientY-r.top)/r.height*H}}
+cv.addEventListener('pointerdown',e=>{
+  const p=pos(e);
+  if(placeBlocks){
+    const w=Math.max(10,Math.min(300,Number($('blockW').value)||60)),h=Math.max(10,Math.min(300,Number($('blockH').value)||40));
+    const b={x:Math.max(0,Math.min(W-w,p.x-w/2)),y:Math.max(0,Math.min(H-h,p.y-h/2)),w,h,_custom:true};rects.push(b);selectedBlock=b;cv.setPointerCapture(e.pointerId);$('editHint').textContent='Block added. Click Place blocks to stop adding, or add more blocks.';return;
+  }
+  if(Math.hypot(p.x-T.x-Math.cos(T.th)*ESX,p.y-T.y-Math.sin(T.th)*ESX)<13){toggleEstop();return}
+  const b=[...rects].reverse().find(r=>r._custom&&p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h);
+  if(b){selectedBlock=b;blockDrag={b,dx:p.x-b.x,dy:p.y-b.y};cv.setPointerCapture(e.pointerId);return}
+  if(Math.hypot(p.x-user.x,p.y-user.y)<32){drag=true;cv.setPointerCapture(e.pointerId)}
+});
+cv.addEventListener('pointermove',e=>{const p=pos(e);if(blockDrag){const b=blockDrag.b;b.x=Math.max(0,Math.min(W-b.w,p.x-blockDrag.dx));b.y=Math.max(0,Math.min(H-b.h,p.y-blockDrag.dy));return}if(!drag)return;user.x=Math.max(20,Math.min(W-20,p.x));user.y=Math.max(20,Math.min(H-20,p.y))});
+function finishCanvasDrag(){drag=false;blockDrag=null}
+cv.addEventListener('pointerup',finishCanvasDrag);cv.addEventListener('pointercancel',finishCanvasDrag);
+
+$('go').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(bat.r<8&&!estop){startReturn();setSt('Battery too low - returning to the dock instead','warn');return}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
+$('back').onclick=startReturn;
+$('stop').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;didArrive=false;arT=0;active=false;path=[];recovery=null;stuckTime=0;setSt('Stopped','warn')};
+$('rst').onclick=()=>{forgetMap();sceneKey='default';reset();clearMapArrays();loadMap()};
+$('learn').onclick=startTour;
+$('cord').onclick=()=>{
+  if(!cordIn){if(Math.hypot(T.x-HOME.x,T.y-HOME.y)>45){setSt('The cord only reaches the dock: bring the desk home first','warn');return}cordIn=true;setSt('Cord plugged in','ok')}
+  else{cordIn=false;setSt('Cord unplugged','ok')}
+};
+$('forget').onclick=()=>{forgetMap();setSt('Map forgotten: it will plan through unknown space again until it relearns','')};
+// Slot test: a full-width wall with one 70 px slot (the desk is 56 x 36 px). The only way through is to turn the
+// desk so its long axis points through the slot.
+function buildSlotTest(){
+  const gap=Math.max(56,Math.min(160,Number($('slotGap').value)||70)),dir=$('slotDirection').value;
+  reset();sceneKey='slot';clearMapArrays();loadMap();rects.length=0;
+  if(dir==='horizontal'){const gx=(W-gap)/2;rects.push({x:0,y:240,w:gx,h:20},{x:gx+gap,y:240,w:W-gx-gap,h:20});T.x=400;T.y=90;user.x=700;user.y=430;}
+  else{const gy=(H-gap)/2;rects.push({x:380,y:0,w:20,h:gy},{x:380,y:gy+gap,w:20,h:H-gy-gap});T.x=100;T.y=250;user.x=700;user.y=250;}
+  circs.length=0;people=[];setSt('Slot test ('+gap+' px, '+dir+'): press Come to me. Watch the desk orientation as it crosses the gap.','');
+}
+$('slot').onclick=buildSlotTest;$('runSlot').onclick=buildSlotTest;
+$('roomStyle').onchange=()=>{roomStyle=$('roomStyle').value};
+$('placeMode').onclick=()=>{placeBlocks=!placeBlocks;blockDrag=null;$('placeMode').textContent='Place blocks: '+(placeBlocks?'on':'off');$('editHint').textContent=placeBlocks?'Click anywhere in the room to add a block using the width and height above.':'Click and drag an orange block to reposition it. Added blocks affect route planning and collision checks.'};
+$('deleteBlock').onclick=()=>{if(!selectedBlock){$('editHint').textContent='Select an orange added block by clicking or dragging it first.';return}const i=rects.indexOf(selectedBlock);if(i>=0)rects.splice(i,1);selectedBlock=null;blockDrag=null};
+$('clearBlocks').onclick=()=>{for(let i=rects.length-1;i>=0;i--)if(rects[i]._custom)rects.splice(i,1);selectedBlock=null;blockDrag=null;$('editHint').textContent='All added blocks removed. Built-in room obstacles remain.'};
+
+function toggleEstop(){estop=!estop;parkTh=null;didArrive=false;if(estop){active=false;path=[];T.vx=T.vy=T.w=0;manualDrive={...manualDrive,x:0,y:0,turn:0};recovery=null;stuckTime=0}else setSt('E-stop released - press Come to me','')}
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();if(!estop)toggleEstop()}});
+function ahead(dd){for(const q of path)if(Math.hypot(q.x-T.x,q.y-T.y)>=dd)return q;return{x:T.x+Math.cos(T.th)*dd,y:T.y+Math.sin(T.th)*dd}}
+$('es').onclick=toggleEstop;
+$('wp').onchange=()=>warp=+$('wp').value;
+$('hs').oninput=()=>{userH=$('hs').value/100;$('hv').textContent=$('hs').value};
+
+$('add').onclick=()=>{
+  for(let i=0;i<50;i++){
+    const x=40+Math.random()*(W-80),y=40+Math.random()*(H-80);
+    if(!hitTest(x,y)&&Math.hypot(x-T.x,y-T.y)>120){people.push(mkWalker(x,y));break}
+  }
+};
+$('obs').onclick=()=>{
+  for(const dd of[130,110,150,170]){
+    const q=ahead(dd);
+    if(q.x>50&&q.x<W-50&&q.y>50&&q.y<H-50&&clearance(q.x,q.y)>20){circs.push({x:q.x,y:q.y,r:16});return}
+  }
+};
+$('walk').onclick=()=>{
+  const q=ahead(130),da=Math.atan2(q.y-T.y,q.x-T.x),nx=-Math.sin(da),ny=Math.cos(da);
+  const cl=(v,m)=>Math.max(30,Math.min(m-30,v));
+  const p=mkWalker(cl(q.x+nx*60,W),cl(q.y+ny*60,H));
+  p.tx=cl(q.x-nx*170,W); p.ty=cl(q.y-ny*170,H);
+  p.sp=14; p.t=12;
+  people.push(p);
+};
+$('sit').onclick=()=>{
+  const q=ahead(130),da=Math.atan2(q.y-T.y,q.x-T.x),nx=-Math.sin(da),ny=Math.cos(da);
+  const cl=(v,m)=>Math.max(30,Math.min(m-30,v));
+  const p=mkWalker(cl(q.x+nx*70,W),cl(q.y+ny*70,H));
+  p.tx=q.x; p.ty=q.y; p.sp=18; p.t=999;
+  p.convertOnArrival=true;   // becomes a sitter on arrival, then waits 5 s
+  people.push(p);
+};
+$('talk').onclick=()=>{
+  const q=ahead(150),da=Math.atan2(q.y-T.y,q.x-T.x),nx=-Math.sin(da),ny=Math.cos(da);
+  const cl=(v,m)=>Math.max(30,Math.min(m-30,v));
+  const cx1=cl(q.x+nx*20,W),cy1=cl(q.y+ny*20,H);
+  const cx2=cl(q.x-nx*20,W),cy2=cl(q.y-ny*20,H);
+  people.push(mkTalker(cx1,cy1));
+  people.push(mkTalker(cx2,cy2));
+};
+
+reset();loadMap();requestAnimationFrame(loop);
+
+// ============ 3D concept model (unchanged from previous version) ============
+try{const el=$('m'),ren=new THREE.WebGLRenderer({antialias:true,alpha:true}),c2=ren.domElement;el.appendChild(c2);ren.setPixelRatio(Math.min(2,devicePixelRatio));
+c2.style.cssText='width:100%;height:100%;display:block;touch-action:none;cursor:grab';
+const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(38,1,.1,50),g=new THREE.Group();sc.add(g,new THREE.AmbientLight(0xffffff,.75));
+const dl=new THREE.DirectionalLight(0xffffff,.9);dl.position.set(2,4,3);sc.add(dl);
+const M=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.55,metalness:.15},o)),Bx=THREE.BoxGeometry,Cy=THREE.CylinderGeometry;
+const P=(geo,mat,x,y,z,rz)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);if(rz)m.rotation.z=rz;g.add(m);return m};
+const it=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);top.add(m)};
+const dark=M(0x2b2f36),steel=M(0x9aa3ad,{metalness:.6}),red=M(0xe5221f,{emissive:0x661010}),grn=M(0x22e07a,{emissive:0x22e07a,emissiveIntensity:.9});
+const top=P(new Bx(1.1,.04,.7),M(0xa9743f),0,.55,0);
+const al=M(0xc3cad3,{metalness:.7,roughness:.35});
+for(const sz of[-1,1])P(new Bx(1.01,.05,.03),al,0,.15,sz*.325);   // long rails
+for(const x of[-.475,.475])P(new Bx(.03,.05,.65),al,x,.15,0);        // cross rails
+P(new Bx(.2,.14,.14),M(0x2d5f8f),.375,.23,0);   // 12 V battery on the cross rail
+const f38Body=M(0x2a2d33),f38Top=M(0x1a1c20);
+const f38Accent=M(0x3a7fdb,{emissive:0x1c4a8a,emissiveIntensity:.25});
+const f38Screen=M(0x0b0d10,{emissive:0x1d2b3a,emissiveIntensity:.35});
+// UPS: positions are RELATIVE TO THE DESKTOP (desktop centre = 0, its underside = -.02), so it is carried by the desktop
+it(new Bx(.46,.012,.30),f38Top,0,-.026,0);                     // mounting bracket: its top face touches the desktop underside
+it(new Bx(.40,.22,.26),f38Body,0,-.142,0);                     // UPS body hangs from the bracket
+it(new Bx(.14,.05,.012),f38Screen,0,-.112,-.136);              // status display on the front face
+it(new Bx(.34,.016,.012),f38Accent,0,-.222,-.136);
+it(new Bx(.014,.08,.16),f38Top,.207,-.142,0);                  // side vent
+for(const sz of[-1,1])P(new Bx(.98,.012,.008),grn,0,.135,sz*.348);
+// ---- 3in MAXSwerve module (REV-21-3005), to scale ----
+// VERIFIED (REV): 133.1 mm footprint with tabs, 100.5 mm without, 171.5 mm tall with the NEO, 3 in wheel x 7/8 in wide,
+// azimuth = NEO 550 + UltraPlanetary gearbox, drive = NEO. Everything else (plate thicknesses, fork shape, motor
+// diameters, colours) is APPROXIMATE. Module centre is INBOARD of the frame rails so the motors fit inside the frame.
+const plateM=M(0x3b4048,{metalness:.5,roughness:.4}),houseM=M(0x4a5059,{metalness:.5,roughness:.45}),treadM=M(0x16171a,{roughness:.95}),
+      hubM=M(0xa7b0ba,{metalness:.75,roughness:.3}),motorM=M(0x24272d,{metalness:.55,roughness:.45}),gearM=M(0xc2c9d1,{metalness:.85,roughness:.3});
+const mods=[];
+function maxSwerve(cx,cz){
+  const sx=Math.sign(cx),sz=Math.sign(cz),Y0=.125;               // Y0 = top of the mounting plate = underside of the frame rail
+  mods.push([cx,cz]);
+  P(new Bx(.1331,.006,.1331),plateM,cx,Y0-.003,cz);               // mounting tabs, 133.1 mm
+  P(new Bx(.1005,.028,.1005),houseM,cx,Y0-.020,cz);               // module body, 100.5 mm square
+  for(const s of[-1,1])P(new Bx(.006,.109,.064),plateM,cx+s*.0195,.0645,cz);   // fork plates either side of the wheel
+  P(new Cy(.0381,.0381,.0222,40),treadM,cx,.0381,cz,1.5708);      // wheel: 3 in dia x 7/8 in wide, bottom touches the floor
+  P(new Cy(.028,.028,.0232,28),hubM,cx,.0381,cz,1.5708);          // billet hub face
+  P(new Cy(.0075,.0075,.050,14),gearM,cx,.0381,cz,1.5708);        // axle through the fork plates
+  for(const bx of[-1,1])for(const bz of[-1,1])P(new Cy(.005,.005,.005,10),gearM,cx+bx*.0575,.1165,cz+bz*.0575);   // bolt heads under the tabs
+  const dx=cx-sx*.005,dz=cz-sz*.005;                              // drive NEO, vertical, just inboard of centre
+  P(new Cy(.0255,.0255,.0405,32),motorM,dx,Y0+.02025,dz);         // drive NEO body
+  P(new Cy(.012,.012,.006,16),gearM,dx,Y0+.0435,dz);              // output cap: top of the stack = 171.5 mm above the floor (REV)
+  const nx=cx-sx*.04,nz=cz-sz*.04;                                // azimuth: NEO 550 on an UltraPlanetary gearbox
+  P(new Cy(.0205,.0205,.018,28),gearM,nx,Y0+.009,nz);
+  P(new Cy(.0175,.0175,.0285,28),motorM,nx,Y0+.018+.01425,nz);
+}
+const inn=[],cols=[];
+for(const sx of[-1,1])for(const sz of[-1,1]){
+  maxSwerve(sx*.42,sz*.27);
+  cols.push(P(new Bx(.06,.375,.06),M(0x3a3f47),sx*.4,.3625,sz*.325));          // lift-column sleeve, standing on the long rail
+  inn.push(P(new Bx(.04,.3,.04),steel,sx*.4,.5,sz*.325));                       // telescoping inner tube
+}
+const ld=[];   // lidars do not move with the desk
+for(const s of[-1,1]){
+  P(new Bx(.03,.12,.03),steel,s*.49,.235,s*.325);             // post standing on the frame corner
+  P(new Cy(.045,.045,.05,24),dark,s*.49,.32,s*.325);          // lidar body
+  P(new Cy(.047,.047,.01,24),M(0x30d0ff,{emissive:0x30d0ff}),s*.49,.32,s*.325);
+}
+const e1=P(new Cy(.05,.05,.012,24),M(0xf5c400),-.32,.576,0),e2=P(new Cy(.034,.034,.035,24),red,-.32,.595,0);
+it(new Bx(.26,.012,.2),dark,.12,.026,-.12);it(new Bx(.03,.22,.03),dark,.12,.14,-.12);it(new Bx(.62,.36,.025),M(0x111318),.12,.34,-.12);
+it(new Bx(.34,.018,.23),M(0xb8bcc4,{metalness:.6}),.3,.029,.18);it(new Bx(.32,.01,.2),M(0x1b1d22),.3,.042,.18);it(new Cy(.04,.04,.09,20),M(0xffffff),-.22,.065,.2);
+P(new Cy(1.4,1.4,.004,48),M(0x888888,{transparent:true,opacity:.15}),0,0,0);
+let yaw=.7,pit=.35,dr=null,zm=false;
+$('zm').onclick=()=>{zm=!zm;$('zm').textContent=zm?'Zoom out':'Zoom to a swerve module';top.visible=!zm;for(const c of cols)c.visible=!zm;for(const c of inn)c.visible=!zm};
+c2.onpointerdown=e=>{dr=e;c2.setPointerCapture(e.pointerId)};
+c2.onpointermove=e=>{if(!dr)return;yaw-=(e.clientX-dr.clientX)*.01;pit=Math.max(.05,Math.min(1.2,pit+(e.clientY-dr.clientY)*.01));dr=e};
+c2.onpointerup=()=>dr=null;
+const rs=()=>{const w=el.clientWidth,h=el.clientHeight;ren.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()};
+addEventListener('resize',rs);rs();
+(function f(){if(!dr)yaw+=.004;const r=3.3,H=deskH+.13,ty=.6;
+top.position.y=H;e1.position.y=H+.026;e2.position.y=H+.045;
+for(const[m,dy]of ld)m.position.y=H+dy;
+const L=Math.max(.01,H-.02-.5);for(const m of inn){m.scale.y=L/.3;m.position.y=.5+L/2}
+const R=zm?.5:r,TY=zm?.085:ty,TX=zm?.42:0,TZ=zm?-.27:0;   // zoom target: the front-right module
+cam.position.set(TX+Math.sin(yaw)*Math.cos(pit)*R,TY+Math.sin(pit)*R,TZ+Math.cos(yaw)*Math.cos(pit)*R);cam.lookAt(TX,TY,TZ);ren.render(sc,cam);requestAnimationFrame(f)})();
+}catch(err){$('m').textContent='3D preview needs WebGL.'}
+</script><script>
+// Summon Desk live bridge: the browser simulator is the single source of truth for the phone controller.
+(()=>{
+  'use strict';
+  const token=window.SUMMON_BRIDGE_TOKEN||'dev-token';
+  const headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+  const send=async(path,body)=>{const r=await fetch(path,{method:'POST',headers,body:JSON.stringify(body),cache:'no-store'});if(!r.ok)throw new Error('bridge HTTP '+r.status);return r.json()};
+  const get=async(path)=>{const r=await fetch(path,{headers:{'Authorization':'Bearer '+token},cache:'no-store'});if(!r.ok)throw new Error('bridge HTTP '+r.status);return r.json()};
+  const px=.02;
+  function snapshot(){let seenCount=0,remembered=0;for(let i=0;i<GW*GH;i++){if(seen[i])seenCount++;if(smap[i]>0)remembered++}
+    return {time:+time.toFixed(1),mode,status:$('st').textContent,severity:($('st').className||'info'),active,estop,
+      pose:{x:+(T.x*px).toFixed(3),y:+(T.y*px).toFixed(3),theta:+T.th.toFixed(3)},user:{x:+(user.x*px).toFixed(3),y:+(user.y*px).toFixed(3)},
+      battery:{robot_pct:+bat.r.toFixed(1),ups_pct:+bat.a.toFixed(1)},charging,cord:{plugged:cordIn,interlock_on:!!$('il').checked,breakaways},
+      dock_type:$('dm').value,desk_height_cm:Math.round(deskH*100),alert:alertT>0,explored_pct:Math.round(100*seenCount/(GW*GH)),remembered_cells:remembered,
+      people:people.map(p=>({x:+(p.x*px).toFixed(2),y:+(p.y*px).toFixed(2),settled:!!p.settled})),
+      lidar:hits.filter(h=>h&&h.hit&&Number.isFinite(h.d)&&h.d>0).map(h=>({angle:+(((h.a-T.th)*180/Math.PI+540)%360-180).toFixed(2),range:+(h.d*px).toFixed(3),type:h.type||'obstacle'}))};
+  }
+  function mapSnapshot(){const rows=[];for(let y=0;y<GH;y++){let row='';for(let x=0;x<GW;x++){const i=y*GW+x;row+=smap[i]>0?'#':traffic[i]>2?'+':seen[i]?'_':'.'}rows.push(row)}return {width_m:W*px,height_m:H*px,cell_m:CS*px,gw:GW,gh:GH,rows}}
+  function apply(c){
+    if(c.type==='summon'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;user.x=c.x/px;user.y=c.y/px;$('go').click()}
+    else if(c.type==='drive'){active=false;path=[];parkTh=null;mode='manual';manualDrive.enabled=true;manualDrive.lastCommandAt=Date.now();manualDrive.x=c.x;manualDrive.y=c.y;manualDrive.turn=c.turn;manualDrive.speed=c.speed;if(estop){manualDrive.x=manualDrive.y=manualDrive.turn=0;setSt('E-STOP engaged — manual drive blocked','bad')}}
+    else if(c.type==='return'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;$('back').click()}
+    else if(c.type==='learn')$('learn').click();
+    else if(c.type==='stop'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;$('stop').click()}
+    else if(c.type==='cord'&&!!c.plugged!==cordIn)$('cord').click();
+  }
+  let lastMapAt=0,lastStatus='';
+  async function tick(){
+    try{
+      await send('/v1/sim/state',snapshot());
+      const now=Date.now();if(now-lastMapAt>1200){await send('/v1/sim/map',mapSnapshot());lastMapAt=now}
+      const result=await get('/v1/sim/poll');for(const c of result.commands||[]){try{apply(c)}catch(e){console.error('Failed to apply phone command',c,e)}}
+      if(lastStatus!==$('st').textContent){lastStatus=$('st').textContent;}
+      document.documentElement.dataset.bridge='connected';
+    }catch(e){document.documentElement.dataset.bridge='disconnected';console.warn('Summon Desk bridge sync:',e.message)}
+  }
+  tick();setInterval(tick,350);
+})();
+</script>
+</body></html>
+----- bridge/bridge_core.js -----
+// Runs inside the simulator's scope. Exposes the simulator API and a mobile-first web controller.
+$('dm').value='manual'; $('il').checked=true;
+const TOKEN=process.env.SUMMON_TOKEN||'dev-token', PORT=+process.env.PORT||8787, PX=0.02;
+let lastT=Date.now();
+// When the visual browser simulator is open, it is the authoritative simulation state.
+let browserState=null,browserStateAt=0,browserMap=null,browserMapAt=0;
+let pendingCommands=[],nextCommandId=1,browserLidar=null,browserLidarAt=0;
+// Server-side duplicate suppression: the UI guard alone is not sufficient when stale tabs or repeated events exist.
+let lastNavSignature='',lastNavAt=0,lastStopAt=0;
+setInterval(()=>{const n=Date.now();const dt=Math.min(.05,(n-lastT)/1000);lastT=n;update(dt)},16);
+function stateJSON(){
+  let ns=0,no=0;for(let i=0;i<GW*GH;i++){if(seen[i])ns++;if(smap[i]>0)no++}
+  return {time:+time.toFixed(1),mode,status:$('st').textContent,severity:($('st').className||'info')||'info',active,estop,
+    pose:{x:+(T.x*PX).toFixed(3),y:+(T.y*PX).toFixed(3),theta:+T.th.toFixed(3)},user:{x:+(user.x*PX).toFixed(3),y:+(user.y*PX).toFixed(3)},
+    battery:{robot_pct:+bat.r.toFixed(1),ups_pct:+bat.a.toFixed(1)},charging,cord:{plugged:cordIn,interlock_on:!!$('il').checked,breakaways},
+    dock_type:$('dm').value,desk_height_cm:Math.round(deskH*100),alert:alertT>0,explored_pct:Math.round(100*ns/(GW*GH)),remembered_cells:no,
+    people:people.map(p=>({x:+(p.x*PX).toFixed(2),y:+(p.y*PX).toFixed(2),settled:!!p.settled}))};
+}
+function mapJSON(){const rows=[];for(let y=0;y<GH;y++){let r='';for(let x=0;x<GW;x++){const i=y*GW+x;r+=smap[i]>0?'#':traffic[i]>2?'+':seen[i]?'_':'.'}rows.push(r)}return {width_m:W*PX,height_m:H*PX,cell_m:CS*PX,gw:GW,gh:GH,rows}}
+function send(res,code,obj){const b=JSON.stringify(obj);res.writeHead(code,{'Content-Type':'application/json; charset=utf-8','Content-Length':Buffer.byteLength(b),'Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(b)}
+function sendFile(res,file,type){try{let b=require('fs').readFileSync(require('path').join(__dirname,'..',file));if(file==='robot/simulator/summon_table_sim.html'){let html=b.toString('utf8');html=html.replace('</head>','<script>window.SUMMON_BRIDGE_TOKEN='+JSON.stringify(TOKEN)+'</script></head>');b=Buffer.from(html)}res.writeHead(200,{'Content-Type':type,'Content-Length':b.length,'Cache-Control':'no-store'});res.end(b)}catch(e){send(res,404,{error:'file not found'})}}
+function readBody(req,cb){let s='';req.on('data',c=>{s+=c;if(s.length>262144)req.destroy()});req.on('end',()=>{try{cb(s?JSON.parse(s):{})}catch(e){cb(null)}})}
+const server=require('http').createServer((req,res)=>{
+  const url=req.url.split('?')[0];
+  if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'GET, POST, OPTIONS'});return res.end()}
+  // The web app and simulator are served by this same local server, so the phone only needs one URL.
+  if(req.method==='GET'&&(url==='/'||url==='/app'||url==='/app/'))return sendFile(res,'mobile/index.html','text/html; charset=utf-8');
+  if(req.method==='GET'&&url==='/manifest.webmanifest')return sendFile(res,'mobile/manifest.webmanifest','application/manifest+json; charset=utf-8');
+  if(req.method==='GET'&&url==='/simulator')return sendFile(res,'robot/simulator/summon_table_sim.html','text/html; charset=utf-8');
+  if(req.method==='GET'&&url==='/v1/health')return send(res,200,{ok:true,name:'summon-desk-bridge (simulator)',version:1});
+  if((req.headers.authorization||'')!=='Bearer '+TOKEN)return send(res,401,{error:'unauthorized'});
+  if(req.method==='GET'&&url==='/v1/state'){const live=!!browserState&&(Date.now()-browserStateAt<3000);return send(res,200,{...(live?browserState:stateJSON()),simulator_connected:live})}
+  if(req.method==='GET'&&url==='/v1/map')return send(res,200,browserMap&&(Date.now()-browserMapAt<5000)?browserMap:mapJSON());
+  if(req.method==='GET'&&url==='/v1/lidar'){const live=!!browserLidar&&(Date.now()-browserLidarAt<3000);const points=live?browserLidar:(hits||[]).filter(h=>h&&h.hit&&Number.isFinite(h.d)&&h.d>0).map(h=>({angle:+(((h.a-T.th)*180/Math.PI+540)%360-180).toFixed(2),range:+(h.d*PX).toFixed(3),type:h.type||'obstacle'}));return send(res,200,{source:live?'simulator-live':'bridge-sim-core',simulator_connected:live,max_range:5.2,frame:'robot',units:'meters',points,updated_at:Date.now()})}
+  if(req.method==='GET'&&url==='/v1/sim/poll'){const commands=pendingCommands.splice(0);return send(res,200,{commands,server_time:Date.now()})}
+  if(req.method==='POST'&&(url==='/v1/sim/state'||url==='/v1/sim/map'))return readBody(req,body=>{if(body===null)return send(res,400,{error:'bad json'});if(url==='/v1/sim/state'){browserState=body;browserStateAt=Date.now();if(Array.isArray(body.lidar)){browserLidar=body.lidar;browserLidarAt=Date.now()}}else{browserMap=body;browserMapAt=Date.now()}return send(res,200,{ok:true})});
+  if(req.method!=='POST')return send(res,404,{error:'not found'});
+  readBody(req,body=>{
+    if(body===null)return send(res,400,{error:'bad json'});
+    let command=null;
+    if(url==='/v1/summon'){
+      const x=+body.x,y=+body.y;
+      if(!(Number.isFinite(x)&&Number.isFinite(y)&&x>=0.5&&x<=W*PX-0.5&&y>=0.5&&y<=H*PX-0.5))return send(res,422,{accepted:false,status:'Target outside the room'});
+      command={type:'summon',x,y};
+    }else if(url==='/v1/drive'){
+      const x=Number(body.x),y=Number(body.y),turn=Number(body.turn),speed=Number(body.speed);
+      if(![x,y,turn,speed].every(Number.isFinite))return send(res,422,{accepted:false,status:'Drive values must be numbers'});
+      command={type:'drive',x:Math.max(-1,Math.min(1,x)),y:Math.max(-1,Math.min(1,y)),turn:Math.max(-1,Math.min(1,turn)),speed:Math.max(0.08,Math.min(1,speed))};
+    }else if(url==='/v1/return')command={type:'return'};
+    else if(url==='/v1/learn')command={type:'learn'};
+    else if(url==='/v1/stop')command={type:'stop'};
+    else if(url==='/v1/sim/cord')command={type:'cord',plugged:!!body.plugged};
+    else return send(res,404,{error:'not found'});
+    if(!browserState||Date.now()-browserStateAt>=3000)return send(res,503,{accepted:false,status:'Simulator page is not connected. Open /simulator and keep it running.'});
+    // Enforce the cord interlock before acknowledging or queueing a movement request.
+    // Stop and cord plug/unplug commands remain available so the user can stop or clear the interlock.
+    const movementTypes=new Set(['summon','drive','return','learn']);
+    if(movementTypes.has(command.type)&&browserState.cord?.plugged&&browserState.cord?.interlock_on){
+      return send(res,423,{accepted:false,status:'Movement refused: desk cord is plugged in. Unplug the cord before moving.',severity:'bad'});
+    }
+    const now=Date.now();
+    if(['summon','return','learn'].includes(command.type)){
+      const signature=command.type==='summon'?JSON.stringify({type:command.type,x:command.x,y:command.y}):command.type;
+      // Reject rapid repeats from repeated taps, stale tabs, or duplicate browser handlers.
+      if(signature===lastNavSignature&&now-lastNavAt<2000){
+        return send(res,409,{accepted:false,status:'Duplicate navigation command ignored. Wait for the current command to finish.',severity:'warn'});
+      }
+      lastNavSignature=signature;lastNavAt=now;
+    }
+    // Coalesce repeated software-stop clicks for 250 ms, while always allowing the first Stop through.
+    if(command.type==='stop'&&now-lastStopAt<250){
+      return send(res,429,{accepted:false,status:'Stop already sent.',severity:'warn'});
+    }
+    if(command.type==='stop')lastStopAt=now;
+    if(command.type==='stop'){
+      // Stop supersedes queued motion commands; do not let an old joystick packet run after it.
+      pendingCommands=pendingCommands.filter(c=>!['drive','summon','return','learn'].includes(c.type));
+    }else if(['summon','return'].includes(command.type)){
+      // Navigation commands replace stale manual-drive packets and older navigation requests.
+      pendingCommands=pendingCommands.filter(c=>!['drive','summon','return','learn'].includes(c.type));
+    }else if(command.type==='drive'){
+      // Keep only the newest joystick state instead of accumulating stale input.
+      pendingCommands=pendingCommands.filter(c=>c.type!=='drive');
+    }
+    const queued={id:nextCommandId++,...command,created_at:Date.now()};
+    pendingCommands.push(queued);
+    send(res,200,{accepted:true,status:'Command sent to simulator',severity:'info',command_id:queued.id});
+  });
+});
+server.listen(PORT,'0.0.0.0',()=>console.log('Summon Desk local web app + simulator bridge on port '+PORT+' (token configured)'));
+
+----- bridge/bridge_sim.js -----
+// Serves the REAL simulator (the same code as the browser page) over HTTP so the iPhone app can be developed
+// without hardware.  node bridge_sim.js   (Node 18+, no dependencies)
+const fs=require('fs'),path=require('path');
+global.els={};
+const mkctx=()=>new Proxy({},{get:(t,p)=>p in t?t[p]:(()=>{}),set:(t,p,v)=>{t[p]=v;return true}});
+function el(id){return els[id]||(els[id]={id,width:1600,height:1000,style:{},dataset:{},value:'1',checked:false,textContent:'',className:'',
+  getContext:()=>mkctx(),addEventListener(){},appendChild(){},setPointerCapture(){},getBoundingClientRect:()=>({left:0,top:0,width:800,height:500})})}
+global.document={getElementById:el,documentElement:{},querySelectorAll:()=>[]};
+global.getComputedStyle=()=>({getPropertyValue:()=>'#888'});
+global.matchMedia=()=>({matches:false,addEventListener(){}});
+global.addEventListener=()=>{};global.devicePixelRatio=1;
+global.performance={now:()=>0};global.requestAnimationFrame=()=>{};
+global.localStorage={getItem:()=>null,setItem(){},removeItem(){}};
+const code=fs.readFileSync(path.join(__dirname,'sim_core.js'),'utf8')+'\n'+fs.readFileSync(path.join(__dirname,'bridge_core.js'),'utf8');
+eval(code);
+
+----- .vscode/tasks.json -----
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Summon Desk: Start bridge",
+      "type": "shell",
+      "command": "node bridge/bridge_sim.js",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}
+
+----- README.md -----
+# Summon Desk
+
+A Humanscale sit-stand desk on a swerve base that drives to you, parks facing you, returns to its charging station, and
+is controlled from an iPhone. This archive holds all of the code in one place.
+
+    robot/simulator/   summon_table_sim.html   the browser simulator = the SINGLE SOURCE OF TRUTH for behaviour
+    robot/java-core/   Java (WPILib-style) planner, safety supervisor, map memory, with tests; WPILib glue skeleton
+    bridge/            Node server that serves the REAL simulator over the phone API (so the app needs no hardware)
+    ios/               SwiftUI iPhone app + the Info.plist keys it needs
+    mobile/            responsive phone web controller (Android/iPhone browser)
+    docs/              API.md (the phone <-> robot contract), the project proposal, the bill of materials
+    tests/sim/         headless scenarios that run the simulator's own code
+    tools/ scripts/    3D-model check, and verify.sh: one command that checks what can be checked
+
+## How the pieces fit
+
+    iPhone app  --HTTP/JSON (docs/API.md)-->  bridge  -->  today: the simulator   |   on the robot: NetworkTables + UPS
+                                                           roboRIO runs the Java robot code; a Pi/Jetson runs lidar drivers
+
+The simulator defines how the desk should behave. The Java core reproduces its planner and safety logic for the real robot
+(the cross-check prints identical routes on 4 of 5 scenes, the fifth is an equal-cost tie). The bridge exposes whichever
+backend is running behind the same API, and the app only ever talks to that API.
+
+## Check everything
+
+    ./scripts/verify.sh            # about 1-2 minutes: Java tests, API through the bridge, 3D model, Swift typo check, cord lock
+    ./scripts/verify.sh --full     # also slots, parking, round trips and batteries (several minutes)
+
+Needs: a JDK (17 or newer), Node 18+, Python 3, curl. No other dependencies.
+
+## What is verified, and what is not
+
+| Part | Status |
+|---|---|
+| Simulator behaviour | Tested headlessly: stress runs with 0 collisions, slots, parking, round trips, batteries, the cord lock. |
+| Java core (planner, supervisor, memory) | Builds and passes its own 16 checks; matches the simulator's routes (see above). |
+| Bridge and API | Tested with curl by `verify.sh`. |
+| 3D model | Geometry checked (every part connected at four desk heights, module dimensions match REV's figures). Not seen in a browser by the author. |
+| **Swift app** | **Never compiled.** Only a delimiter check. Build it in Xcode and expect small fixes. |
+| **WPILib glue** (`robot/java-core/wpilib-glue`) | **Never compiled** (needs WPILib). A skeleton. |
+| **Not written yet in Java** | The path follower, stuck recovery, the state machine (summon / return / learn / battery rules / cord lock). Today these exist only in the simulator. |
+| Hardware | Nothing here has run on a real robot. |
+
+## Quick start for each part
+
+- **Simulator:** open `robot/simulator/summon_table_sim.html` in a browser.
+- **Java core:** `cd robot/java-core && java tools/Build.java && java -cp out frc.robot.summon.core.CoreTests`.
+  To use it in a WPILib project, copy `src/main/java/frc/robot/summon/core/` and read `robot/java-core/README.md`.
+- **Phone controller (Android or iPhone):** run `Start Summon Desk.vbs` on Windows, or run `node bridge/bridge_sim.js` from the project root. On the phone, connected to the same trusted Wi-Fi, open `http://COMPUTER-IP:8787` in Chrome/Safari. On Android, use the browser menu → **Add to Home screen** for an app-like launcher. `dev-token` is a local development token only.
+- **Desktop simulator:** open `http://localhost:8787/simulator` after the bridge starts. The `/` route is the mobile controller. The visual simulator at `/simulator` publishes its live state (including both battery levels) to the bridge and receives commands from the phone controller. Keep the `/simulator` tab open while controlling it from the phone; the phone reports when the simulator is offline.
+- **No-terminal Windows start:** double-click `Start Summon Desk.vbs`; it starts the Node bridge hidden and opens the simulator in your browser. Double-click `Stop Summon Desk.vbs` to stop the bridge. If your organization's policies block VBScript, use the terminal command above instead.
+- **Change the simulator:** edit `robot/simulator/summon_table_sim.html`, then run `python3 scripts/sync_sim_core.py` so the
+  bridge picks it up (`verify.sh` does this for you).
+
+## Left out on purpose
+
+The earlier Python package (`summon_desk.zip`) is not included: it is out of date against the simulator and the Java core.
+
+## GitHub Codespaces
+
+For Codespaces setup and troubleshooting, follow [`CODESPACES-QUICKSTART.md`](CODESPACES-QUICKSTART.md). Run the bridge from the repository root and open the simulator through the forwarded URL at `/simulator`; do not open the HTML file directly if you want phone synchronization.
+
+===== DIFF: .vscode/tasks.json =====
+diff --git a/.vscode/tasks.json b/.vscode/tasks.json
+index 4323ab9..1a99afe 100644
+--- a/.vscode/tasks.json
++++ b/.vscode/tasks.json
+@@ -11,6 +11,10 @@
+         "reveal": "always",
+         "panel": "dedicated",
+         "clear": false
++      },
++      "group": {
++        "kind": "build",
++        "isDefault": true
+       }
+     }
+   ]
+
+===== DIFF: OTHER FILES =====
+diff --git a/.vscode/tasks.json b/.vscode/tasks.json
+index 4323ab9..1a99afe 100644
+--- a/.vscode/tasks.json
++++ b/.vscode/tasks.json
+@@ -11,6 +11,10 @@
+         "reveal": "always",
+         "panel": "dedicated",
+         "clear": false
++      },
++      "group": {
++        "kind": "build",
++        "isDefault": true
+       }
+     }
+   ]
+diff --git a/Start Summon Desk.bat b/Start Summon Desk.bat
+deleted file mode 100644
+index 356dc3e..0000000
+--- a/Start Summon Desk.bat	
++++ /dev/null
+@@ -1,35 +0,0 @@
+-@echo off
+-setlocal
+-cd /d "%~dp0"
+-echo ========================================
+-echo       SUMMON DESK - STARTUP CHECK
+-echo ========================================
+-echo Project folder: %CD%
+-echo.
+-if not exist "bridge\bridge_sim.js" (
+-  echo ERROR: bridge\bridge_sim.js was not found.
+-  echo Extract the ENTIRE ZIP folder before launching.
+-  pause
+-  exit /b 1
+-)
+-where node >nul 2>nul
+-if errorlevel 1 (
+-  echo ERROR: Node.js was not found on PATH.
+-  echo Install Node.js 18 or newer, then close and reopen this launcher.
+-  pause
+-  exit /b 1
+-)
+-echo Node.js found:
+-node --version
+-echo Starting the bridge in a separate window...
+-start "Summon Desk Bridge" /min "%ComSpec%" /k ""%~dp0bridge\run-bridge.cmd""
+-echo Waiting 3 seconds for the server...
+-timeout /t 3 /nobreak >nul
+-start "" "http://localhost:8787/"
+-start "" "http://localhost:8787/simulator"
+-echo.
+-echo Browser tabs requested. Keep the bridge window running.
+-echo Phone URL: http://YOUR-COMPUTER-IP:8787/
+-echo If the browser shows an error, check the bridge window for details.
+-timeout /t 8
+-endlocal
+diff --git a/Stop Summon Desk.bat b/Stop Summon Desk.bat
+deleted file mode 100644
+index 156743f..0000000
+--- a/Stop Summon Desk.bat	
++++ /dev/null
+@@ -1,4 +0,0 @@
+-@echo off
+-echo To stop Summon Desk, close the window titled "Summon Desk Bridge".
+-echo If the server window is minimized, restore it first.
+-pause
+diff --git a/mobile/index.html b/mobile/index.html
+index f8f8c3b..542df69 100644
+--- a/mobile/index.html
++++ b/mobile/index.html
+@@ -106,6 +106,63 @@ html[data-theme="teal"] .theme-toggle{background:#214247}
+ .event-log-empty{font-size:12px;color:#8daab3;padding:12px 0}
+ @media(min-width:1081px){#tab-control .layout>.event-log-card{grid-column:span 6}}
+ 
++
++/* Targeted desktop layout correction */
++@media (min-width: 1081px) {
++  main {
++    width: 100%;
++    max-width: 1180px;
++    margin-inline: auto;
++    padding-top: 24px;
++  }
++
++  #tab-control .layout {
++    display: grid;
++    grid-template-columns: repeat(2, minmax(0, 1fr));
++    gap: 14px;
++    align-items: start;
++  }
++
++  /* Clear older desktop column spans and fixed row placements */
++  #tab-control .layout > * {
++    grid-column: auto !important;
++    grid-row: auto !important;
++    min-width: 0;
++  }
++
++  /* Keep the main controls and status panels at consistent widths */
++  #tab-control .layout > .hero,
++  #tab-control .layout > .action-card,
++  #tab-control .layout > .mapcard,
++  #tab-control .layout > .diagnostics-card,
++  #tab-control .layout > .target-card,
++  #tab-control .layout > .advanced-card {
++    width: 100%;
++    min-width: 0;
++  }
++
++  #tab-control .layout .map {
++    width: 100%;
++    height: auto;
++    min-height: 260px;
++    aspect-ratio: 1.45;
++  }
++
++  /* Let event history use the full row for readable entries */
++  #tab-control .layout > .event-log-card {
++    grid-column: 1 / -1 !important;
++  }
++
++  /* Prevent the header and tabs from spreading awkwardly */
++  .top {
++    gap: 16px;
++  }
++
++  .tabs {
++    width: fit-content;
++    max-width: 100%;
++  }
++}
+ </style>
+ </head>
+ <body><main>

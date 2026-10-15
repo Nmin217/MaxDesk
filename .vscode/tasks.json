@@ -11,6 +11,10 @@
         "reveal": "always",
         "panel": "dedicated",
         "clear": false
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
       }
     }
   ]
