@@ -37,6 +37,17 @@ python3 scripts/check_swift.py && ok "Swift delimiters balanced (NOT compiled: b
 echo "== Simulator scenarios (headless)"
 if node tests/sim/run.js cord > /tmp/cord.log 2>&1 && grep -q "refused" /tmp/cord.log && grep -q "breakaways 1" /tmp/cord.log && ! grep -q "MOVED (bad)" /tmp/cord.log; then
   ok "cord lock: refuses, stops mid-trip, breakaway works, auto mode unaffected"; else no "cord scenario"; tail -5 /tmp/cord.log; fi
+if node tests/sim/run.js stoppriority > /tmp/sp.log 2>&1 && grep -q "STOP-PRIORITY PASS" /tmp/sp.log; then
+  ok "stop priority: cord, summon, stop, dup"
+else
+  no "stop priority"; tail -6 /tmp/sp.log
+fi
+
+if bash tests/bridge/run.sh > /tmp/br.log 2>&1; then
+  ok "bridge: dup poll, restart epoch handling"
+else
+  no "bridge restart"; tail -8 /tmp/br.log
+fi
 if [ $FULL -eq 1 ]; then
   for s in slots parking roundtrip battery; do
     node tests/sim/run.js $s > /tmp/$s.log 2>&1 && ! grep -q '"collisions":[1-9]' /tmp/$s.log && ! grep -Eq 'collisions[^0-9]*[1-9]' /tmp/$s.log && ! grep -q 'did not' /tmp/$s.log && ok "$s ran with no collisions" || { no "$s"; tail -4 /tmp/$s.log; }
