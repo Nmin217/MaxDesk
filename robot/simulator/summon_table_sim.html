@@ -146,7 +146,7 @@ let stuckTime=0,recovery=null,recoveryT=0;
 let headTarget=0.3, headState='SETTLED';
 // Phone joystick commands are simulation-only; values are normalized to [-1, 1].
 let manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35,lastCommandAt:0};
-let peopleInPathCount=0, safetyHolds=0, holdLatch=false, squeeze=false, squeezeUntil=0;
+let peopleInPathCount=0, safetyHolds=0, holdLatch=false, squeeze=false, squeezeUntil=0, safetyHoldUntil=0;
 const user={x:700,y:430,r:13};
 const modAng=[0,0,0,0];
 
@@ -181,7 +181,7 @@ function reset(){
   $('hs').value=105; $('hv').textContent='105';
   path=[]; goal=null; active=false; contacts=0; minGap=1e9; peakA=0;
   user.x=700; user.y=430;
-  stuckTime=0; recovery=null; recoveryT=0; safetyHolds=0; holdLatch=false; squeeze=false; squeezeUntil=0;
+  stuckTime=0; recovery=null; recoveryT=0; safetyHolds=0; holdLatch=false; squeeze=false; squeezeUntil=0; safetyHoldUntil=0;
   headTarget=T.th; headState='SETTLED';
   setSt('Idle',''); $('rc').textContent='–'; $('hg').textContent='–'; $('sl').textContent='–'; $('pp').textContent='–';
 }
@@ -632,9 +632,12 @@ for(const p of people){
   p.y += vy*dt;
   pushOut(p);
   pushFromDesk(p);
-  // Motion classification
+    // Motion classification
   const moved = Math.hypot(p.x-p.lastX, p.y-p.lastY)/Math.max(dt,1e-3);
   if(moved > MOVE_THRESH){
+    // A person we were routing around just moved. Hold briefly so the desk re-plans
+    // against their new position instead of driving through where they used to be.
+    if(p.settled){safetyHoldUntil = Math.max(safetyHoldUntil, time + 0.8); setSt('Person moved - holding to re-plan','warn')}
     p.stillTime = 0;
     p.settled = false;
   } else {
@@ -874,6 +877,9 @@ if(manualDrive.enabled && !estop && !active && !recovery && parkTh===null && !co
 let held=false;
 [cx,cy,w,held]=supervise(cx,cy,w);
 if(manualDriveTimedOut)held=true; // use emergency deceleration when joystick updates go stale
+// Sudden-movement hold: a settled person just moved. Zero the command so the desk stops
+// and re-plans against the new position, not the old one.
+if(time < safetyHoldUntil){cx=0;cy=0;w=0;held=true;}
 if(held&&active&&!estop&&!recovery&&low&&du>(mode==='user'?80:10))setSt('Safety hold - something in the swept path','warn');
 
 // Charging-cord lock: while plugged in (interlock on) the wheels get NO command, every frame, whatever else asked for motion.
