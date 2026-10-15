@@ -12,11 +12,10 @@ let lastNavSignature='',lastNavAt=0,lastStopAt=0;
 let epoch=1,lastBrowserStateAt=0;
 setInterval(()=>{const n=Date.now();const dt=Math.min(.05,(n-lastT)/1000);lastT=n;drainHeadless();update(dt)},16);
 function drainHeadless(){
-  // When no browser page is connected (or the last one went stale), apply
-  // queued commands to the internal sim. When the browser is live, it polls
-  // /v1/sim/poll and applies commands itself.
-  const browserLive=!!browserState&&(Date.now()-browserStateAt<3000);
-  if(browserLive)return;
+  // Headless mode is allowed only before a browser simulator has connected.
+  // Once a browser has connected, never replay its queued commands into the
+  // internal simulation after the browser becomes stale.
+  if(browserState)return;
   while(pendingCommands.length){
     const c=pendingCommands.shift();
     try{
@@ -53,13 +52,28 @@ const server=require('http').createServer((req,res)=>{
   if(req.method==='GET'&&url==='/v1/state'){const live=!!browserState&&(Date.now()-browserStateAt<3000);return send(res,200,{...(live?browserState:stateJSON()),simulator_connected:live,epoch:epoch})}
   if(req.method==='GET'&&url==='/v1/map')return send(res,200,{...(browserMap&&(Date.now()-browserMapAt<5000)?browserMap:mapJSON()),epoch:epoch});
   if(req.method==='GET'&&url==='/v1/lidar'){const live=!!browserLidar&&(Date.now()-browserLidarAt<3000);const points=live?browserLidar:(hits||[]).filter(h=>h&&h.hit&&Number.isFinite(h.d)&&h.d>0).map(h=>({angle:+(((h.a-T.th)*180/Math.PI+540)%360-180).toFixed(2),range:+(h.d*PX).toFixed(3),type:h.type||'obstacle'}));return send(res,200,{source:live?'simulator-live':'bridge-sim-core',simulator_connected:live,max_range:5.2,frame:'robot',units:'meters',points,updated_at:Date.now(),epoch:epoch})}
-  if(req.method==='GET'&&url==='/v1/sim/poll'){const commands=pendingCommands.splice(0);return send(res,200,{commands,server_time:Date.now(),epoch:epoch})}
+  if(req.method==='GET'&&url==='/v1/sim/poll'){
+    // Defense in depth: never deliver commands from an older session.
+    const commands=pendingCommands.splice(0).filter(c=>c.epoch===epoch);
+    return send(res,200,{commands,server_time:Date.now(),epoch:epoch});
+  }
   if(req.method==='POST'&&(url==='/v1/sim/state'||url==='/v1/sim/map'))return readBody(req,body=>{
     if(body===null)return send(res,400,{error:'bad json'});
     if(url==='/v1/sim/state'){
+      const hadBrowserSession=lastBrowserStateAt>0;
       const wasStale=!lastBrowserStateAt||(Date.now()-lastBrowserStateAt>=3000);
       browserState=body;browserStateAt=Date.now();lastBrowserStateAt=browserStateAt;
-      if(wasStale){epoch++;console.log('simulator (re)connected, epoch='+epoch)}
+      if(wasStale){
+        epoch++;
+        // Discard commands belonging to the previous browser session.
+        pendingCommands=[];
+        // On reconnection, require a known stopped state before resuming.
+        // Do not inject a Stop on the simulator's initial connection.
+        if(hadBrowserSession){
+          pendingCommands.push({id:nextCommandId++,type:'stop',created_at:Date.now(),epoch:epoch});
+        }
+        console.log('simulator '+(hadBrowserSession?'reconnected':'connected')+', epoch='+epoch);
+      }
       if(Array.isArray(body.lidar)){browserLidar=body.lidar;browserLidarAt=Date.now()}
     }else{browserMap=body;browserMapAt=Date.now()}
     return send(res,200,{ok:true,epoch:epoch})

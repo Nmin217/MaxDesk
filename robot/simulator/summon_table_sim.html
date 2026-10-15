@@ -1247,7 +1247,15 @@ cam.position.set(TX+Math.sin(yaw)*Math.cos(pit)*R,TY+Math.sin(pit)*R,TZ+Math.cos
     try{
       await send('/v1/sim/state',snapshot());
       const now=Date.now();if(now-lastMapAt>1200){await send('/v1/sim/map',mapSnapshot());lastMapAt=now}
-      const result=await get('/v1/sim/poll');for(const c of result.commands||[]){try{apply(c)}catch(e){console.error('Failed to apply phone command',c,e)}}
+      const result=await get('/v1/sim/poll');
+      for(const c of result.commands||[]){
+        // A delayed response must not execute commands from an older epoch.
+        if(c.epoch!==result.epoch){
+          console.warn('Ignoring stale simulator command',c.id,c.epoch,'current epoch',result.epoch);
+          continue;
+        }
+        try{apply(c)}catch(e){console.error('Failed to apply phone command',c,e)}
+      }
       if(lastStatus!==$('st').textContent){lastStatus=$('st').textContent;}
       document.documentElement.dataset.bridge='connected';
     }catch(e){document.documentElement.dataset.bridge='disconnected';console.warn('Summon Desk bridge sync:',e.message)}
