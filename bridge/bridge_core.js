@@ -10,7 +10,25 @@ let lastNavSignature='',lastNavAt=0,lastStopAt=0;
 // Command epoch: bumped when the simulator was stale and has just come back.
 // Commands may carry the client's last-seen epoch; a mismatch is rejected.
 let epoch=1,lastBrowserStateAt=0;
-setInterval(()=>{const n=Date.now();const dt=Math.min(.05,(n-lastT)/1000);lastT=n;update(dt)},16);
+setInterval(()=>{const n=Date.now();const dt=Math.min(.05,(n-lastT)/1000);lastT=n;drainHeadless();update(dt)},16);
+function drainHeadless(){
+  // When no browser page is connected (or the last one went stale), apply
+  // queued commands to the internal sim. When the browser is live, it polls
+  // /v1/sim/poll and applies commands itself.
+  const browserLive=!!browserState&&(Date.now()-browserStateAt<3000);
+  if(browserLive)return;
+  while(pendingCommands.length){
+    const c=pendingCommands.shift();
+    try{
+      if(c.type==='summon'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;user.x=c.x/PX;user.y=c.y/PX;parkTh=null;mode='user';didArrive=false;active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;headTarget=T.th;headState='SETTLED';setSt('Driving to you','');}
+      else if(c.type==='return'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;startReturn();}
+      else if(c.type==='stop'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;active=false;path=[];recovery=null;stuckTime=0;parkTh=null;setSt('Stopped','warn');}
+      else if(c.type==='learn'){startTour();}
+      else if(c.type==='cord'){cordIn=!!c.plugged;setSt(cordIn?'Cord plugged in':'Cord unplugged','');}
+      else if(c.type==='drive'){active=false;path=[];parkTh=null;mode='manual';manualDrive.enabled=true;manualDrive.lastCommandAt=Date.now();manualDrive.x=c.x;manualDrive.y=c.y;manualDrive.turn=c.turn;manualDrive.speed=c.speed;}
+    }catch(e){console.error('drainHeadless failed for',c.type,e.message)}
+  }
+}
 function stateJSON(){
   let ns=0,no=0;for(let i=0;i<GW*GH;i++){if(seen[i])ns++;if(smap[i]>0)no++}
   return {time:+time.toFixed(1),mode,status:$('st').textContent,severity:($('st').className||'info')||'info',active,estop,
@@ -67,12 +85,16 @@ const server=require('http').createServer((req,res)=>{
     else if(url==='/v1/stop')command={type:'stop'};
     else if(url==='/v1/sim/cord')command={type:'cord',plugged:!!body.plugged};
     else return send(res,404,{error:'not found'});
-    if(!browserState||Date.now()-browserStateAt>=3000)return send(res,503,{accepted:false,status:'Simulator page is not connected. Open /simulator and keep it running.'});
+    const browserLive=!!browserState&&(Date.now()-browserStateAt<3000);
+    const browserEverSeen=!!browserState;
+    if(browserEverSeen&&!browserLive)return send(res,503,{accepted:false,status:'Simulator page is not connected. Open /simulator and keep it running.'});
     // Enforce the cord interlock before acknowledging or queueing a movement request.
     // Stop and cord plug/unplug commands remain available so the user can stop or clear the interlock.
     const movementTypes=new Set(['summon','drive','return','learn']);
-    if(movementTypes.has(command.type)&&browserState.cord?.plugged&&browserState.cord?.interlock_on){
-      return send(res,423,{accepted:false,status:'Movement refused: desk cord is plugged in. Unplug the cord before moving.',severity:'bad'});
+    const cordPlugged=browserState?!!browserState.cord?.plugged:!!cordIn;
+    const cordInterlock=browserState?!!browserState.cord?.interlock_on:!!$('il').checked;
+    if(movementTypes.has(command.type)&&cordPlugged&&cordInterlock){
+      return send(res,409,{accepted:false,status:'Movement refused: desk cord is plugged in. Unplug the cord before moving.',severity:'bad'});
     }
     const now=Date.now();
     if(['summon','return','learn'].includes(command.type)){
