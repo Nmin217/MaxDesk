@@ -43,6 +43,7 @@ else
   no "stop priority"; tail -6 /tmp/sp.log
 fi
 
+node tests/pi/test_runtime.js > /tmp/pi.log 2>&1 && ok "pi runtime" || { no "pi runtime"; tail -8 /tmp/pi.log; }
 if bash tests/bridge/run.sh > /tmp/br.log 2>&1; then
   ok "bridge: dup poll, restart epoch handling"
 else
