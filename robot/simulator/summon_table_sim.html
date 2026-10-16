@@ -112,8 +112,12 @@ const smap=new Float32Array(GW*GH); let clrRays=[];
 // Long-term memory. smap = static obstacles (kept until a lidar ray passes through the cell). seen = cells the lidar has
 // ever covered. traffic = where people tend to be. All three persist between trips and, in this browser, between visits.
 const seen=new Uint8Array(GW*GH), traffic=new Float32Array(GW*GH);
-let sceneKey='default',mapChanged=false,lastSaveT=0,mapCalls=0,tourI=0,tourT=0,readyPending=false,wasCharging=false,cordIn=false,breakaways=0,alertT=0;
+let sceneKey='default',mapChanged=false,lastSaveT=0,mapCalls=0,stuckCalls=0,tourI=0,tourT=0,readyPending=false,wasCharging=false,cordIn=false,breakaways=0,alertT=0;
 const RISK=new Float32Array(GW*GH), UNK_PEN=.15, TRAF_K=.015, TRAF_MAX=.4;
+// Cells where the desk has recently been stuck get a growing planning cost, so A* prefers
+// a wider route next time. Fades slowly so a temporary obstacle does not poison a cell forever.
+const stuckP=new Float32Array(GW*GH), stuckPAt=new Float32Array(GW*GH).fill(-99);
+const STUCK_ADD=0.8, STUCK_MAX=4.0, STUCK_DECAY=0.98;
 const TOURS={default:[[160,430],[420,430],[700,420],[730,240],[540,200],[330,140],[330,340],[150,260]],
              slot:[[160,120],[620,120],[400,200],[400,330],[180,430],[650,430]]};
 function tourPts(){return TOURS[sceneKey]||TOURS.default}
@@ -450,7 +454,7 @@ function buildRoomy(occ,offs,rad){
 }
 function plan(){
   const occ=buildOccupancy();
-  for(let i=0;i<GW*GH;i++)RISK[i]=(seen[i]?0:UNK_PEN)+Math.min(TRAF_MAX,traffic[i]*TRAF_K);ROOMY=buildRoomy(occ,roomOffs,ROOMY_R);ROTOK=buildRoomy(occ,rotOffs,ROT_R);
+  for(let i=0;i<GW*GH;i++)RISK[i]=(seen[i]?0:UNK_PEN)+Math.min(TRAF_MAX,traffic[i]*TRAF_K)+stuckP[i];ROOMY=buildRoomy(occ,roomOffs,ROOMY_R);ROTOK=buildRoomy(occ,rotOffs,ROT_R);
   const Bt=buildBlocked(occ,KERN_TIGHT,MG_TIGHT);
   let r;
   if(time<squeezeUntil){   // flipping between a strict route and a tight one every replan made the desk go back and forth
@@ -763,7 +767,7 @@ if(active){
     while(trail.length>1&&Math.hypot(T.x-trail[trail.length-1].x,T.y-trail[trail.length-1].y)<10)trail.pop();
     const tc=trail[trail.length-1];
     const gi=T.x/CS|0,gj=T.y/CS|0,roomy=gi>=0&&gi<GW&&gj>=0&&gj<GH&&!ROOMY[gj*GW+gi];
-    if(!tc||(roomy&&recoveryT>1.5)||retreatD>=80||recoveryT>13){recovery=null;recoveryT=0;stuckTime=0;rp=0;waitT=1.2;trail=[];lastRecEnd=time}
+    if(!tc||(roomy&&recoveryT>1.5)||retreatD>=80||recoveryT>13){recovery=null;recoveryT=0;stuckTime=0;rp=0;waitT=1.2;trail=[];lastRecEnd=time;path=[];goal=null}
     else{
       const dd=Math.hypot(tc.x-T.x,tc.y-T.y)||1;
       cx=(tc.x-T.x)/dd*22;cy=(tc.y-T.y)/dd*22;retreatD+=22*dt;
@@ -856,6 +860,15 @@ if(active&&!estop&&!recovery){
     }
   } else if(!active||estop){stuckTime=0;recoveryT=0}
   $('rc').textContent=recovery?recovery:'–';
+  // Record the cell we are stuck in so A* avoids it on the next replan.
+  {
+    const gi=T.x/CS|0, gj=T.y/CS|0;
+    if(active&&!estop&&stuckTime>STUCK_TRIGGER&&gi>=0&&gi<GW&&gj>=0&&gj<GH){
+      const k=gj*GW+gi;
+      if(time-stuckPAt[k]>1.0){stuckP[k]=Math.min(STUCK_MAX,stuckP[k]+STUCK_ADD);stuckPAt[k]=time}
+    }
+    if((++stuckCalls)%60===0)for(let i=0;i<GW*GH;i++)if(stuckP[i]>0)stuckP[i]*=STUCK_DECAY;
+  }
 }
 
 batStep(dt);
