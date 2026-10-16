@@ -421,6 +421,19 @@ function planOri(B,Bt){
 }
 // Try the spot above/below you first (table ends up horizontal); use it unless it means a big detour.
 function planBest(B){return planOri(B)}
+function pathLength(p){let L=0;for(let i=1;i<p.length;i++)L+=Math.hypot(p[i].x-p[i-1].x,p[i].y-p[i-1].y);return L}
+function pathBlockedAhead(Bs){
+  // True if any of the next few waypoints of the CURRENT path is blocked.
+  if(!path.length) return true;
+  let bi=0,bd=1e9;
+  for(let i=0;i<path.length;i++){const d=Math.hypot(path[i].x-T.x,path[i].y-T.y);if(d<bd){bd=d;bi=i}}
+  const N=Math.min(6,path.length-bi);
+  for(let j=bi;j<bi+N;j++){
+    const p=path[j], c=(p.y/CS|0)*GW+(p.x/CS|0);
+    if(Bs[p.k&7][c]) return true;
+  }
+  return false;
+}
 // A cell is "roomy" if nothing is within the desk's circumscribed radius + 22 px, in ANY orientation. Only there may the plan
 // combine a turn with a move: the planner knows nothing about yaw rate, and near walls/gaps a turn must be a deliberate in-place one.
 const ROOMY_R=Math.hypot(HW,HH)+22, ROT_R=Math.hypot(HW,HH)+8, roomOffs=[], rotOffs=[];
@@ -450,8 +463,21 @@ function plan(){
       if(r2.length){r=r2;squeeze=true;squeezeUntil=time+3}
     }
   }
-  path=r;goal=r.length?{x:r[r.length-1].x,y:r[r.length-1].y}:null;
+    const newGoal=r.length?{x:r[r.length-1].x,y:r[r.length-1].y}:null;
+  // Path persistence: keep the old path if it is still valid and the new one
+  // is not meaningfully shorter. Without this, two near-equal routes flip
+  // back and forth every replan and the desk never commits.
+  if(path.length&&r.length&&goal){
+    const goalMoved=Math.hypot(newGoal.x-goal.x,newGoal.y-goal.y)>CS*0.5;
+    const oldLen=pathLength(path),newLen=pathLength(r);
+    if(!goalMoved&&!pathBlockedAhead(Bt)&&oldLen<=newLen*1.10){
+      goal=newGoal;   // keep the old path, refresh the goal pointer
+      return;
+    }
+  }
+  path=r;goal=newGoal;
 }
+
 
 function pushOut(p){
   for(const r of rects){const cx=Math.max(r.x,Math.min(p.x,r.x+r.w)),cy=Math.max(r.y,Math.min(p.y,r.y+r.h));let dx=p.x-cx,dy=p.y-cy,d=Math.hypot(dx,dy);
