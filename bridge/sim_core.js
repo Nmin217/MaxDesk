@@ -219,7 +219,7 @@ if(!C[g])return null;const out=[];for(let i=g;i!==-1;i=P[i])out.push({x:(i%GW+.5
 // Each orientation gets its own blocked grid: every obstacle cell is grown by the real rotated footprint
 // (plus a margin). A* then moves in 8 directions and can also rotate in place +-22.5 deg wherever both
 // orientations are free, so it inserts a turn exactly where there is room for one.
-const NKF=8, NK=16, DK=Math.PI/NKF, ALIGN_PEN=0.25, ROT_COST=1.0, ROT_MOVE=0.5, MG_STRICT=7, MG_TIGHT=2;
+const NKF=8, NK=16, DK=Math.PI/NKF, ALIGN_PEN=0.25, ROT_COST=1.0, ROT_MOVE=0.5, MG_STRICT=7, MG_TIGHT=4;
 const DIRS=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
 const STEPC=[];for(let k=0;k<NK;k++)STEPC.push(DIRS.map(([dx,dy])=>Math.hypot(dx,dy)*(1+ALIGN_PEN*Math.abs(Math.sin(Math.atan2(dy,dx)-k*DK)))));
 function makeKernels(mg){
@@ -784,9 +784,14 @@ if(active&&!estop&&!recovery){
    if(active&&!estop&&low&&!path.length&&!recovery&&tight)noPathT+=dt;else noPathT=0;
    if(noPathT>3&&!recovery&&trail.length>=3&&retreats<4){recovery='RETREAT';retreats++;retreatD=0;recoveryT=0;noPathT=0}}
   if(stuckTime>STUCK_TRIGGER && !recovery){
-    // First try to back out the way we came in (known-good states). Spinning/aligning inside a tight gap can't work.
-    if(trail.length>=3&&retreats<4&&time-lastRecEnd<8){recovery='RETREAT';retreats++;retreatD=0}else recovery='ALIGN';
-    recoveryT=0;stuckTime=STUCK_TRIGGER}
+    if(retreats>=4){
+      active=false;path=[];setSt('Blocked by obstacles - giving up','bad');stuckTime=0;
+    }else{
+      // First try to back out the way we came in (known-good states). Spinning/aligning inside a tight gap can't work.
+      if(trail.length>=3&&time-lastRecEnd<8){recovery='RETREAT';retreats++;retreatD=0}else recovery='ALIGN';
+      recoveryT=0;stuckTime=STUCK_TRIGGER;
+    }
+  }
   if(recovery){
     recoveryT+=dt;
     const lim = recovery==='RETREAT'?14:recovery==='SPIN'?REC_SPIN_T:(recovery==='ALIGN'?REC_ALIGN_T:REC_BACKOFF_T);
