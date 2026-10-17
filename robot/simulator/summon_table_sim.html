@@ -147,6 +147,8 @@ function loadMap(){
 }
 let warp=1,peakA=0,deskH=1.05,userH=1.05,estop=false,T,people,path=[],goal=null,hits=[],time=0,active=false,contacts=0,inC=false,minGap=1e9,rp=0,drag=false,parkTh=null,parkT=0,mode='user',didArrive=false,arT=0,bat={r:80,a:70},charging=false,lowT=0,prevDeskH=1.05,trail=[],retreats=0,waitT=0,retreatD=0,noPathT=0,lowSpeedT=0,patientUntil=0,lastRecEnd=-99;
 let stuckTime=0,recovery=null,recoveryT=0;
+// Measure progress over a short window so in-place turns are not mistaken for failed translation.
+let stuckWindowT=0,stuckWindowX=0,stuckWindowY=0,stuckWindowTh=0,stuckCmdTransT=0,stuckCmdRotT=0;
 let headTarget=0.3, headState='SETTLED';
 // Phone joystick commands are simulation-only; values are normalized to [-1, 1].
 let manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35,lastCommandAt:0};
@@ -185,7 +187,7 @@ function reset(){
   $('hs').value=105; $('hv').textContent='105';
   path=[]; goal=null; active=false; contacts=0; minGap=1e9; peakA=0;
   user.x=700; user.y=430;
-  stuckTime=0; recovery=null; recoveryT=0; safetyHolds=0; holdLatch=false; squeeze=false; squeezeUntil=0; safetyHoldUntil=0;
+  stuckTime=0; recovery=null; recoveryT=0; stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th; safetyHolds=0; holdLatch=false; squeeze=false; squeezeUntil=0; safetyHoldUntil=0;
   headTarget=T.th; headState='SETTLED';
   setSt('Idle',''); $('rc').textContent='–'; $('hg').textContent='–'; $('sl').textContent='–'; $('pp').textContent='–';
 }
@@ -474,10 +476,12 @@ function plan(){
   if(path.length&&r.length&&goal){
     const goalMoved=Math.hypot(newGoal.x-goal.x,newGoal.y-goal.y)>CS*0.5;
     const oldLen=pathLength(path),newLen=pathLength(r);
-    if(!goalMoved&&!pathBlockedAhead(Bt)&&oldLen<=newLen*1.10){
-      goal=newGoal;   // keep the old path, refresh the goal pointer
+    const currentPathBlocked=pathBlockedAhead(Bt);
+    if(!goalMoved&&!currentPathBlocked&&oldLen<=newLen*1.10){
+      goal=newGoal;   // keep the old path only while its upcoming waypoints remain clear
       return;
     }
+    // If the current path is blocked, fall through and replace it with the newly planned route.
   }
   path=r;goal=newGoal;
 }
@@ -603,14 +607,14 @@ function startTour(){
   if(cordBlocks())return;
   if(estop){setSt('E-stop engaged - release it first','bad');return}
   mode='tour';active=true;parkTh=null;didArrive=false;arT=0;tourI=0;tourT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;
-  stuckTime=0;recovery=null;recoveryT=0;headTarget=T.th;headState='SETTLED';setSt('Learning the room: point 1 of '+tourPts().length,'');
+  stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Learning the room: point 1 of '+tourPts().length,'');
 }
 function startReturn(){
   manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
   if(cordBlocks())return;
   if(estop){setSt('E-stop engaged - release it first','bad');return}
   mode='home';active=true;parkTh=null;didArrive=false;arT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;
-  headTarget=T.th;headState='SETTLED';setSt('Returning to start…','');
+  stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Returning to start…','');
 }
 function startParking(){
   const u=Math.atan2(user.y-T.y,user.x-T.x);
@@ -814,7 +818,7 @@ if(rotHere&&!recovery&&thTarget!==null){
   else{
     rotStallT+=dt;
     if(err<rotStallErr0*0.5){rotStallT=1e-6;rotStallErr0=err}
-    else if(rotStallT>1.5){
+    else if(rotStallT>2.0){
       const gi=T.x/CS|0,gj=T.y/CS|0;
       if(gi>=0&&gi<GW&&gj>=0&&gj<GH){const kk=gj*GW+gi;stuckP[kk]=Math.min(STUCK_MAX,stuckP[kk]+STUCK_ADD*2);stuckPAt[kk]=time}
       path=[];goal=null;rotHere=false;w=0;cx=0;cy=0;headTarget=T.th;headState='SETTLED';
@@ -855,23 +859,51 @@ if(active&&!estop&&!recovery){
   if(!lc||Math.hypot(T.x-lc.x,T.y-lc.y)>=8){trail.push({x:T.x,y:T.y,th:T.th});if(trail.length>150)trail.shift()}
 }
 
-// Stuck detection
+// Stuck detection: measure commanded translation and commanded yaw independently.
+// A rotation-in-place has near-zero X/Y displacement by design, so it must not trip
+// the translation detector. Progress is checked over a window, not from instantaneous speed.
 {
-  const actualSpeed=Math.hypot(T.vx,T.vy);
   const cmdSpeed=Math.hypot(cx,cy);
-  const shouldBeMoving = active && !estop && low && (cmdSpeed>8 || (thTarget!==null&&Math.abs(ang(thTarget,T.th))>.3&&Math.abs(T.w)<.05));
-  if(shouldBeMoving && actualSpeed<8) stuckTime+=dt;
-  else stuckTime=Math.max(0,stuckTime-dt*2);
+  const translating = active && !estop && low && cmdSpeed>8;
+  // w is the controller's requested yaw rate. T.w is the physical yaw rate after
+  // acceleration/safety limiting, so using T.w as the command would miss refused turns.
+  const rotating = active && !estop && low &&
+    (Math.abs(w)>0.2 || (thTarget!==null && Math.abs(ang(thTarget,T.th))>.3 &&
+      (rotHere || cmdSpeed<SPEED_DRIVE_MIN)));
+  if(!active||estop||!low||recovery){
+    stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;
+    stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;
+    if(!active||estop)stuckTime=0;
+  }else{
+    if(stuckWindowT===0){stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th}
+    stuckWindowT+=dt;
+    if(translating)stuckCmdTransT+=dt;
+    if(rotating)stuckCmdRotT+=dt;
+    if(stuckWindowT>=0.75){
+      const translationProgress=Math.hypot(T.x-stuckWindowX,T.y-stuckWindowY);
+      const rotationProgress=Math.abs(ang(T.th,stuckWindowTh));
+      const translationStalled=stuckCmdTransT>=0.5&&translationProgress<3;
+      const rotationStalled=stuckCmdRotT>=0.5&&rotationProgress<0.08;
+      if(translationStalled||rotationStalled)stuckTime+=stuckWindowT;
+      else stuckTime=Math.max(0,stuckTime-stuckWindowT*2);
+      stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;
+      stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;
+    }
+  }
   {const gi=T.x/CS|0,gj=T.y/CS|0,tight=gi>=0&&gi<GW&&gj>=0&&gj<GH&&ROOMY[gj*GW+gi];
    if(active&&!estop&&low&&!path.length&&!recovery&&tight)noPathT+=dt;else noPathT=0;
    if(noPathT>3&&!recovery&&trail.length>=3&&retreats<4){recovery='RETREAT';retreats++;retreatD=0;recoveryT=0;noPathT=0}}
   if(stuckTime>STUCK_TRIGGER && !recovery){
     if(retreats>=4){
-      active=false;path=[];setSt('Blocked by obstacles - giving up','bad');stuckTime=0;
+      // Never deactivate an active trip solely because recovery attempts accumulated.
+      // Clear the stale plan and start a fresh recovery cycle; Stop/E-stop remain authoritative.
+      retreats=0;path=[];goal=null;rp=0;retreatD=0;recoveryT=0;stuckTime=0;
+      recovery=trail.length>=3?'RETREAT':'ALIGN';
+      setSt('Recovery cycle reset - replanning','warn');
     }else{
-      // First try to back out the way we came in (known-good states). Spinning/aligning inside a tight gap can't work.
+      // First try a known-good breadcrumb retreat after a recent recovery; otherwise align and retry.
       if(trail.length>=3&&time-lastRecEnd<8){recovery='RETREAT';retreats++;retreatD=0}else recovery='ALIGN';
-      recoveryT=0;stuckTime=STUCK_TRIGGER;
+      recoveryT=0;stuckTime=0;
     }
   }
   if(recovery){
@@ -880,7 +912,7 @@ if(active&&!estop&&!recovery){
     if(recoveryT>lim){
       if(recovery==='ALIGN'){recovery='BACKOFF';recoveryT=0}
       else if(recovery==='BACKOFF'){recovery='SPIN';recoveryT=0}
-      else{recovery=null;recoveryT=0;stuckTime=0;lastRecEnd=time}
+      else{recovery=null;recoveryT=0;stuckTime=0;lastRecEnd=time;rp=0;path=[];goal=null}
     }
   } else if(!active||estop){stuckTime=0;recoveryT=0}
   $('rc').textContent=recovery?recovery:'–';
@@ -1130,7 +1162,7 @@ cv.addEventListener('pointermove',e=>{const p=pos(e);if(blockDrag){const b=block
 function finishCanvasDrag(){drag=false;blockDrag=null}
 cv.addEventListener('pointerup',finishCanvasDrag);cv.addEventListener('pointercancel',finishCanvasDrag);
 
-$('go').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(bat.r<8&&!estop){startReturn();setSt('Battery too low - returning to the dock instead','warn');return}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
+$('go').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(bat.r<8&&!estop){startReturn();setSt('Battery too low - returning to the dock instead','warn');return}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
 $('back').onclick=startReturn;
 $('stop').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;didArrive=false;arT=0;active=false;path=[];recovery=null;stuckTime=0;setSt('Stopped','warn')};
 $('rst').onclick=()=>{forgetMap();sceneKey='default';reset();clearMapArrays();loadMap()};
