@@ -187,7 +187,7 @@ function reset(){
   $('hs').value=105; $('hv').textContent='105';
   path=[]; goal=null; active=false; contacts=0; minGap=1e9; peakA=0;
   user.x=700; user.y=430;
-  stuckTime=0; recovery=null; recoveryT=0; safetyHolds=0; holdLatch=false; squeeze=false; squeezeUntil=0; safetyHoldUntil=0;
+  stuckTime=0; recovery=null; recoveryT=0; stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th; safetyHolds=0; holdLatch=false; squeeze=false; squeezeUntil=0; safetyHoldUntil=0;
   headTarget=T.th; headState='SETTLED';
   setSt('Idle',''); $('rc').textContent='–'; $('hg').textContent='–'; $('sl').textContent='–'; $('pp').textContent='–';
 }
@@ -607,14 +607,14 @@ function startTour(){
   if(cordBlocks())return;
   if(estop){setSt('E-stop engaged - release it first','bad');return}
   mode='tour';active=true;parkTh=null;didArrive=false;arT=0;tourI=0;tourT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;
-  stuckTime=0;recovery=null;recoveryT=0;headTarget=T.th;headState='SETTLED';setSt('Learning the room: point 1 of '+tourPts().length,'');
+  stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Learning the room: point 1 of '+tourPts().length,'');
 }
 function startReturn(){
   manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
   if(cordBlocks())return;
   if(estop){setSt('E-stop engaged - release it first','bad');return}
   mode='home';active=true;parkTh=null;didArrive=false;arT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;
-  headTarget=T.th;headState='SETTLED';setSt('Returning to start…','');
+  stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Returning to start…','');
 }
 function startParking(){
   const u=Math.atan2(user.y-T.y,user.x-T.x);
@@ -1162,7 +1162,7 @@ cv.addEventListener('pointermove',e=>{const p=pos(e);if(blockDrag){const b=block
 function finishCanvasDrag(){drag=false;blockDrag=null}
 cv.addEventListener('pointerup',finishCanvasDrag);cv.addEventListener('pointercancel',finishCanvasDrag);
 
-$('go').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(bat.r<8&&!estop){startReturn();setSt('Battery too low - returning to the dock instead','warn');return}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
+$('go').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(bat.r<8&&!estop){startReturn();setSt('Battery too low - returning to the dock instead','warn');return}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
 $('back').onclick=startReturn;
 $('stop').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;didArrive=false;arT=0;active=false;path=[];recovery=null;stuckTime=0;setSt('Stopped','warn')};
 $('rst').onclick=()=>{forgetMap();sceneKey='default';reset();clearMapArrays();loadMap()};
