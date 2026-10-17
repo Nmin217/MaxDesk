@@ -150,7 +150,7 @@ let stuckTime=0,recovery=null,recoveryT=0;
 let headTarget=0.3, headState='SETTLED';
 // Phone joystick commands are simulation-only; values are normalized to [-1, 1].
 let manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35,lastCommandAt:0};
-let peopleInPathCount=0, safetyHolds=0, holdLatch=false, squeeze=false, squeezeUntil=0, safetyHoldUntil=0;
+let peopleInPathCount=0, safetyHolds=0, holdLatch=false, squeeze=false, squeezeUntil=0, safetyHoldUntil=0, rotStallT=0, rotStallErr0=0, forceStrictUntil=-99;
 const user={x:700,y:430,r:13};
 const modAng=[0,0,0,0];
 
@@ -805,6 +805,25 @@ if(active){
     }
   }
 }
+// Rotation stall: if rotHere has not reduced the yaw error by half within 1.5 s,
+// the supervisor is refusing the turn. Abandon it, penalize this cell, and force a
+// strict-margin replan so A* tries a wider route instead of twitching against a wall.
+if(rotHere&&!recovery&&thTarget!==null){
+  const err=Math.abs(ang(thTarget,T.th));
+  if(rotStallT===0){rotStallT=1e-6;rotStallErr0=err}
+  else{
+    rotStallT+=dt;
+    if(err<rotStallErr0*0.5){rotStallT=1e-6;rotStallErr0=err}
+    else if(rotStallT>1.5){
+      const gi=T.x/CS|0,gj=T.y/CS|0;
+      if(gi>=0&&gi<GW&&gj>=0&&gj<GH){const kk=gj*GW+gi;stuckP[kk]=Math.min(STUCK_MAX,stuckP[kk]+STUCK_ADD*2);stuckPAt[kk]=time}
+      path=[];goal=null;rotHere=false;w=0;cx=0;cy=0;headTarget=T.th;headState='SETTLED';
+      forceStrictUntil=time+5;
+      setSt('Rotation blocked - replanning','warn');
+      rotStallT=0;rotStallErr0=0;
+    }
+  }
+}else{rotStallT=0;rotStallErr0=0}
 
 // Parking turn (after arriving): rotate in place until the keyboard side faces you
 if(!active&&!estop&&parkTh!==null){
