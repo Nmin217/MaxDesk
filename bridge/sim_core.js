@@ -65,6 +65,13 @@ function loadMap(){
 }
 let warp=1,peakA=0,deskH=1.05,userH=1.05,estop=false,T,people,path=[],goal=null,hits=[],time=0,active=false,contacts=0,inC=false,minGap=1e9,rp=0,drag=false,parkTh=null,parkT=0,mode='user',didArrive=false,arT=0,bat={r:80,a:70},charging=false,lowT=0,prevDeskH=1.05,trail=[],retreats=0,waitT=0,retreatD=0,noPathT=0,lowSpeedT=0,patientUntil=0,lastRecEnd=-99;
 let stuckTime=0,recovery=null,recoveryT=0;
+// Progress along the current path. It only moves forward: picking the nearest waypoint every frame let a waypoint from
+// BEFORE an in-place turn win right after the turn, so the yaw target flipped back and forth and the wheels twitched.
+let pathI=0,planDest=null,pathStrict=true,heldT=0,closeFollowUntil=-99;   // heldT: how long the supervisor has been refusing the current command
+const PATH_SEARCH=15;   // waypoints (10 px each) ahead of pathI that may be the closest one
+function nearestAhead(){let bi=Math.min(pathI,path.length-1),bd=1e9;
+  for(let i=bi;i<Math.min(path.length,pathI+PATH_SEARCH);i++){const d=Math.hypot(path[i].x-T.x,path[i].y-T.y);if(d<bd){bd=d;bi=i}}
+  return bi}
 // Measure progress over a short window so in-place turns are not mistaken for failed translation.
 let stuckWindowT=0,stuckWindowX=0,stuckWindowY=0,stuckWindowTh=0,stuckCmdTransT=0,stuckCmdRotT=0;
 let headTarget=0.3, headState='SETTLED';
@@ -349,8 +356,7 @@ function pathLength(p){let L=0;for(let i=1;i<p.length;i++)L+=Math.hypot(p[i].x-p
 function pathBlockedAhead(Bs){
   // True if any of the next few waypoints of the CURRENT path is blocked.
   if(!path.length) return true;
-  let bi=0,bd=1e9;
-  for(let i=0;i<path.length;i++){const d=Math.hypot(path[i].x-T.x,path[i].y-T.y);if(d<bd){bd=d;bi=i}}
+  const bi=nearestAhead();
   const N=Math.min(6,path.length-bi);
   for(let j=bi;j<bi+N;j++){
     const p=path[j], c=(p.y/CS|0)*GW+(p.x/CS|0);
@@ -375,33 +381,30 @@ function buildRoomy(occ,offs,rad){
 function plan(){
   const occ=buildOccupancy();
   for(let i=0;i<GW*GH;i++)RISK[i]=(seen[i]?0:UNK_PEN)+Math.min(TRAF_MAX,traffic[i]*TRAF_K)+stuckP[i];ROOMY=buildRoomy(occ,roomOffs,ROOMY_R);ROTOK=buildRoomy(occ,rotOffs,ROT_R);
-  const Bt=buildBlocked(occ,KERN_TIGHT,MG_TIGHT);
+  const Bt=buildBlocked(occ,KERN_TIGHT,MG_TIGHT),Bs=buildBlocked(occ,KERN_STRICT,MG_STRICT);
   let r;
   if(time<squeezeUntil){   // flipping between a strict route and a tight one every replan made the desk go back and forth
     r=planOri(Bt,Bt);squeeze=true;
-    if(!r.length){r=planOri(buildBlocked(occ,KERN_STRICT,MG_STRICT),Bt);squeeze=false}
+    if(!r.length){r=planOri(Bs,Bt);squeeze=false}
   }else{
-    r=planOri(buildBlocked(occ,KERN_STRICT,MG_STRICT),Bt);squeeze=false;
+    r=planOri(Bs,Bt);squeeze=false;
     if(!r.length){   // nothing fits with the full margin: retry tighter (the supervisor still guards contact)
       const r2=planOri(Bt,Bt);
       if(r2.length){r=r2;squeeze=true;squeezeUntil=time+3}
     }
   }
-    const newGoal=r.length?{x:r[r.length-1].x,y:r[r.length-1].y}:null;
-  // Path persistence: keep the old path if it is still valid and the new one
-  // is not meaningfully shorter. Without this, two near-equal routes flip
-  // back and forth every replan and the desk never commits.
-  if(path.length&&r.length&&goal){
-    const goalMoved=Math.hypot(newGoal.x-goal.x,newGoal.y-goal.y)>CS*0.5;
-    const oldLen=pathLength(path),newLen=pathLength(r);
-    const currentPathBlocked=pathBlockedAhead(Bt);
-    if(!goalMoved&&!currentPathBlocked&&oldLen<=newLen*1.10){
-      goal=newGoal;   // keep the old path only while its upcoming waypoints remain clear
-      return;
-    }
-    // If the current path is blocked, fall through and replace it with the newly planned route.
+  const newGoal=r.length?{x:r[r.length-1].x,y:r[r.length-1].y}:null,dd=dest();
+  // Path persistence: keep the current path (and its goal) while it is clear, the destination has not moved, and what is
+  // LEFT of it is not much longer than the new plan. Compare against the parking spot the user is at (dest), not the
+  // goal cell: several cells around the user cost nearly the same, and the cheapest one changes from replan to replan
+  // as the map fills in, which used to throw away a good route for a longer one.
+  // Never hold on to a path the supervisor is refusing, or one that now breaks the margin it was planned with.
+  if(path.length&&r.length&&goal&&planDest&&heldT<0.3&&stuckTime===0){
+    const destMoved=Math.hypot(dd.x-planDest.x,dd.y-planDest.y)>CS*0.5;
+    const i0=nearestAhead(),oldLeft=Math.hypot(path[i0].x-T.x,path[i0].y-T.y)+pathLength(path.slice(i0)),newLen=pathLength(r);
+    if(!destMoved&&!pathBlockedAhead(pathStrict?Bs:Bt)&&oldLeft<=newLen*1.15+CS)return;
   }
-  path=r;goal=newGoal;
+  path=r;goal=newGoal;pathI=0;planDest={x:dd.x,y:dd.y};pathStrict=!squeeze;
 }
 
 
@@ -621,8 +624,7 @@ if(active){
   }
   else if(!path.length)setSt('No safe path – waiting','warn')
   else{
-    let bi=0,bd=1e9;
-    for(let i=0;i<path.length;i++){const d=Math.hypot(path[i].x-T.x,path[i].y-T.y);if(d<bd){bd=d;bi=i}}
+    let bi=nearestAhead();
     // ---- orientation-aware following ----
     // Swerve: the desk turns WHILE it drives. It only stops for a turn if the plan has an in-place one (same spot,
     // new orientation), which A* now uses only where no moving turn fits. Otherwise the yaw target is simply the
@@ -639,9 +641,13 @@ if(active){
       if(Math.abs(ang(thT,T.th))<.12){bi=e;continue}
       rotHere=true;thTarget=thT;break;
     }
+    pathI=bi;
     if(!rotHere)thTarget=angleNear(path[bi].th,T.th);
     let ti=bi;
-    for(let i=bi;i<=tiLimit;i++){ti=i;if(Math.hypot(path[i].x-T.x,path[i].y-T.y)>38)break}
+    // Aim 38 px ahead, which cuts corners. Right after a safety hold, aim just 14 px ahead so the desk follows the planned
+    // path (which has margin) around the corner, instead of stopping dead against it.
+    const look=time<closeFollowUntil?14:38;
+    for(let i=bi;i<=tiLimit;i++){ti=i;if(Math.hypot(path[i].x-T.x,path[i].y-T.y)>look)break}
     const dx=path[ti].x-T.x,dy=path[ti].y-T.y,d=Math.hypot(dx,dy)||1,da=Math.atan2(dy,dx);
     const ca=Math.cos(da),sa=Math.sin(da);
     let sp=(mode==='home'||mode==='tour')?Math.min(VMAX,8+du*.5):Math.min(VMAX,15+(du-80)*.5),ms=1e9,md=1e9;
@@ -893,6 +899,8 @@ if(manualDriveTimedOut)held=true; // use emergency deceleration when joystick up
 // Sudden-movement hold: a settled person just moved. Zero the command so the desk stops
 // and re-plans against the new position, not the old one.
 if(time < safetyHoldUntil){cx=0;cy=0;w=0;held=true;}
+heldT=held&&active?heldT+dt:0;
+if(held&&active)closeFollowUntil=time+1.5;
 if(held&&active&&!estop&&!recovery&&low&&du>(mode==='user'?80:10))setSt('Safety hold - something in the swept path','warn');
 
 // Charging-cord lock: while plugged in (interlock on) the wheels get NO command, every frame, whatever else asked for motion.
