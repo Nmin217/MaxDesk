@@ -1,0 +1,13 @@
+{
+  "name": "Summon Desk Simulator",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "forwardPorts": [8787],
+  "portsAttributes": {
+    "8787": {
+      "label": "Summon Desk app + simulator bridge",
+      "onAutoForward": "notify",
+      "protocol": "http"
+    }
+  },
+  "postCreateCommand": "node --version && python3 --version"
+}

@@ -1,0 +1,10 @@
+out/
+node_modules/
+*.class
+.DS_Store
+xcuserdata/
+*.bak
+maxdesk_review_bundle.txt
+bridge/*.bak
+robot/simulator/*.bak
+workspace.zip

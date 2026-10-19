@@ -1,0 +1,19 @@
+{
+  "lidar": {
+    "model": "RPLIDAR_A1M8_PLACEHOLDER",
+    "port": "/dev/ttyUSB0",
+    "baudrate": 115200,
+    "timeout": 3.0
+  },
+  "safety": {
+    "forward_angle_min_deg": -30,
+    "forward_angle_max_deg": 30,
+    "stop_distance_m": 0.8,
+    "slow_distance_m": 1.5,
+    "max_stale_scan_sec": 1.0
+  },
+  "networktables": {
+    "server": "10.0.0.2",
+    "port": 5810
+  }
+}

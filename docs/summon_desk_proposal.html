@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Summon Desk: project proposal</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f5f8;--paper:#ffffff;--ink:#16202c;--mut:#556272;--line:#d5dce5;--acc:#0b6a88;--accbg:#e4f1f6;--hi:#b3261e;--hibg:#fbe9e7;--med:#8a5a00;--medbg:#fff3d9;--lo:#1e6b45;--lobg:#e3f4ea;--code:#eef1f5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f141a;--paper:#171e26;--ink:#e6ebf1;--mut:#9aa7b6;--line:#2c3743;--acc:#63bfdc;--accbg:#12303b;--hi:#ff8a80;--hibg:#3a1b19;--med:#f0c060;--medbg:#3a2e12;--lo:#74d6a0;--lobg:#12301f;--code:#1d2630}}
+:root[data-theme="dark"]{--bg:#0f141a;--paper:#171e26;--ink:#e6ebf1;--mut:#9aa7b6;--line:#2c3743;--acc:#63bfdc;--accbg:#12303b;--hi:#ff8a80;--hibg:#3a1b19;--med:#f0c060;--medbg:#3a2e12;--lo:#74d6a0;--lobg:#12301f;--code:#1d2630}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.68 "Charter","Iowan Old Style","Palatino Linotype",Georgia,serif}
+.wrap{max-width:900px;margin:0 auto;padding:28px 18px 60px}
+header{padding:8px 0 22px;border-bottom:2px solid var(--ink);margin-bottom:26px}
+h1{font:700 34px/1.15 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0 0 8px;letter-spacing:-.01em}
+.meta{font:14px/1.5 system-ui,sans-serif;color:var(--mut)}
+h2{font:700 23px/1.25 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:46px 0 10px;padding-top:6px}
+h2 .n{color:var(--acc);margin-right:8px}
+h3{font:650 17px/1.3 system-ui,sans-serif;margin:26px 0 6px}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:70ch}li{margin-bottom:6px}
+a{color:var(--acc)}
+.lede{font-size:19px;max-width:66ch}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:20px 0 6px}
+.fact{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-family:system-ui,sans-serif}
+.fact b{display:block;font-size:24px;line-height:1.2}.fact span{font-size:13px;color:var(--mut)}
+table{border-collapse:collapse;width:100%;margin:12px 0 22px;font:14.5px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--paper)}
+.tw{overflow-x:auto;margin:12px 0 22px;border:1px solid var(--line);border-radius:10px}
+.tw table{margin:0}
+th,td{padding:9px 11px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--code);font-weight:650;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font:600 12px/1 system-ui,sans-serif;padding:4px 7px;border-radius:5px;white-space:nowrap}
+.hi{background:var(--hibg);color:var(--hi)}.med{background:var(--medbg);color:var(--med)}.lo{background:var(--lobg);color:var(--lo)}
+.note{background:var(--accbg);border-left:4px solid var(--acc);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;max-width:72ch;font-size:16px}
+.warn{background:var(--medbg);border-left:4px solid var(--med);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;max-width:72ch;font-size:16px}
+code{font:13.5px ui-monospace,Menlo,Consolas,monospace;background:var(--code);padding:1px 5px;border-radius:4px}
+figure{margin:18px 0 8px}figcaption{font:13.5px system-ui,sans-serif;color:var(--mut);margin-top:6px}
+svg{width:100%;height:auto;display:block;background:var(--paper);border:1px solid var(--line);border-radius:10px}
+.toc{font:15px/1.9 system-ui,sans-serif;columns:2;column-gap:30px;margin:18px 0 0;padding:0;list-style:none}
+.toc a{text-decoration:none}.toc a:hover{text-decoration:underline}
+@media (max-width:640px){body{font-size:16px}h1{font-size:28px}.toc{columns:1}}
+@media print{body{background:#fff;color:#000;font-size:11.5pt}.wrap{max-width:none;padding:0}.tw{overflow:visible;border:0}tr{break-inside:avoid}h2{break-after:avoid}svg,.fact{break-inside:avoid}a{color:#000}}
+</style></head><body><div class="wrap">
+
+<header>
+<h1>Summon Desk: project proposal</h1>
+<div class="meta">A self-driving Humanscale sit-stand desk that comes when called, parks facing you, and returns to its dock to charge. Draft v2 for review, October 7, 2026: UPS power, and the desk stays manual.</div>
+<ul class="toc">
+<li><a href="#s1">1. Summary</a></li><li><a href="#s2">2. Goal and success criteria</a></li><li><a href="#s3">3. System overview</a></li><li><a href="#s4">4. What the simulator has shown</a></li>
+<li><a href="#s5">5. Plan and timeline</a></li><li><a href="#s6">6. Budget</a></li><li><a href="#s7">7. Challenges and risks</a></li><li><a href="#s8">8. The desk stays manual</a></li>
+<li><a href="#s9">9. Automatic charging and docking</a></li><li><a href="#s10">10. Phone app (iOS)</a></li><li><a href="#s11">11. Safety plan</a></li><li><a href="#s12">12. Decisions I need from you</a></li><li><a href="#s13">13. Sources and what is verified</a></li>
+</ul>
+</header>
+
+<h2 id="s1"><span class="n">1</span>Summary</h2>
+<p class="lede">The project is a Humanscale electric sit-stand desk on a four-module swerve base. You tap your location on a phone, and the desk drives to you around people and furniture, parks with its keyboard side toward you and its monitor's back forward, and later drives back to a dock and charges itself. It stays at your height the whole time. It does not lower itself first, so nothing has to be wired into the desk's controls.</p>
+<p>The software side is far along: a browser simulator that has been stress-tested for collisions, tight gaps, people in the way, parking, return trips, charging, and now a map that it remembers between trips. One caveat on the code: the robot-side software should be Java on WPILib. I have ported the planner, safety supervisor and map memory into a tested Java core (it reproduces the simulator's routes). The path follower, the state machine and the WPILib wiring still need porting, and the earlier Python package is out of date. What remains is almost entirely physical: the drive base, the safety chain, the UPS and dock, and keeping a desk at standing height stable while it moves.</p>
+<div class="facts">
+<div class="fact"><b>~$7,700</b><span>suggested build incl. 15% contingency (estimate; section 6)</span></div>
+<div class="fact"><b>5 to 8 months</b><span>part-time, one or two people (estimate; section 5)</span></div>
+<div class="fact"><b>0 collisions</b><span>in every simulator stress run; 35 of 35 trips arrive</span></div>
+<div class="fact"><b>3 big risks</b><span>control-system supply, tall-desk stability, E-stop design</span></div>
+</div>
+
+<h2 id="s2"><span class="n">2</span>Goal and success criteria</h2>
+<p><b>Goal.</b> On request, move the desk to a person safely and unattended, park it in a useful pose, and later return and recharge without help. The desk's height is the user's business: the robot never changes it.</p>
+<p>The project is done when, on real hardware, all of these hold:</p>
+<ol>
+<li><b>No contact.</b> Over a fixed test course with people walking and standing, nothing and no one is touched. The hardwired E-stop stops all motion in under a second, with no software involved.</li>
+<li><b>Gets there.</b> From the dock to a target anywhere in the test room, including a 70 cm gap, with no human help in at least 9 of 10 trials. After the room has been mapped, the first planned route does not cross a known obstacle.</li>
+<li><b>Parks usefully.</b> Stops facing you with the table horizontal where possible and the monitor's back forward, within a few centimeters of the planned spot.</li>
+<li><b>Stays stable at standing height.</b> No tipping, wobble or sliding items at the speed and braking limits, with the desk left at its tallest working height and a realistic monitor load.</li>
+<li><b>Docks and charges.</b> Both batteries charge by themselves, and it goes home on its own when either is low.</li>
+</ol>
+
+<h2 id="s3"><span class="n">3</span>System overview</h2>
+<p>This follows your wiring diagram, updated for two changes: a UPS replaces the Anker power station, and the desk stays manual, so there is no desk control board or handset wiring. The robot has a 12 V FRC-style drivetrain, a lidar and onboard-computer domain on UPS power, and a hardwired E-stop that sits above both.</p>
+<figure>
+<svg viewBox="0 0 860 470" role="img" aria-label="Block diagram of the summon desk: onboard computer, lidars, roboRIO, swerve drive, UPS, manual Humanscale desk, dock, and the E-stop chain">
+<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--mut)"/></marker><marker id="are" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--hi)"/></marker></defs>
+<style>.b{fill:var(--paper);stroke:var(--ink);stroke-width:1.4}.d1{fill:var(--accbg);stroke:var(--acc);stroke-width:1.2;stroke-dasharray:6 4}.d3{fill:var(--hibg);stroke:var(--hi);stroke-width:1.2;stroke-dasharray:6 4}.t{font:600 13px system-ui,sans-serif;fill:var(--ink)}.s{font:11.5px system-ui,sans-serif;fill:var(--mut)}.dl{font:700 12px system-ui,sans-serif;fill:var(--acc)}.dr{font:700 12px system-ui,sans-serif;fill:var(--hi)}.ln{stroke:var(--mut);stroke-width:1.5;fill:none;marker-end:url(#ar)}.lp{stroke:var(--ink);stroke-width:2.2;fill:none}.le{stroke:var(--hi);stroke-width:2;fill:none;stroke-dasharray:5 3;marker-end:url(#are)}</style>
+<rect class="d1" x="12" y="12" width="400" height="302" rx="12"/><text class="dl" x="26" y="32">Drivetrain: 12 V SLA, FRC-style</text>
+<rect class="d1" x="440" y="12" width="408" height="302" rx="12"/><text class="dl" x="454" y="32">Perception, planning and desk: UPS house power</text>
+<rect class="d3" x="12" y="334" width="836" height="126" rx="12"/><text class="dr" x="26" y="356">Hardwired E-stop (no software in this loop)</text>
+
+<rect class="b" x="28" y="52" width="110" height="46" rx="6"/><text class="t" x="40" y="72">12 V SLA</text><text class="s" x="40" y="88">drivetrain only</text>
+<rect class="b" x="28" y="122" width="110" height="46" rx="6"/><text class="t" x="40" y="142">Contactor</text><text class="s" x="40" y="158">batt +, 150 A</text>
+<rect class="b" x="170" y="122" width="110" height="46" rx="6"/><text class="t" x="182" y="142">PDH</text><text class="s" x="182" y="158">CAN passthrough</text>
+<rect class="b" x="170" y="52" width="110" height="46" rx="6"/><text class="t" x="182" y="72">roboRIO</text><text class="s" x="182" y="88">Java: plan, safety</text>
+<rect class="b" x="304" y="52" width="94" height="116" rx="6"/><text class="t" x="314" y="74">8 x SPARK</text><text class="t" x="314" y="90">MAX</text><text class="s" x="314" y="110">4 drive NEO</text><text class="s" x="314" y="126">4 steer 550</text><text class="s" x="314" y="142">4 encoders</text>
+<rect class="b" x="28" y="196" width="370" height="106" rx="6"/><text class="t" x="42" y="218">4 swerve modules + frame</text><text class="s" x="42" y="236">Each wheel steers and drives independently.</text><text class="s" x="42" y="252">UPS bolted under the desktop; the desk stays</text><text class="s" x="42" y="268">at the user's height while driving.</text><text class="s" x="42" y="286">Stability at that height: see section 7, risk 2.</text>
+<path class="lp" d="M83,98 V122"/><path class="lp" d="M138,145 H170"/><path class="lp" d="M225,122 V98"/><path class="ln" d="M280,75 H304"/><path class="ln" d="M351,168 V196"/>
+
+<rect class="b" x="456" y="52" width="160" height="62" rx="6"/><text class="t" x="468" y="72">Onboard computer</text><text class="s" x="468" y="90">Pi 5 / Jetson</text><text class="s" x="468" y="105">lidar + UPS drivers</text>
+<rect class="b" x="456" y="140" width="76" height="46" rx="6"/><text class="t" x="466" y="160">Lidar L</text><text class="s" x="466" y="176">360 deg</text>
+<rect class="b" x="540" y="140" width="76" height="46" rx="6"/><text class="t" x="550" y="160">Lidar R</text><text class="s" x="550" y="176">360 deg</text>
+<rect class="b" x="456" y="212" width="160" height="46" rx="6"/><text class="t" x="468" y="232">Ethernet switch</text><text class="s" x="468" y="248">NetworkTables link</text>
+<rect class="b" x="648" y="52" width="184" height="62" rx="6"/><text class="t" x="660" y="72">Line-interactive UPS</text><text class="s" x="660" y="90">pure sine, USB monitoring</text><text class="s" x="660" y="105">charges itself from AC</text>
+<rect class="b" x="648" y="138" width="184" height="78" rx="6"/><text class="t" x="660" y="158">Humanscale desk</text><text class="s" x="660" y="176">manual handset, unmodified</text><text class="s" x="660" y="192">powered from the UPS</text><text class="s" x="660" y="208">you set its height</text>
+<rect class="b" x="648" y="238" width="184" height="62" rx="6"/><text class="t" x="660" y="258">Charging station</text><text class="s" x="660" y="276">wall cord with breakaway end</text><text class="s" x="660" y="291">no driving while plugged in</text>
+<path class="ln" d="M494,140 V114"/><path class="ln" d="M578,140 V114"/><path class="ln" d="M648,83 H616"/>
+<path class="ln" d="M740,114 V138"/>
+<path class="ln" d="M225,52 V44 H432 V235 H456"/><path class="ln" d="M456,83 H432"/>
+
+<rect class="b" x="28" y="376" width="172" height="56" rx="6"/><text class="t" x="40" y="398">E-stop button x2</text><text class="s" x="40" y="416">desktop + frame, in series</text>
+<rect class="b" x="222" y="376" width="208" height="56" rx="6"/><text class="t" x="234" y="398">Dual-channel safety relay</text><text class="s" x="234" y="416">drops out on any fault</text>
+<rect class="b" x="466" y="376" width="170" height="56" rx="6"/><text class="t" x="478" y="398">Contactor (12 V +)</text><text class="s" x="478" y="416">kills all drive power</text>
+<path class="le" d="M200,404 H222"/><path class="le" d="M430,404 H466"/>
+<text class="s" x="660" y="396">Software is never trusted to stop the robot.</text><text class="s" x="660" y="414">The phone link only carries target and summon</text><text class="s" x="660" y="432">requests, via a bridge on the Pi.</text>
+</svg>
+<figcaption>Simplified from your wiring diagram. Dashed red = safety loop. The diagram's "main breaker coil" is replaced by a contactor (section 7, risk 6).</figcaption>
+</figure>
+<h3>Code and language</h3>
+<p>The robot-side code should be <b>Java on WPILib</b>, which is the best-supported path for an FRC-style robot: swerve templates, simulation, logging and REVLib all treat Java as first class. A sensible split:</p>
+<ul>
+<li><b>roboRIO (Java):</b> swerve drive from the REV MAXSwerve template, the safety supervisor, path following, the state machine and the charging interlock.</li>
+<li><b>Coprocessor (Pi 5 or Jetson):</b> the lidar drivers (vendor SDKs are usually C++ or Python) and UPS monitoring through Network UPS Tools, publishing scans and power state over NetworkTables.</li>
+<li><b>Planner:</b> light enough to run in Java on either side. It takes about 2 ms on a laptop JVM; the roboRIO is much slower, so measure it there before deciding.</li>
+</ul>
+<p>The Java core (<b>summon_java.zip</b>) contains the planner, supervisor and map memory with 16 passing checks, and a skeleton of the WPILib subsystem that I could not compile offline.</p>
+
+<h2 id="s4"><span class="n">4</span>What the simulator has shown</h2>
+<p>The simulator is a browser page that implements the planning and safety ideas directly (the Java core reproduces its planner, supervisor and map; see section 1), with a swerve robot, two lidars, walkers, sitters and talkers. It has been tested headless with scripted scenarios. These are results from that sim, not hardware.</p>
+<div class="tw"><table>
+<tr><th>Behavior</th><th>Result in simulation</th></tr>
+<tr><td>Collisions and arrival</td><td>0 collisions in every stress run: a 35-run matrix (5 targets x 7 event sets, all 35 arrive), a 19-case people-in-the-slot matrix, and sudden-obstacle tests.</td></tr>
+<tr><td>Sudden obstacle</td><td>Stops for an object that appears about 1.1 m or more ahead at full speed. Closer than that it is physically too late at the sim's braking limit.</td></tr>
+<tr><td>Fitting through gaps</td><td>Passes 70 cm and 62 cm slots by turning the desk to face along the slot.</td></tr>
+<tr><td>Parking</td><td>5 of 6 test positions end with the table horizontal and the keyboard side facing the user; the sixth parks diagonal because furniture and a person block the spots above and below.</td></tr>
+<tr><td>Turning while moving</td><td>Swerve turns happen while it drives wherever there is room. Time spent turning while stopped fell from 18.1 s to 4.2 s across the six parking positions.</td></tr>
+<tr><td>Remembering the room</td><td>On a fresh desk the first planned route crossed a real obstacle (the grey box) and about half of the replans on that trip did too. On the second trip the first route was clean and none of 107 replans crossed it. A "Learn the room" tour maps 95% of the room in about 100 s; the next trip's first route is clean. The map survives a page reload. People are kept out of the furniture map, and places where people often stand get a small cost so routes avoid them.</td></tr>
+<tr><td>Stuck handling</td><td>A short wiggle first; if stuck again soon after, it reverses along the trail it came in on; a person who does not clear for 8 s becomes an obstacle to route around. 17 of 19 people-in-the-slot cases finish; the other 2 are someone sitting in the slot entrance, where waiting is correct.</td></tr>
+<tr><td>Charging</td><td>Two dock types. <i>Manual cord:</i> charges only when plugged in; with the interlock on, Come to me and Learn the room are refused while plugged in; with it off, the breakaway releases at cord length and the trip still completes with 0 collisions. <i>Auto contacts:</i> charges by itself when parked on the pad. Both: batteries drain while driving, it auto-returns when low and idle, and it refuses a trip below 8%.</td></tr>
+<tr><td>Trip time</td><td>A typical trip across the room is about 21 s, down from about 38 s when the desk lowered and raised itself.</td></tr>
+<tr><td>Planner speed</td><td>Median about 13 ms and 95th percentile about 30 ms per replan in a laptop-class JavaScript engine. The replan rate stretches automatically on slower devices. A Pi 5 should be fine but must be measured.</td></tr>
+</table></div>
+<h3>Numbers the hardware must be able to meet</h3>
+<p>The simulator assumes these motion limits (1 m = 50 px in the sim). The real robot has to deliver them at its true mass and center of gravity, or the sim's safety margins no longer hold:</p>
+<div class="tw"><table>
+<tr><th>Parameter</th><th class="num">Sim value</th></tr>
+<tr><td>Top speed</td><td class="num">0.8 m/s</td></tr><tr><td>Acceleration limit</td><td class="num">0.5 m/s&sup2;</td></tr>
+<tr><td>Normal braking</td><td class="num">1.2 m/s&sup2;</td></tr><tr><td>Emergency braking (just under item-slip)</td><td class="num">2.4 m/s&sup2;</td></tr>
+<tr><td>Yaw rate</td><td class="num">up to 1.8 rad/s</td></tr><tr><td>Desk height while driving</td><td class="num">the user's own height (sim default 105 cm)</td></tr>
+</table></div>
+<div class="warn"><b>What the sim does not model:</b> localization error and drift, sensor noise and dropouts, wheel slip, the real mass and center of gravity (which matters more now that the desk drives at standing height), floor surfaces and thresholds, and network latency. Most of the remaining project risk lives in that list.</div>
+
+<h2 id="s5"><span class="n">5</span>Plan and timeline</h2>
+<p>The plan is to build the drivetrain first, add the lidar once it is proven, and attach the table last. That order is right, and the stages below add a few things that make it safer: a ballast stage before the real desk goes on, a frame designed up front for everything that will attach later, and the E-stop from day one. Durations are my estimates for one or two people part-time.</p>
+<div class="tw"><table>
+<tr><th>Stage</th><th>Work</th><th>Exit criterion</th><th class="num">Weeks</th></tr>
+<tr><td>0. Decide, design, order</td><td>Settle the control stack (roboRIO availability matters first). Design the <i>whole</i> frame in CAD with mounting points reserved for the lidars, the desk's lift columns, the UPS bracket, the charging inlet, the E-stops and the battery. Order long-lead parts.</td><td>Section 12 answered; frame design reviewed; orders placed.</td><td class="num">2 to 3</td></tr>
+<tr><td>1. Bare base, then lidar</td><td>E-stop and contactor first. Four modules on a frame, wheels off the floor for first power-up, calibrate, drive by gamepad, measure odometry and set speed limits. Then mount the lidars on the <b>frame</b> at a fixed low height, calibrate their position, log scans, and run "assisted driving" where the gamepad is filtered by the safety supervisor.</td><td>Repeatable 0.8 m/s paths; odometry error measured; lidar scans clean at speed; the supervisor stops the base for a cardboard obstacle.</td><td class="num">4 to 7</td></tr>
+<tr><td>2. Ballast and dummy desk</td><td>Add weight plates and a plywood desktop outline at desk height, at the real mass and center of gravity. Set the footprint to the full outline.</td><td>Loaded acceleration and braking match the sim table; tilt and stopping-distance tests passed; lidar blind spots from the overhang mapped.</td><td class="num">3 to 4</td></tr>
+<tr><td>3. Autonomy on the loaded base</td><td>Planner, map memory and the mapping tour on the real hardware, tethered, with cardboard scenarios copied from the simulator (slots, people, sudden boxes).</td><td>Sim-matching runs with someone holding the E-stop; first routes avoid known obstacles after mapping.</td><td class="num">4 to 6</td></tr>
+<tr><td>4. Real desk and UPS</td><td>Attach the Humanscale, the UPS bracket and the rest. Repeat the stage 2 tests with the real thing, including a sideways-load test of the lift columns.</td><td>Same loaded tests pass at full desk height.</td><td class="num">2 to 3</td></tr>
+<tr><td>5. Safety validation</td><td>People walking and standing, fault injection, E-stop chain tests, written risk assessment.</td><td>Checklist in section 11 signed off.</td><td class="num">3 to 4</td></tr>
+<tr><td>6. Charging station</td><td>Wall station, cord with breakaway, interlock and its hardware backup, UPS monitoring.</td><td>10 consecutive unattended plug-in and unplug cycles; forgotten-cord tests pass.</td><td class="num">2 to 4</td></tr>
+<tr><td>7. Polish</td><td>iOS app (started early against the simulator bridge, finished and tested on the real robot), status indicators, documentation.</td><td>A new user can summon it without help.</td><td class="num">2 to 3</td></tr>
+</table></div>
+<p>Elapsed time is roughly 22 to 33 weeks (5 to 8 months). Software work (finishing the Java port of the follower and state machine, and the iOS app against the simulator bridge) runs in parallel with stages 1 and 2, so it is ready when the hardware is.</p>
+<div class="note"><b>Why the ballast stage matters.</b> A bare base weighs a fraction of the finished robot. Tuning and testing it bare tells you little about loaded braking, wheel wear, battery sag or tip-over. Ballast and a dummy desktop let you find those problems before the real desk is bolted on.</div>
+
+<h2 id="s6"><span class="n">6</span>Budget</h2>
+<p>The full line-item list is in <b>Summon_Desk_BOM.xlsx</b> (version 6), with live formulas so you can change quantities and prices. The roll-up, by category:</p>
+<div class="tw"><table>
+<tr><th>Category</th><th class="num">Required</th><th class="num">Recommended</th><th class="num">Optional</th></tr>
+<tr><td>Swerve drive base</td><td class="num">$2,140</td><td class="num">-</td><td class="num">$60</td></tr>
+<tr><td>Control system and 12 V power</td><td class="num">$1,210</td><td class="num">-</td><td class="num">$12</td></tr>
+<tr><td>Onboard compute and perception</td><td class="num">$925</td><td class="num">$230</td><td class="num">-</td></tr>
+<tr><td>Humanscale desk (manual; table assumed owned)</td><td class="num">$0</td><td class="num">-</td><td class="num">$15</td></tr>
+<tr><td>House power (UPS)</td><td class="num">$450</td><td class="num">-</td><td class="num">-</td></tr>
+<tr><td>E-stop and safety</td><td class="num">$160</td><td class="num">$355</td><td class="num">-</td></tr>
+<tr><td>Charging station</td><td class="num">$230</td><td class="num">$87</td><td class="num">$40</td></tr>
+<tr><td>Frame and mechanical</td><td class="num">$650</td><td class="num">$100</td><td class="num">-</td></tr>
+<tr><td>Miscellaneous (incl. Apple Developer Program)</td><td class="num">$100</td><td class="num">$99</td><td class="num">-</td></tr>
+<tr><th>Total</th><th class="num">$5,865</th><th class="num">$871</th><th class="num">$127</th></tr>
+</table></div>
+<p>Required plus recommended is <b>$6,736</b>; with 15% contingency it is about <b>$7,750</b>. This excludes tax, shipping, labor, any electrician or machining beyond the lines shown, and the Humanscale table, which I assumed you own. That is roughly $2,500 less than the earlier plan: the Anker (about $2,500) and the heavy casters are gone, and so is the desk-control hardware, partly offset by a depth camera that is now recommended.</p>
+<div class="warn"><b>How much to trust the prices.</b> None of the remaining prices were verified this session. The UPS in particular is a placeholder (about $300) because I do not know your model; REV's pages loaded without prices, and everything else marked "Estimate" is my own estimate. Check before ordering.</div>
+<p><b>The swerve base is now the main cost</b> at about 35% of the build. The UPS is only about 5%. Its weight, not its price, is what to check: a sealed lead-acid UPS of roughly this size is typically 10 to 15 kg (verify yours), far less than the 60 kg power station it replaces.</p>
+
+<h2 id="s7"><span class="n">7</span>Challenges and risks</h2>
+<p>Ranked by how likely they are to hurt the project and how hard they are to undo. The last column says the earliest cheap way to find out.</p>
+<div class="tw"><table>
+<tr><th>#</th><th>Risk</th><th>Why it matters</th><th>What to do</th><th>Find out by</th></tr>
+<tr><td>1</td><td><span class="tag hi">High</span> Robot controller: availability and lifespan</td><td>AndyMark sells the roboRIO 2.0 only for FRC use (non-FRC buyers contact NI). WPILib 2027 drops roboRIO for Systemcore, whose price is unannounced. SPARK MAX use without a roboRIO is documented as non-competition use and needs a heartbeat; Linux support is raw SocketCAN.</td><td>Decide the stack before buying motor controllers: roboRIO (if NI will sell), wait for Systemcore, or a CAN-on-Linux stack such as CTRE Talon FX with a CANivore, or an open controller. Also plan how the robot gets "enabled" without a laptop Driver Station.</td><td>Phase 0</td></tr>
+<tr><td>2</td><td><span class="tag hi">High</span> Driving at standing height: tip-over, sliding items, wobble</td><td>The desk no longer lowers before driving, so the center of gravity is higher and the monitor sways. As an illustration only: a base 0.7 m wide with its center of gravity 0.6 m up would need about 0.6 g sideways to tip, versus the sim's 0.25 g emergency braking. Your real numbers decide it.</td><td>Keep the 12 V battery and heavy parts low in the frame; measure the real center of gravity; tilt-table and braking tests at full height with a realistic monitor; cap speed and braking from the results; use the IMU tilt fault; optionally a read-only height sensor to slow down when the desk is tall. Ask users to keep loose items off.</td><td>Phase 2</td></tr>
+<tr><td>3</td><td><span class="tag med">Medium</span> UPS under the desktop: lift rating, attachment, column loads</td><td>Published lift capacities for the electric eFloat line are roughly 220 to 250 lb (Lite), 225 to 275 lb (Flex) and 220 lb (Go 2.0); I could not confirm whether they include the desktop. A UPS around 10 to 15 kg plus a monitor and the top should fit, but the columns were designed for sit-stand loads, not for the sideways forces of a robot accelerating. In an illustrative example, moving a 12 kg UPS from low in the frame to under the desktop raises the center of gravity from about 0.55 m to 0.66 m and lowers the sideways tip threshold from about 0.66 g to 0.55 g, still well above the sim's 0.24 g emergency braking.</td><td>Check your model's rated load including everything on it; through-bolt the bracket with backing plates; add cable slack for height changes and keep the UPS vents clear; brace or test the columns under lateral load before driving with people near.</td><td>Phase 0 and 2</td></tr>
+<tr><td>4</td><td><span class="tag hi">High</span> The robot's size and shape at every height</td><td>The sim treats the desk as one 1.12 m x 0.72 m rectangle and assumes everything it can hit is visible to the lidar. A real desk has different outlines at different heights, and with no lowering the desktop sits at about 1 m, where a lidar mounted low on the frame cannot see shelves, chair backs or other desks' edges. A lidar mounted under the desktop would move with the desk height and miss floor-level obstacles instead.</td><td>Mount the lidars on the frame at a fixed low height; define the footprint as the largest outline at any height (including the desktop overhang and monitor); add a depth camera or a second lidar plane at desktop height; keep one set of measured dimensions as the single source of truth (the old Python config and the sim disagreed; the Java Config now matches the sim).</td><td>Phase 2 and 3</td></tr>
+<tr><td>5</td><td><span class="tag med">Medium</span> Mass, stopping distance and floor loads</td><td>The UPS is far lighter than the old power station, but desk, frame, batteries and modules still add up. The 3 in MAXSwerve module weighs 3.8 lb and REV calls it the smallest and lightest swerve module for FRC; I found no published load rating, and REV notes that its wheels are consumables that wear with robot weight. More mass means longer stops, higher wheel loads and faster tread wear, and 3 in wheels cope poorly with floor thresholds.</td><td>Weigh the real build early; ask REV about your loaded mass; derate speeds; add current limits; test on your real floors and thresholds; measure loaded braking against the sim table, with ballast first.</td><td>Phase 2</td></tr>
+<tr><td>6</td><td><span class="tag hi">High</span> E-stop design</td><td>The diagram has the E-stop open the PDP main breaker's coil. A standard FRC main breaker is a manual breaker with no remote-trip coil (verify yours).</td><td>Use a 12 V DC contactor, rated for the full battery current, in series with battery positive, driven through a dual-channel safety relay. It must not depend on any computer.</td><td>Phase 2</td></tr>
+<tr><td>7</td><td><span class="tag med">Medium</span> Localization and finding you</td><td>The sim knows exactly where the desk is. Real odometry drifts and wheels slip. The sim also gets your position from a tap.</td><td>Fuse gyro and wheel odometry with lidar scan matching against the saved map. For your position, start with tapping a floor-plan map in the app; consider a UWB or phone-based tag later.</td><td>Phase 3</td></tr>
+<tr><td>8</td><td><span class="tag med">Medium</span> A UPS riding on a moving base</td><td>UPSes are built to sit still. Sealed lead-acid batteries dislike shock and tilt, a UPS beeps and switches to battery every time it leaves the dock, and its quoted runtime assumes a short backup.</td><td>Secure it firmly with vibration isolation; silence the alarm; read its state over USB; check real watt-hours against your loads; consider a lithium UPS.</td><td>Phase 0 and 5</td></tr>
+<tr><td>9</td><td><span class="tag med">Medium</span> Mains voltage, batteries and charging</td><td>120 V AC inside the base and at the dock; a UPS battery and an SLA battery; charging unattended.</td><td>Fuse every branch, GFCI, shrouded connectors with no exposed live pins, an electrician's review of the wall station, and no unattended charging until the cycle is proven.</td><td>Phase 5</td></tr>
+<tr><td>10</td><td><span class="tag med">Medium</span> A forgotten or snagged charging cord</td><td>If the desk drives off while still plugged in, it can yank the plug or outlet, trip someone, or damage the inlet or the cord. A single sensor that fails silently is not enough protection.</td><td>Two independent layers (section 9): a lock fed by three separate "plugged in" signals that holds the wheels off (backed by a hardware switch in the contactor path), and a low-force breakaway connector for when it drives anyway. Route the cord so it cannot reach a wheel, and test the release force with a pull gauge.</td><td>Phase 5</td></tr>
+<tr><td>11</td><td><span class="tag med">Medium</span> Lidar blind spots</td><td>Corner lidars are shadowed by the desk body and the UPS. 2D lidar misses low obstacles, glass and overhangs.</td><td>Measure the real coverage map; add bumpers; consider a depth camera. Slow down where coverage is poor.</td><td>Phase 3</td></tr>
+<tr><td>12</td><td><span class="tag med">Medium</span> The learned map goes stale</td><td>Moved furniture or a removed box leaves a ghost until a lidar ray passes through the spot. Real sensors cannot tell a person from a chair as easily as the sim can.</td><td>Rays clear ghosts as soon as they see the space; classify people before mapping; keep a "forget map" control and re-run the mapping tour after rearranging.</td><td>Phase 3</td></tr>
+<tr><td>13</td><td><span class="tag med">Medium</span> Sim-to-real gap</td><td>Everything in section 4 is simulated.</td><td>Re-run the same scenarios on hardware, one at a time, with someone on the E-stop; keep the sim's scenario list as the test plan.</td><td>Phase 3 to 4</td></tr>
+<tr><td>14</td><td><span class="tag med">Medium</span> Links, latency and watchdogs</td><td>Computer to roboRIO over NetworkTables: any stall must fail safe.</td><td>Heartbeat on every link; a missed heartbeat zeroes velocity.</td><td>Phase 1</td></tr>
+<tr><td>15</td><td><span class="tag med">Medium</span> The phone app: network, permissions and alerts</td><td>The phone and robot must share a network; iOS asks for local network permission; alerts do not arrive when the app is closed unless you add push notifications; I could not compile the Swift.</td><td>Decide the network layout early; keep the API contract (API.md) as the source of truth; build against the simulator bridge; plan push alerts as version 2; never let the app be part of the safety chain.</td><td>Stage 3</td></tr>
+<tr><td>16</td><td><span class="tag lo">Low</span> Price and supply swings</td><td>Memory and storage are supply-constrained in 2026; the Pi 5 4 GB reportedly rose from $60 to about $110.</td><td>Buy the computer early; keep the contingency line.</td><td>Phase 0</td></tr>
+<tr><td>17</td><td><span class="tag med">Medium</span> Where it will be used</td><td>A 100 kg-class autonomous robot among people may be restricted in an office or school, and may raise insurance questions.</td><td>Confirm the location's rules before spending. Start in a space you control.</td><td>Phase 0</td></tr>
+</table></div>
+
+<h2 id="s8"><span class="n">8</span>The desk stays manual</h2>
+<p>The earlier plan spent a lot of effort on getting the Humanscale desk to obey a computer: opening the handset, emulating its buttons, closing the loop on height, and defending against a button stuck pressed. That was the highest-risk item, because Humanscale publishes no control protocol and I could not verify your handset's electronics.</p>
+<p>By keeping the desk at your height for the whole trip, all of that goes away. The desk's own handset and control box stay untouched, and you raise and lower it yourself.</p>
+<h3>What this removes</h3>
+<ul>
+<li>The optocoupler or relay board, the desk control board and its watchdog.</li>
+<li>The logic analyzer and spare handset, and the bench-test phase (2 to 4 weeks).</li>
+<li>The risk of a stuck button driving the desk to a limit, and any warranty question about opening the handset.</li>
+<li>Waiting for the desk to lower and raise: trips are about 17 s shorter in the sim.</li>
+</ul>
+<h3>What it adds, and what to do about it</h3>
+<ul>
+<li><b>A taller, more top-heavy robot while moving.</b> This becomes the main physical risk (section 7, risk 2). Measure the real center of gravity and test at full height before setting speed and braking limits.</li>
+<li><b>Loose items on the desk.</b> The sim's braking limits are sized below the slip threshold of typical items, but a monitor and cables are what to test first.</li>
+<li><b>The UPS under the desktop.</b> Its weight counts against the lift's rated load, it rides up and down with the desk, and the columns will feel sideways loads they were not built for. See section 7, risk 3.</li>
+<li><b>Power.</b> The desk's control box still needs mains power, from the UPS or the dock. Check that the UPS handles the lift motors' start-up current, preferably with a pure sine wave output.</li>
+</ul>
+<div class="note"><b>Optional safety aid.</b> A read-only height sensor mounted on the frame (not wired into the Humanscale) lets the software cap speed when the desk is left tall. It is listed in the BOM as optional.</div>
+<h3>If you want automatic height later</h3>
+<p>Nothing in the design blocks it. The controller already talks to a desk-lift interface, and the earlier approach still applies: emulate the handset buttons with optocouplers, hold them only while a watchdog is alive, and read the height with a sensor. Do not attempt it until a spare handset has been studied on the bench.</p>
+<div class="note"><b>Mechanical note.</b> Confirm the desk's rated load covers the desktop, monitor and anything else it carries. The UPS and batteries ride in the frame, not on the desk.</div>
+
+<h2 id="s9"><span class="n">9</span>Charging station: plug-in, and safe if you forget to unplug</h2>
+<p>You asked how to set up a charging station for the 12 V FRC battery and the UPS so they can be plugged in, and nothing bad happens if the cord is still plugged in when the desk is summoned. The plan is a simple manual plug-in station, with two independent protections against a forgotten cord. Automatic contacts stay available as a later upgrade.</p>
+<h3>The station</h3>
+<ol>
+<li><b>On the wall:</b> a GFCI outlet on its own 15 A circuit (have an electrician do it) and a hook for the cord. The cord is only long enough (about 0.9 m in the sim) to reach the desk's parking spot.</li>
+<li><b>One cord:</b> a UL-listed, light-duty magnetic breakaway power cord from the wall to the robot.</li>
+<li><b>On the robot:</b> a shrouded AC inlet fixed to the <b>frame</b>, not the UPS, because the UPS now rides up and down with the desktop. From the inlet, a flexible, strain-relieved cable with slack for the full height range goes to the UPS input, which charges its own battery.</li>
+<li><b>The 12 V battery:</b> a small smart charger on the robot, powered from the same inlet (so it only runs when plugged in), connected through a fuse straight to the battery terminals, ahead of the E-stop contactor so that the E-stop never interrupts charging.</li>
+</ol>
+<h3>If you forget to unplug: two independent layers</h3>
+<ol>
+<li><b>Interlock (prevents it, and holds it).</b> Three separate signals say "plugged in": an AC-presence sensor on the inlet, the UPS "on line" status read over USB, and the breakaway connector's auxiliary contact. If <i>any</i> of them says plugged in, the wheels get no command at all, checked on every control loop, not just when you press Come to me. A trip already under way is cancelled and the desk brakes to a stop if you plug in mid-trip (tested in the simulator: it stopped within a few centimeters). It also flashes a beacon and a phone alert saying "unplug me". Three sources because any one can fail silently.<br><b>Hardware backup (recommended):</b> an inlet-empty switch, closed <i>only</i> when the inlet is empty, wired in series with the drive contactor coil, with a key switch for maintenance override. A broken wire then reads as plugged in and the wheels cannot be powered even if the software crashes. Charging is unaffected, because the 12 V charger connects ahead of the contactor.</li>
+<li><b>Breakaway (limits the damage).</b> If it drives anyway (interlock bypassed, a sensor failed, or someone plugged in after the summon started), the connector separates at a low pull force and can be re-mated without tools. Pick a connector that leaves no exposed live pins on the wall side, and route the cord so it cannot reach a wheel.</li>
+</ol>
+<div class="tw"><table>
+<tr><th>Situation</th><th>What happens</th></tr>
+<tr><td>Summon while plugged in, interlock working</td><td>The desk does not move, and tells you to unplug it.</td></tr>
+<tr><td>Plug in during a trip</td><td>The trip is cancelled and the desk brakes to a stop; it will not move again until you unplug.</td></tr>
+<tr><td>Software crashes while plugged in</td><td>With the hardware backup, the contactor stays off, so the wheels cannot be powered.</td></tr>
+<tr><td>Driven away while plugged in (interlock off or failed)</td><td>The cord breaks away at about its length; the status says so; the trip continues.</td></tr>
+<tr><td>Cord snags on something else</td><td>The same breakaway releases.</td></tr>
+<tr><td>Someone plugs in while the desk is away</td><td>The cord does not reach.</td></tr>
+<tr><td>GFCI trips or the outlet loses power</td><td>Charging stops; the UPS runs the robot on its battery and the controller reports it.</td></tr>
+<tr><td>Left plugged in for days</td><td>Both chargers float-charge. Confirm your charger has a float mode.</td></tr>
+</table></div>
+<div class="warn"><b>The release force is the part I cannot verify.</b> Industrial breakaways exist, but the one I checked needs 130 lb to separate, far too stiff here: it would pull the plug out of the wall first. You need a light-duty connector rated for 15 A. As a starting target (my judgment, not a standard), it should hold against the cord's own weight and a light snag and let go well before it could pull the plug from the wall or tip the desk. Measure it with a pull gauge.</div>
+<h3>Going home on its own</h3>
+<p>With a manual cord the robot can still drive itself to the station when a battery is low, but then it waits for a person to plug it in and says so. The thresholds are unchanged: go home below 25% (robot battery) or 20% (UPS) while idle, refuse a new trip below 8%. The UPS reports its charge over USB (check that Network UPS Tools supports your model); the 12 V battery's state comes from its voltage and the PDH's current readings.</p>
+<h3>What the simulator shows</h3>
+<p>The simulator has a <i>Dock type</i> selector (Manual cord or Auto contacts), a Plug in / Unplug button, and an <i>Interlock</i> checkbox. Tested: docked but unplugged does not charge and shows "PLUG ME IN"; plugging in charges; Come to me and Learn the room are refused while plugged in; plugging in mid-trip stops the desk within a few centimeters with 0 collisions; with the interlock off the breakaway releases and the trip completes with 0 collisions. In Auto contacts mode there is no cord, so charging does not stop it leaving: the contacts simply disengage.</p>
+<h3>Wireless charging for the 12 V battery: possible, but I would skip it for v1</h3>
+<p>You asked whether a wireless charger for the 12 V AGM battery is possible. It is, at this power level. There is a development kit for robots rated up to 100 W; research on automated guided vehicles reports about 80% efficiency charging lead-acid batteries wirelessly, and industrial inductive chargers claim up to 93%. A student project for a small vehicle targeted at least 75% efficiency even with the coils misaligned, and relied on camera-assisted parking to get sub-centimeter alignment.</p>
+<p>My rough arithmetic: a 12 V, 17 Ah AGM battery holds about 200 Wh. A 100 W link at 80% efficiency delivers about 80 W, so refilling half the battery takes roughly an hour and a half, plus the slow final phase, and about 20 W is lost as heat.</p>
+<p>It would need a transmitter pad on the floor, a receiver under the frame, a rectifier and an AGM-style charge controller on the robot (bulk, absorption and float stages, with temperature compensation), a way to switch the pad on only when the robot is there, and much more precise parking than today's: the simulator parks within about 6 cm of the dock.</p>
+<p><b>Why I would still skip it:</b></p>
+<ul>
+<li><b>It does not remove the cord.</b> The UPS needs 120 V AC. Only the 12 V battery would go wireless, so you would keep the plug and all its protections.</li>
+<li>A do-it-yourself resonant charger at 100 W is a real power-electronics project. If you try it, buy a kit rather than design one.</li>
+<li>It costs more and wastes energy compared with a plain charger.</li>
+</ul>
+<p>If you later want a fully cordless design, the first thing to check is whether the UPS can be dropped. The desk's control box takes mains power (I have not verified its input), so that needs an answer first. Whatever you try, bench-test with a spare AGM battery before wiring anything to the robot.</p>
+<h3>Later upgrade</h3>
+<p>Automatic charging can reuse the same frame inlet with a blind-mate connector and a contactor that energizes it only when docked. The BOM lists that sensor and contactor as optional.</p>
+<div class="warn"><b>Mains safety.</b> Shrouded connectors, GFCI, fusing, and an electrician's review of the wall station. Do not leave it charging unattended until you have run many supervised cycles.</div>
+
+<h2 id="s10"><span class="n">10</span>Phone app (iOS)</h2>
+<p>You need an iOS app for this project. Here is what I would build first, how it talks to the robot, and what I have and have not verified.</p>
+<h3>What version 1 does</h3>
+<ul>
+<li>Shows the robot's status in plain words, both batteries, whether the cord is plugged in, whether it is charging, and the E-stop state (read-only).</li>
+<li>Shows the room map with the desk, people, and what the robot remembers. You tap where you are.</li>
+<li>Buttons: <b>Come to me</b>, <b>Return to start</b>, <b>Learn the room</b>, and a software <b>Stop</b>.</li>
+<li>Alerts such as "unplug me", low battery and stuck, as local notifications.</li>
+</ul>
+<h3>What it deliberately does not do</h3>
+<p>It is not a safety device. The Stop button is software only, the app can never release the hardware E-stop, and the cord lock holds the wheels off whatever the app sends. There is no remote steering.</p>
+<h3>How it connects</h3>
+<p>iPhone app, to a small bridge on the Pi or Jetson over HTTP and JSON on your local network, to the roboRIO's NetworkTables and the UPS. The phone does not speak NetworkTables itself; the bridge translates. Every call carries an access token, the token is kept in the iOS Keychain, and the bridge is never exposed to the internet. iOS asks permission for local network access, and plain HTTP is allowed to local addresses only. The contract is in <b>API.md</b> in <b>summon_ios.zip</b>.</p>
+<p>The one network decision to make early: the phone and the robot must be on the same network. An FRC radio can act as the access point (the phone then has no internet while connected), or the Pi can join your normal Wi-Fi.</p>
+<h3>Finding you</h3>
+<p>Version 1 uses a tap on the map. Automatic "find me" is a later step: recent iPhones have a UWB chip that can range to a UWB accessory on the robot through Apple's NearbyInteraction framework, which needs extra hardware and its own project. I have not verified that path.</p>
+<h3>Alerts when the app is closed</h3>
+<p>Local notifications only fire while the app is running. To get alerts when it is closed you need Apple push notifications through a small server, or a push relay service. That is a version 2 item.</p>
+<h3>What I built and tested</h3>
+<ul>
+<li><b>The contract</b> (API.md): 8 endpoints, status codes, and four rules the real bridge must keep.</li>
+<li><b>A bridge that serves the real simulator</b> over that contract, so the app can be developed with no hardware. Tested with curl: the token check, state, map, summon, an off-map target (422), the cord refusal (409 with the reason and the alert flag), Learn refused while plugged in, a summon accepted after unplugging, the soft stop, and error handling.</li>
+<li><b>SwiftUI source</b> (7 files, about 550 lines): status card, tap-to-place map, command buttons, settings, polling client, Keychain, local notifications. I could not compile it, because there is no Swift toolchain where I worked. A check confirmed that the braces and brackets balance. Expect a few small compile fixes in Xcode.</li>
+</ul>
+<h3>What you need</h3>
+<p>A Mac with Xcode and an iPhone. To distribute through TestFlight you need the Apple Developer Program (about $99 a year; check the current price). As I understand it, a free account can install on your own phone, but those builds expire after 7 days. My estimate is 3 to 5 weeks of part-time work to finish version 1 on top of the bridge, in parallel with the hardware stages.</p>
+
+<h2 id="s11"><span class="n">11</span>Safety plan</h2>
+<ul>
+<li><b>Layers that do not need software:</b> two hardwired E-stops through a safety relay and contactor; bumpers; a breakaway connector on the charging cord.</li>
+<li><b>Layers that do:</b> a charging-cord lock that holds the wheels off, on every loop, while any of three sensors says the cord is plugged in, plus a hardware inlet-empty switch in the contactor coil path; the swept-footprint supervisor (checks the desk's real rectangle against live lidar points and caps speed so it can always stop), a speed cap of 0.8 m/s, current limits, and the IMU tilt fault that stops the robot if it leans too far.</li>
+<li><b>Because the desk drives tall:</b> speed and braking limits set from measured tip-over margin at full height, a read-only height sensor to slow down when the desk is raised, and a rule that loose items stay off the desk.</li>
+<li><b>Visible and audible:</b> an amber beacon and buzzer while moving.</li>
+<li><b>Progression:</b> tethered and unloaded first; then loaded in an empty room; people only after the stopping and tilt tests pass. Always have an E-stop within reach.</li>
+<li><b>Paper:</b> a short written risk assessment before people are near it. Mobile-robot standards such as ISO 3691-4 and ANSI/RIA R15.08 are good references; I am not claiming this design meets them.</li>
+</ul>
+
+<h2 id="s12"><span class="n">12</span>Decisions I need from you</h2>
+<ol>
+<li><b>Control stack.</b> Can you buy a roboRIO (or Systemcore when it ships), or should we plan a different CAN stack now?</li>
+<li><b>The UPS.</b> Which model, if you have one in mind: its weight, watt-hours, whether it is pure sine wave and whether its USB reporting is supported. Lead-acid or lithium? It will hang under the desktop, so how thick and strong is the top?</li>
+<li><b>The desk and its load.</b> Which Humanscale model and its rated load, including the top; how heavy are the monitor, the UPS and anything else on it? Who sets the height before a trip?</li>
+<li><b>Where it runs.</b> Home, office or school, and who has to approve a robot of this size?</li>
+<li><b>Finding you.</b> Is a floor-plan tap acceptable for v1, or do you need it to find you automatically?</li>
+<li><b>Charging station.</b> Where, and is there a 120 V 15 A circuit within reach? Manual cord (my recommendation to start) or automatic contacts later?</li>
+<li><b>Budget and timeline.</b> Is about $7,700 and 5 to 8 months the right order of magnitude?</li>
+</ol>
+
+<h2 id="s13"><span class="n">13</span>Sources and what is verified</h2>
+<p>Verified on October 6, 2026 from the sources below. Everything else is my estimate or judgment and is labeled as such.</p>
+<ul>
+<li>roboRIO 2.0 purchase restriction: AndyMark's roboRIO 2.0 page.</li>
+<li>WPILib 2027 and Systemcore: FRC community threads at chiefdelphi.com (Systemcore on-sale date; Systemcore pricing).</li>
+<li>SPARK MAX non-roboRIO control: REVLib low-level API notes and community threads (heartbeat, USB control, SocketCAN).</li>
+<li>Humanscale eFloat controls: product pages on humanscale.com and a reseller listing describing the analog and digital-memory handsets. No control protocol is published. (No longer used in the plan, kept for the "automatic height later" option.)</li>
+<li>Humanscale lift capacities (eFloat Lite 220 lb, or 250 lb on angled work surfaces; eFloat Flex 225 lb, or 275 lb; eFloat Go 2.0 220 lb; non-electric Float 130 lb): reseller and spec listings at sweets.construction.com and lttpartners.com. Not confirmed whether they include the desktop.</li>
+<li>Breakaway connectors: Hubbell LineSafe product page and datasheet (magnetic, UL 1682, re-mates without tools, two auxiliary contacts you can wire to a relay, rated up to 60 A). The model I checked lists a 130 lb coupling force, which is far too stiff for this job; it only confirms that the category exists.</li>
+<li>3 in MAXSwerve module dimensions (133.1 mm footprint with tabs, 100.5 mm without, 171.5 mm tall with the NEO, 3.8 lb) and the 3 in x 7/8 in wheel: REV's MAXSwerve documentation and the REV-21-3005 and aluminum wheel pages. The 3D model uses these figures; motor sizes and plate details in it are approximate.</li>
+<li>Wireless charging: a robot charging kit rated up to 100 W (hackster.io, NOA CORE100); AGV lead-acid wireless charging at about 80% efficiency (PolyU research record); industrial inductive charging up to 93% (SAFELOG); a student AGV charging project with camera-assisted parking (University of Illinois ECE 445).</li>
+<li>Pi 5 price movement: a forum report, not an official price.</li>
+<li>For the earlier design, the Anker SOLIX F3800 Plus was verified at 3,840 Wh, about 133 to 137 lb, 1,800 W AC charging and about $2,499 at one reseller. It is no longer in the plan.</li>
+</ul>
+<p><b>Not verified:</b> the Swift code (never compiled); the Apple Developer Program price and the 7-day expiry of free-account builds; the NOA kit's output voltage, charge profile and price; the UWB "find me" path; any suitable light-duty breakaway power cord product or its release force; whether your UPS is supported by Network UPS Tools; every UPS detail (price, weight, watt-hours, sine-wave output, USB reporting); REV prices (pages loaded without prices); your exact Humanscale model and rated load; whether your swerve module kit includes the encoders; the standard FRC main breaker having no remote trip (I am confident, but check the part you use).</p>
+</div></body></html>

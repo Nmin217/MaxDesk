@@ -1,0 +1,3 @@
+rplidar>=1.0.0
+pyserial>=3.5
+networktables>=3.0.0
