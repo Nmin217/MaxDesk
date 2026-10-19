@@ -1,7 +1,14 @@
-# Summon Desk
+# Summon Desk (swerve-desk)
 
 A Humanscale sit-stand desk on a swerve base that drives to you, parks facing you, returns to its charging station, and
-is controlled from an iPhone. This archive holds all of the code in one place.
+is controlled from an iPhone. This repository combines the original swerve-desk build plan ([`PLAN.md`](PLAN.md):
+mechanical design, BOM, roadmap) with the MaxDesk code (everything below).
+
+**Bringing up hardware?** Start with [`firmware/two-module-test`](firmware/two-module-test/README.md): wiring,
+REV Hardware Client setup, and a bench-test program for one or two MAXSwerve modules.
+
+    firmware/two-module-test/   WPILib 2026 bench test for MAXSwerve modules (readout, self test, joystick)
+    Summon_Desk_IRL_Hardware_Package/   roboRIO + Raspberry Pi starter code, LiDAR test, bring-up checklists
 
     robot/simulator/   summon_table_sim.html   the browser simulator = the SINGLE SOURCE OF TRUTH for behaviour
     robot/java-core/   Java (WPILib-style) planner, safety supervisor, map memory, with tests; WPILib glue skeleton
@@ -48,7 +55,7 @@ Needs: a JDK (17 or newer), Node 18+, Python 3, curl. No other dependencies.
   To use it in a WPILib project, copy `src/main/java/frc/robot/summon/core/` and read `robot/java-core/README.md`.
 - **Phone controller (Android or iPhone):** run `Start Summon Desk.vbs` on Windows, or run `node bridge/bridge_sim.js` from the project root. On the phone, connected to the same trusted Wi-Fi, open `http://COMPUTER-IP:8787` in Chrome/Safari. On Android, use the browser menu → **Add to Home screen** for an app-like launcher. `dev-token` is a local development token only.
 - **Desktop simulator:** open `http://localhost:8787/simulator` after the bridge starts. The `/` route is the mobile controller. The visual simulator at `/simulator` publishes its live state (including both battery levels) to the bridge and receives commands from the phone controller. Keep the `/simulator` tab open while controlling it from the phone; the phone reports when the simulator is offline.
-- **No-terminal Windows start:** double-click `Start Summon Desk.vbs`; it starts the Node bridge hidden and opens the simulator in your browser. Double-click `Stop Summon Desk.vbs` to stop the bridge. If your organization's policies block VBScript, use the terminal command above instead.
+- **No-terminal Windows start:** double-click `Start Summon Desk.vbs`; it starts the Node bridge hidden and opens the simulator in your browser. There is no stop script yet: end the `node` process in Task Manager to stop the bridge. If your organization's policies block VBScript, use the terminal command above instead.
 - **Change the simulator:** edit `robot/simulator/summon_table_sim.html`, then run `python3 scripts/sync_sim_core.py` so the
   bridge picks it up (`verify.sh` does this for you).
 
