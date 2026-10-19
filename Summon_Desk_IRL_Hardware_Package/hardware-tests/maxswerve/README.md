@@ -1,7 +1,7 @@
 # MAXSwerve Module Test
 
-Superseded by [`firmware/two-module-test`](../../../firmware/two-module-test/README.md), a complete
-WPILib 2026 / REVLib 2026 project for one or two modules (readout, scripted self test with
+Superseded by [`firmware/module-test`](../../../firmware/module-test/README.md), a complete
+WPILib 2026 / REVLib 2026 project for one to four modules (readout, scripted self test with
 pass/fail, joystick with deadman).
 
 The old `SingleModuleTest.java` was removed because it:

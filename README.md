@@ -4,10 +4,10 @@ A Humanscale sit-stand desk on a swerve base that drives to you, parks facing yo
 is controlled from an iPhone. This repository combines the original swerve-desk build plan ([`PLAN.md`](PLAN.md):
 mechanical design, BOM, roadmap) with the MaxDesk code (everything below).
 
-**Bringing up hardware?** Start with [`firmware/two-module-test`](firmware/two-module-test/README.md): wiring,
-REV Hardware Client setup, and a bench-test program for one or two MAXSwerve modules.
+**Bringing up hardware?** Start with [`firmware/module-test`](firmware/module-test/README.md): wiring,
+REV Hardware Client setup, and a bench-test program for your MAXSwerve modules.
 
-    firmware/two-module-test/   WPILib 2026 bench test for MAXSwerve modules (readout, self test, joystick)
+    firmware/module-test/   WPILib 2026 bench test for 1-4 MAXSwerve modules (readout, self test, joystick)
     Summon_Desk_IRL_Hardware_Package/   roboRIO + Raspberry Pi starter code, LiDAR test, bring-up checklists
 
     robot/simulator/   summon_table_sim.html   the browser simulator = the SINGLE SOURCE OF TRUTH for behaviour

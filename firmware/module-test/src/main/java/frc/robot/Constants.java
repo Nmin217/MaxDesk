@@ -1,22 +1,26 @@
 package frc.robot;
 
+import java.util.List;
+
 /**
- * Everything you may need to change for the two-module bench test lives here.
+ * Everything you may need to change for the module bench test lives here.
  *
- * <p>CAN IDs follow REV's MAXSwerve template (front-left 10/11, front-right 14/15) so this test
- * grows into the full four-module drivetrain without renumbering.
+ * <p>CAN IDs follow REV's MAXSwerve template so this test grows into the full four-module
+ * drivetrain without renumbering. Each module is named after the corner it will go on.
  */
 public final class Constants {
   private Constants() {}
 
-  public static final class ModuleIds {
-    // Module A = will become FRONT LEFT.
-    public static final int kADriveCanId = 11;
-    public static final int kATurnCanId = 10;
-    // Module B = will become FRONT RIGHT.
-    public static final int kBDriveCanId = 15;
-    public static final int kBTurnCanId = 14;
-  }
+  /** One module: dashboard name, drive SPARK CAN ID, turn SPARK CAN ID. */
+  public record ModuleId(String name, int driveCanId, int turnCanId) {}
+
+  /** The modules on the bench. Comment out any that aren't wired; add RR when you build it. */
+  public static final List<ModuleId> kModules = List.of(
+      new ModuleId("FL", 11, 10),
+      new ModuleId("FR", 15, 14),
+      new ModuleId("RL", 13, 12)
+      // , new ModuleId("RR", 17, 16)
+  );
 
   public static final class ModuleConstants {
     /** 12, 13 or 14. PLAN.md calls for the 12T (low) pinion. */

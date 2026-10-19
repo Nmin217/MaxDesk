@@ -7,13 +7,13 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.robot.Constants.ModuleIds;
 import frc.robot.Constants.OI;
 import frc.robot.Constants.TestLimits;
 import java.util.List;
 
 /**
- * Bench test for two MAXSwerve modules. MODULES ON BLOCKS, WHEELS OFF THE GROUND.
+ * Bench test for MAXSwerve modules (the ones listed in {@link Constants#kModules}).
+ * MODULES ON BLOCKS, WHEELS OFF THE GROUND.
  *
  * <p>Pick a mode from "Test Mode" on the dashboard, then enable TELEOP in the Driver Station.
  * Every enable restarts the selected test from the beginning. Results print to the Driver
@@ -22,20 +22,19 @@ import java.util.List;
  * <ul>
  *   <li><b>Readout</b>: never moves anything. Turn the wheels by hand and watch the angles.
  *   <li><b>Self test</b>: steering direction check, steer to 0/90/180/270/0, then drive slowly
- *       forward and back at 0 deg. Each module passes or fails on its own; a failed module stops.
- *   <li><b>Joystick</b>: hold RIGHT BUMPER (deadman) and use the left stick; both modules follow
- *       the stick. A/B/X/Y point both wheels at 0/90/180/270 deg without driving.
+ *       forward and back at 0 deg. All modules run at once; each passes or fails on its own and a
+ *       failed module stops.
+ *   <li><b>Joystick</b>: hold RIGHT BUMPER (deadman) and use the left stick; every module
+ *       follows the stick. A/B/X/Y point all wheels at 0/90/180/270 deg without driving.
  * </ul>
  */
 public class Robot extends TimedRobot {
   private enum Mode { READOUT, SELF_TEST, JOYSTICK }
 
-  private final TestModule moduleA =
-      new TestModule("A", ModuleIds.kADriveCanId, ModuleIds.kATurnCanId);
-  private final TestModule moduleB =
-      new TestModule("B", ModuleIds.kBDriveCanId, ModuleIds.kBTurnCanId);
-  private final List<TestModule> modules = List.of(moduleA, moduleB);
-  private final List<SelfTest> selfTests = List.of(new SelfTest(moduleA), new SelfTest(moduleB));
+  private final List<TestModule> modules = Constants.kModules.stream()
+      .map(id -> new TestModule(id.name(), id.driveCanId(), id.turnCanId()))
+      .toList();
+  private final List<SelfTest> selfTests = modules.stream().map(SelfTest::new).toList();
 
   private final XboxController controller = new XboxController(OI.kControllerPort);
   private final SendableChooser<Mode> modeChooser = new SendableChooser<>();

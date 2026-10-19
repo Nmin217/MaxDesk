@@ -2,7 +2,7 @@ package frc.robot;
 
 public final class Constants {
     private Constants() {}
-    // CAN IDs match REV's MAXSwerve template and firmware/two-module-test.
+    // CAN IDs match REV's MAXSwerve template and firmware/module-test.
     public static final int FRONT_LEFT_DRIVE_CAN = 11;
     public static final int FRONT_LEFT_STEER_CAN = 10;
     public static final int FRONT_RIGHT_DRIVE_CAN = 15;

@@ -14,7 +14,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.MathUtil;
 
 /**
- * MAXSwerve module (REVLib 2025+ API). Mirrors firmware/two-module-test/TestModule.java, which is
+ * MAXSwerve module (REVLib 2025+ API). Mirrors firmware/module-test/TestModule.java, which is
  * the bench-tested reference; keep the two in sync.
  */
 public class MAXSwerveModule {
