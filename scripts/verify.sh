@@ -42,6 +42,11 @@ if node tests/sim/run.js stoppriority > /tmp/sp.log 2>&1 && grep -q "STOP-PRIORI
 else
   no "stop priority"; tail -6 /tmp/sp.log
 fi
+if node tests/sim/run.js recovery > /tmp/rec.log 2>&1 && grep -q "RECOVERY PASS" /tmp/rec.log; then
+  ok "recovery: turning is not stuck, wall stall recovers, never gives up, Stop/E-stop win"
+else
+  no "recovery"; grep '"ok":false' /tmp/rec.log | head -6
+fi
 
 node tests/pi/test_runtime.js > /tmp/pi.log 2>&1 && ok "pi runtime" || { no "pi runtime"; tail -8 /tmp/pi.log; }
 if bash tests/bridge/run.sh > /tmp/br.log 2>&1; then
@@ -53,5 +58,6 @@ if [ $FULL -eq 1 ]; then
   for s in slots parking roundtrip battery; do
     node tests/sim/run.js $s > /tmp/$s.log 2>&1 && ! grep -q '"collisions":[1-9]' /tmp/$s.log && ! grep -Eq 'collisions[^0-9]*[1-9]' /tmp/$s.log && ! grep -q 'did not' /tmp/$s.log && ok "$s ran with no collisions" || { no "$s"; tail -4 /tmp/$s.log; }
   done
+  node tests/sim/run.js navdiag > /tmp/nav.log 2>&1 && grep -q "NAVDIAG PASS" /tmp/nav.log && ok "navigation: every trip arrives, no route flip-flops, no twitching, no recoveries in open room" || { no "navigation diagnostics"; grep -E "^NAVDIAG|problem" /tmp/nav.log | head -8; }
 fi
 echo; echo "$pass passed, $fail failed"; [ $fail -eq 0 ]

@@ -1,11 +1,20 @@
 // Navigation diagnostics: route flip-flops, back-and-forth driving, wheel/yaw twitching, recoveries, give-ups.
 //   node tests/sim/run.js navdiag            NAVDIAG_N=40 for more trips, NAVDIAG_V=1 to print every trip,
 //                                            NAVDIAG_TRACE=<seed> to print a 0.1 s timeline of that trip
+// Prints NAVDIAG PASS when every trip arrives and stays inside the limits in NAV_LIMITS (verify.sh --full checks it).
 // A "route switch" is a replan whose new path leaves the old one by more than 30 px at its midpoint (often legitimate:
 // the lidar found the old route blocked). A "flip-back" is a switch back onto a route it had already abandoned.
 // A "reversal" is the velocity direction swinging more than 120 deg within 1 s while moving.
 // A "yaw twitch" is the yaw-rate command changing sign at > 0.3 rad/s within 0.4 s.
 const NAV_N = +(process.env.NAVDIAG_N || 24), NAV_V = !!process.env.NAVDIAG_V, NAV_TRACE = +(process.env.NAVDIAG_TRACE || -1);
+// Limits per trip set (totals). The room set must be clean; the equal-route set may flip back when the lidar reveals
+// that the chosen side of the block is narrower than it looked (both remaining cases are that).
+const NAV_LIMITS = { room: { flipBacks: 0, twitch: 12, rec: 2 }, 'equal-routes': { flipBacks: 3, twitch: 8, rec: 2 } };
+let navPass = true;
+function navCheck(name, tot) {
+  const lim = NAV_LIMITS[name], ok = tot.arrived === tot.trips && Object.keys(lim).every(k => tot[k] <= lim[k]);
+  if (!ok) { navPass = false; console.log('  over limit', name, JSON.stringify(lim)); }
+}
 function navMid(p) { return p.length ? p[p.length >> 1] : null; }
 function navOff(p, q) { let m = 1e9; for (const r of p) m = Math.min(m, Math.hypot(r.x - q.x, r.y - q.y)); return m; }
 const navPlan0 = plan;
@@ -66,7 +75,7 @@ function navTrip(seed, ux, uy, tmax) {
     if (NAV_V) console.log('trip', seed, Math.round(ux), Math.round(uy), JSON.stringify(r));
   }
   tot.time = +(tot.time / Math.max(1, tot.arrived)).toFixed(1);
-  console.log('NAVDIAG room', JSON.stringify(tot));
+  console.log('NAVDIAG room', JSON.stringify(tot)); navCheck('room', tot);
   for (const b of bad) console.log('  problem', JSON.stringify(b));
 }
 // Equal-cost routes: one block squarely between the start and the person, so going left or right around it costs
@@ -94,6 +103,8 @@ function navTrip(seed, ux, uy, tmax) {
     seed++;
   }
   tot.time = +(tot.time / Math.max(1, tot.arrived)).toFixed(1);
-  console.log('NAVDIAG equal-routes', JSON.stringify(tot));
+  console.log('NAVDIAG equal-routes', JSON.stringify(tot)); navCheck('equal-routes', tot);
   for (const b of bad) console.log('  problem', JSON.stringify(b));
 }
+console.log(navPass ? 'NAVDIAG PASS' : 'NAVDIAG FAIL');
+if (!navPass) process.exitCode = 1;
