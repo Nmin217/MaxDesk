@@ -86,13 +86,32 @@ Checklist:
       module plate. The module rotates without limit, but your wires can't.
 - [ ] **On blocks**: every module clamped down, wheels clear of the table and of each other.
 
+### No frame yet? Build a bench board
+
+Never run a module loose. The steering motor's reaction twists the whole module, and the drive
+wheel will throw it off the table. Each module needs to be held by its tube slot, wheel in the air.
+
+- **Per module:** bolt a 6–12 in stub of 2×1 aluminium tube into the module's tube slot with the
+  #10-32 through-bolts, exactly as the frame rail will go later. Clamp the stub in a vise, or C-clamp
+  it to the bench edge so the wheel overhangs and clears the bench and the floor.
+- **All modules at once:** screw the stubs to a sheet of ¾ in plywood (about 2 × 3 ft), wheels hanging
+  over the edges, and clamp the plywood to the bench. Mount the SPARK MAXes, PDH, breaker and
+  controller on the same board with screws, Velcro or 3D-printed holders, keeping each SPARK's cables
+  short and clear of its module's rotation. This board becomes a test copy of the belly-pan layout.
+- The 2×1 tube stubs are the same material the frame needs (`PLAN.md` §3), so nothing is wasted.
+
+
 ## 2. One-time setup in REV Hardware Client (USB-C to each SPARK MAX)
 
 Do this with **one SPARK connected at a time** (new SPARKs all ship with CAN ID 0, and IDs must
 be unique).
 
-1. **Update firmware** to the newest version the Hardware Client offers. REVLib 2026 needs current
-   SPARK firmware.
+1. **Firmware: decide first.** This program (roboRIO, REVLib 2026) needs current SPARK firmware.
+   But if you go with Option B (Raspberry Pi + `sparkcan`), the SPARKs must stay on **24.0.x**:
+   `sparkcan` does not work with 25.x or newer. Going back down later means finding and loading
+   an older firmware file, which I haven't verified works. **Check which version your SPARKs are on
+   now, and don't update until you've chosen.** See
+   [`docs/OPTION-B-PI-CAN.md`](../../docs/OPTION-B-PI-CAN.md).
 2. **Set the CAN ID** and power-cycle the SPARK after changing it:
 
    | Module | Turn SPARK | Drive SPARK |
