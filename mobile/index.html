@@ -1,93 +1,101 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f2f3ef"><meta name="description" content="Summon Desk controller"><link rel="manifest" href="/manifest.webmanifest"><title>Summon Desk</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a0e15"><meta name="description" content="Summon Desk controller"><link rel="manifest" href="/manifest.webmanifest"><title>Summon Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-/* Layout: one column on a phone (plan, actions, power, details); plan beside controls on wide screens.
-   Stop lives in a bar pinned to the bottom so it is reachable from every tab. */
+/* Layout: a dark instrument panel. Phone: status + readouts, live plan, actions, power, details.
+   Wide: plan on the left, everything else on the right. Stop is pinned to the bottom on every tab. */
 :root{
-  --paper:#f2f3ef;--surface:#ffffff;--sunk:#e8eae4;--ink:#14171c;--mute:#5c636b;--line:#d5d8d0;
-  --accent:#2147c9;--accent-ink:#ffffff;--go:#1d7a52;--warn:#9a5a00;--stop:#c42b1c;--stop-ink:#ffffff;
-  --floor:#dfe7dc;--wall:#14171c;--busy:#e9b3aa;--unknown:#eceee8;
+  --bg:#0a0e15;--panel:#111722;--raise:#18202d;--sunk:#0c1119;--line:#222c3b;--line2:#2e3a4d;
+  --ink:#e7ecf4;--mute:#8592a6;--faint:#5a6578;
+  --amber:#f4b13d;--amber-ink:#1d1304;--cyan:#5cc6f2;--go:#3ccf8e;--warn:#ff9a4d;--stop:#ff4a3d;--stop-ink:#ffffff;
+  --floor:#142129;--wall:#d6dce6;--busy:#4f2529;--unknown:#0c1119;--grid:#1a2533;
   --display:"Archivo","Arial Narrow",system-ui,sans-serif;--body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-  --r:14px;color-scheme:light
+  color-scheme:dark
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --paper:#0f1114;--surface:#171a1f;--sunk:#1e2228;--ink:#e9ebee;--mute:#9aa1a9;--line:#2b3037;
-  --accent:#8aa4ff;--accent-ink:#0c1230;--go:#4cc28c;--warn:#e2a54b;--stop:#ff5a4a;--stop-ink:#1c0503;
-  --floor:#233128;--wall:#e9ebee;--busy:#6b2c27;--unknown:#1b1f24;color-scheme:dark}}
-:root[data-theme="dark"]{
-  --paper:#0f1114;--surface:#171a1f;--sunk:#1e2228;--ink:#e9ebee;--mute:#9aa1a9;--line:#2b3037;
-  --accent:#8aa4ff;--accent-ink:#0c1230;--go:#4cc28c;--warn:#e2a54b;--stop:#ff5a4a;--stop-ink:#1c0503;
-  --floor:#233128;--wall:#e9ebee;--busy:#6b2c27;--unknown:#1b1f24;color-scheme:dark}
 *{box-sizing:border-box}
-html{background:var(--paper)}
-body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 var(--body);
-  padding-top:env(safe-area-inset-top,0px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
-main{max-width:980px;margin:0 auto;padding-block:14px 8px;display:grid;gap:14px}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--body);
+  padding-top:env(safe-area-inset-top,0px);padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));
+  padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+main{max-width:1060px;margin:0 auto;padding-block:12px 8px;display:grid;gap:12px}
 button,input{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 h1,h2{font-family:var(--display);margin:0;text-wrap:balance}
-.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
-.label{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.eyebrow{font:700 10px/1.2 var(--display);font-stretch:118%;letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
 /* Header */
-.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
-.wordmark{display:flex;align-items:baseline;gap:8px;min-width:0}
-.wordmark h1{font-size:22px;font-weight:800;font-stretch:115%;letter-spacing:-.01em}
-.wordmark span{font-size:12px;color:var(--mute);white-space:nowrap}
-@media (max-width:440px){.wordmark span{display:none}}
-.header-tools{display:flex;align-items:center;gap:8px;min-width:0}
-.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid var(--line);border-radius:99px;background:var(--surface);font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40vw}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.wordmark{display:flex;align-items:center;gap:10px;min-width:0}
+.mark{flex:0 0 30px;height:30px;border-radius:8px;background:var(--amber);display:grid;place-items:center}
+.mark svg{width:20px;height:20px}
+.wordmark h1{font-size:17px;font-weight:800;font-stretch:122%;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.wordmark span{display:block;font:500 11px/1.2 var(--mono);color:var(--mute);letter-spacing:.02em}
+.top>*{min-width:0}.pill{flex:0 1 auto}
+@media (max-width:380px){.wordmark h1{font-size:15px;letter-spacing:.03em}.wordmark span{display:none}.mark{flex-basis:26px;height:26px}}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid var(--line2);border-radius:99px;background:var(--panel);font:500 12px/1 var(--mono);color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48vw}
 .pill:before{content:"";flex:0 0 8px;height:8px;border-radius:50%;background:var(--warn)}
-.pill.online:before{background:var(--go)}
-.theme-toggle{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 11px;font-size:12px;cursor:pointer;white-space:nowrap}
+.pill.online{color:var(--ink)}.pill.online:before{background:var(--go);box-shadow:0 0 0 3px rgba(60,207,142,.18)}
 
 /* Tabs */
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:var(--sunk);border-radius:12px}
-.tab{appearance:none;border:0;background:transparent;border-radius:9px;padding:9px 6px;font-weight:650;font-size:13px;color:var(--mute);cursor:pointer}
-.tab.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.tab-panel{display:none}.tab-panel.active{display:grid;gap:14px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:var(--sunk);border:1px solid var(--line);border-radius:12px}
+.tab{appearance:none;border:0;background:transparent;border-radius:9px;padding:9px 6px;font:700 12px/1.2 var(--display);font-stretch:112%;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);cursor:pointer}
+.tab.active{background:var(--raise);color:var(--ink);box-shadow:inset 0 -2px 0 var(--amber)}
+.tab-panel{display:none}.tab-panel.active{display:grid;gap:12px}
 
 /* Surfaces */
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
-.layout{display:grid;gap:14px}
-@media (min-width:900px){.layout{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}.layout>.plan-panel{grid-row:span 3}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.layout{display:grid;gap:12px}
+@media (min-width:900px){.layout{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);align-items:start}.layout>.plan-panel{grid-column:1;grid-row:1 / span 4}}
 
-/* Status + plan */
-.status-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
-#status{font-family:var(--display);font-size:26px;line-height:1.15;font-weight:750;font-stretch:108%;overflow-wrap:anywhere;color:var(--ink)}
+/* Status */
+.status-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+#status{font-family:var(--display);font-size:25px;line-height:1.12;font-weight:760;font-stretch:106%;overflow-wrap:anywhere;margin-top:4px}
 #status.warn{color:var(--warn)}#status.bad{color:var(--stop)}
-#mode{font-size:13px;color:var(--mute);margin-top:2px}
-.chip{flex:0 0 auto;padding:5px 10px;border-radius:99px;font-size:12px;font-weight:650;background:var(--sunk);color:var(--mute)}
-.chip.moving{background:var(--accent);color:var(--accent-ink)}
-.plan{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--unknown);aspect-ratio:8/5;max-width:100%}
+#mode{font:500 12px/1.4 var(--mono);color:var(--mute);margin-top:4px}
+.chip{flex:0 0 auto;padding:5px 10px;border-radius:99px;font:700 11px/1.2 var(--display);font-stretch:112%;letter-spacing:.08em;text-transform:uppercase;background:var(--raise);color:var(--mute);border:1px solid var(--line2)}
+.chip.moving{background:var(--amber);border-color:var(--amber);color:var(--amber-ink)}
+.readouts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;margin-top:14px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.readout{background:var(--sunk);padding:9px 10px;min-width:0}
+.readout b{display:block;font:600 18px/1.2 var(--mono);font-variant-numeric:tabular-nums;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.readout b small{font-size:11px;font-weight:500;color:var(--mute);margin-left:2px}
+@media (max-width:380px){.readouts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Plan */
+.plan{position:relative;border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--unknown);aspect-ratio:8/5;max-width:100%}
 .plan canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:manipulation}
-.plan-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;margin-top:9px;font-size:12px;color:var(--mute)}
-.legend{display:flex;flex-wrap:wrap;gap:10px}.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.plan-hint{position:absolute;left:8px;bottom:8px;padding:4px 8px;border-radius:7px;background:rgba(10,14,21,.78);font:500 11px/1.3 var(--mono);color:var(--mute);pointer-events:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px;font-size:12px;color:var(--mute)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.legend i.dot{border-radius:50%}
+#mapinfo{font:500 11px/1.4 var(--mono);color:var(--faint);margin-top:6px}
 
 /* Actions */
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn{min-height:50px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:15px;cursor:pointer;padding:10px 12px;touch-action:manipulation}
+.btn{min-height:50px;border-radius:12px;border:1px solid var(--line2);background:var(--raise);font-weight:700;font-size:15px;cursor:pointer;padding:10px 12px;touch-action:manipulation}
 .btn:active{transform:translateY(1px)}.btn:disabled{opacity:.5;cursor:default}
-.btn.primary{grid-column:1/-1;min-height:62px;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-size:18px;font-family:var(--display);font-stretch:110%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
-.btn.primary small{font:500 12px/1.2 var(--mono);opacity:.85}
+.btn.primary{grid-column:1/-1;min-height:64px;background:var(--amber);border-color:var(--amber);color:var(--amber-ink);display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;padding:12px 16px}
+.btn.primary .t{font:800 18px/1.1 var(--display);font-stretch:108%;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.btn.primary small{font:600 12px/1.2 var(--mono);opacity:.8;white-space:nowrap}
 .btn.return{grid-column:1/-1}
 .btn.subtle{font-weight:600;font-size:14px}
-.toast{font-size:13px;color:var(--mute);min-height:19px;margin-top:10px}
+.toast{font:500 12px/1.45 var(--mono);color:var(--mute);min-height:18px;margin-top:10px}
 .toast.good{color:var(--go)}.toast.danger{color:var(--stop)}
 
 /* Power */
-.power{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.meter .reading{font:600 26px/1.1 var(--mono);font-variant-numeric:tabular-nums;margin-top:4px}.meter .reading small{font-size:13px;color:var(--mute);margin-left:2px}
-.bar{height:6px;border-radius:99px;background:var(--sunk);overflow:hidden;margin-top:8px}
-.bar span{display:block;height:100%;width:0;background:var(--go);transition:width .3s}.bar span.low{background:var(--stop)}
-.meta{font-size:12px;color:var(--mute);margin-top:6px}
+.power{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.meter-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.meter-head b{font:600 22px/1 var(--mono);font-variant-numeric:tabular-nums}.meter-head b small{font-size:12px;color:var(--mute);margin-left:1px}
+.seg{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-top:9px}
+.seg i{height:10px;border-radius:2px;background:var(--raise)}
+.seg i.on{background:var(--go)}.seg.low i.on{background:var(--stop)}.seg.mid i.on{background:var(--amber)}
+.meta{font:500 11px/1.4 var(--mono);color:var(--mute);margin-top:7px}
 .battery-warnings{display:grid;gap:6px;margin-top:12px}.battery-warnings:empty{display:none}
 .battery-warning{display:grid;gap:1px;padding:9px 11px;border-radius:10px;border-left:3px solid var(--warn);background:var(--sunk);font-size:12px}
 .battery-warning.danger{border-left-color:var(--stop)}.battery-warning strong{font-size:13px}
@@ -95,98 +103,107 @@ h1,h2{font-family:var(--display);margin:0;text-wrap:balance}
 /* Details list */
 .more{padding:0;overflow:hidden}
 .more details{border-top:1px solid var(--line)}.more details:first-child{border-top:0}
-.more summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;font-weight:650}
+.more summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 14px;font-weight:650;font-size:14px}
 .more summary::-webkit-details-marker{display:none}
 .more summary:after{content:"+";font:500 18px/1 var(--mono);color:var(--mute)}.more details[open] summary:after{content:"–"}
-.more .body{padding:0 16px 16px;display:grid;gap:10px}
-.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.kv div{background:var(--sunk);border-radius:10px;padding:9px 11px;min-width:0}
-.kv b{display:block;font:600 16px/1.3 var(--mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.more .body{padding:0 14px 14px;display:grid;gap:10px}
+.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kv div{background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.kv b{display:block;font:600 15px/1.3 var(--mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;margin-top:2px}
 .value.good{color:var(--go)}.value.danger{color:var(--stop)}.value.warn{color:var(--warn)}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .field{display:grid;gap:5px}.field label{font-size:12px;color:var(--mute)}
-input[type=number],input[type=password]{width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:9px 11px;font-family:var(--mono)}
+input[type=number],input[type=password]{width:100%;min-height:44px;border:1px solid var(--line2);border-radius:10px;background:var(--sunk);padding:9px 11px;font-family:var(--mono)}
 .small{font-size:12px;color:var(--mute)}
 .event-log-tools{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .event-log-tools .btn{min-height:34px;padding:6px 10px;font-size:12px}
 .event-log-list{display:grid;gap:6px;max-height:300px;overflow:auto}
-.event-entry{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;padding:8px 10px;border-radius:9px;background:var(--sunk)}
+.event-entry{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;padding:8px 10px;border-radius:9px;background:var(--sunk);border:1px solid var(--line)}
 .event-time{font:11px/1.5 var(--mono);color:var(--mute)}.event-title{font-size:13px;font-weight:650}.event-detail{font-size:12px;color:var(--mute);overflow-wrap:anywhere}
 .event-entry.warn .event-title{color:var(--warn)}.event-entry.danger .event-title{color:var(--stop)}
 .event-log-empty{font-size:13px;color:var(--mute)}
 
 /* Drive */
 .drive-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
-.drive-head h2{font-size:18px;font-stretch:108%}
-.tag{flex:0 0 auto;padding:4px 8px;border-radius:6px;font:600 11px/1.2 var(--mono);letter-spacing:.05em;background:var(--sunk);color:var(--mute)}
-.tag.live{background:var(--go);color:var(--surface)}.tag.error{background:var(--stop);color:var(--stop-ink)}
+.drive-head h2{font-size:17px;font-stretch:118%;letter-spacing:.04em;text-transform:uppercase}
+.tag{flex:0 0 auto;padding:4px 8px;border-radius:6px;font:600 11px/1.2 var(--mono);letter-spacing:.05em;background:var(--raise);color:var(--mute);border:1px solid var(--line2)}
+.tag.live{background:var(--go);border-color:var(--go);color:#04140c}.tag.error{background:var(--stop);border-color:var(--stop);color:var(--stop-ink)}
 .drive-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:center}
 @media (max-width:560px){.drive-grid{grid-template-columns:1fr}}
-.stick-pad{position:relative;width:min(100%,280px);aspect-ratio:1;margin:0 auto;border-radius:50%;background:radial-gradient(circle,var(--surface) 0 30%,var(--sunk) 31% 100%);border:1px solid var(--line);touch-action:none;user-select:none}
-.stick-pad:before,.stick-pad:after{content:"";position:absolute;background:var(--line)}.stick-pad:before{width:1px;height:76%;left:50%;top:12%}.stick-pad:after{height:1px;width:76%;top:50%;left:12%}
-.stick-knob{position:absolute;left:50%;top:50%;width:30%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:var(--accent);box-shadow:0 4px 12px rgba(0,0,0,.25);z-index:1;pointer-events:none}
+.stick-pad{position:relative;width:min(100%,280px);aspect-ratio:1;margin:0 auto;border-radius:50%;background:radial-gradient(circle,var(--raise) 0 28%,var(--sunk) 29% 100%);border:1px solid var(--line2);touch-action:none;user-select:none}
+.stick-pad:before,.stick-pad:after{content:"";position:absolute;background:var(--line2)}.stick-pad:before{width:1px;height:76%;left:50%;top:12%}.stick-pad:after{height:1px;width:76%;top:50%;left:12%}
+.stick-knob{position:absolute;left:50%;top:50%;width:30%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:var(--amber);box-shadow:0 6px 16px rgba(0,0,0,.45);z-index:1;pointer-events:none}
 .stick-label{position:absolute;font:600 10px/1 var(--mono);letter-spacing:.08em;color:var(--mute);z-index:2}
 .stick-label.up{top:6%;left:50%;transform:translateX(-50%)}.stick-label.down{bottom:6%;left:50%;transform:translateX(-50%)}.stick-label.left{left:5%;top:50%;transform:translateY(-50%)}.stick-label.right{right:5%;top:50%;transform:translateY(-50%)}
 .drive-side{display:grid;gap:14px}
 .turn-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
-.turn-btn{min-height:50px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-weight:650;cursor:pointer;touch-action:none}
-.drive-readout{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--sunk);font-size:12px}
+.turn-btn{min-height:50px;border:1px solid var(--line2);border-radius:12px;background:var(--raise);font-weight:650;cursor:pointer;touch-action:none}
+.drive-readout{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--sunk);border:1px solid var(--line);font-size:12px}
 .drive-readout strong{font:600 12px/1.3 var(--mono)}
-.drive-speed input{width:100%;accent-color:var(--accent)}
+.drive-speed input{width:100%;accent-color:var(--amber)}
 .speed-warning{padding:9px 11px;border-radius:10px;border-left:3px solid var(--warn);background:var(--sunk);font-size:12px}.speed-warning.critical{border-left-color:var(--stop)}
-.drive-safety,.lidar-status{font-size:12px;color:var(--mute);padding:9px 11px;border-radius:10px;background:var(--sunk);margin-top:12px}
+.drive-safety,.lidar-status{font-size:12px;color:var(--mute);padding:9px 11px;border-radius:10px;background:var(--sunk);border:1px solid var(--line);margin-top:12px}
 
 /* 3D */
 .lidar-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
-.lidar-stats div{background:var(--sunk);border-radius:10px;padding:8px 10px;min-width:0}.lidar-stats strong{display:block;font:600 14px/1.3 var(--mono);overflow-wrap:anywhere}
-.lidar-wrap{position:relative;aspect-ratio:1;max-height:65vh;min-height:260px;width:100%;border-radius:12px;overflow:hidden;background:#0e1a20}
+.lidar-stats div{background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}.lidar-stats strong{display:block;font:600 14px/1.3 var(--mono);overflow-wrap:anywhere}
+.lidar-wrap{position:relative;aspect-ratio:1;max-height:65vh;min-height:260px;width:100%;border-radius:12px;overflow:hidden;background:#0e1a20;border:1px solid var(--line2)}
 .lidar-wrap canvas{display:block;width:100%;height:100%;touch-action:none}
 .lidar-legend{position:absolute;right:8px;top:8px;display:grid;gap:4px;padding:7px 8px;border-radius:8px;background:rgba(8,18,24,.78);color:#cfdadd;font-size:11px}
 .lidar-legend span{display:flex;align-items:center;gap:6px}.lidar-key{width:8px;height:8px;border-radius:50%;background:#53d1b8}.lidar-key.robot{background:#e8501f}.lidar-key.wall{background:#e0a83e}
 .lidar-note code{font-family:var(--mono);font-size:12px}
 
 /* Stop bar */
-.stopbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--paper);border-top:1px solid var(--line);
-  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
-.stopbar-inner{max-width:980px;margin:0 auto;display:grid;gap:4px}
-.btn.stop{width:100%;min-height:54px;background:var(--stop);border-color:var(--stop);color:var(--stop-ink);font-family:var(--display);font-size:18px;font-stretch:112%;letter-spacing:.04em}
-.stop-note{font-size:11px;color:var(--mute);text-align:center}
+.stopbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:linear-gradient(to top,var(--bg) 70%,rgba(10,14,21,0));
+  padding:14px max(14px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px))}
+.stopbar-inner{max-width:1060px;margin:0 auto;display:grid;gap:5px}
+.btn.stop{width:100%;min-height:56px;background:var(--stop);border-color:var(--stop);color:var(--stop-ink);font:800 19px/1 var(--display);font-stretch:125%;letter-spacing:.14em;box-shadow:0 8px 24px rgba(255,74,61,.25)}
+.stop-note{font:500 11px/1.3 var(--mono);color:var(--faint);text-align:center}
 
-.links{display:flex;gap:16px;flex-wrap:wrap;font-size:13px}.links a{color:var(--accent)}
-.footer{font-size:12px;color:var(--mute);text-align:center}
+.links{display:flex;gap:16px;flex-wrap:wrap;font-size:13px}.links a{color:var(--amber)}
+.footer{font:500 11px/1.4 var(--mono);color:var(--faint);text-align:center}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body><main>
-<header class="top"><div class="wordmark"><h1>Summon Desk</h1><span>MAXSwerve · sim</span></div><div class="header-tools"><div id="connection" class="pill">Connecting</div><button id="themeToggle" class="theme-toggle" type="button">Auto</button></div></header>
+<header class="top"><div class="wordmark"><div class="mark" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="#1d1304" stroke-width="2"><rect x="3" y="6" width="14" height="8" rx="1.5"/><circle cx="5" cy="16.5" r="1.3" fill="#1d1304" stroke="none"/><circle cx="15" cy="16.5" r="1.3" fill="#1d1304" stroke="none"/><path d="M10 2.5v3"/></svg></div><div><h1>Summon Desk</h1><span>MAXSwerve · 4 modules</span></div></div><div id="connection" class="pill">Connecting</div></header>
 <nav class="tabs" role="tablist" aria-label="Views"><button class="tab active" data-tab="control" role="tab" aria-selected="true" aria-controls="tab-control">Control</button><button class="tab" data-tab="drive" role="tab" aria-selected="false" aria-controls="tab-drive">Drive</button><button class="tab" data-tab="lidar" role="tab" aria-selected="false" aria-controls="tab-lidar">3D room</button></nav>
 
 <section id="tab-control" class="tab-panel active" role="tabpanel">
 <div class="layout">
+ <section class="panel">
+  <div class="status-row"><div><div class="eyebrow">Status</div><div id="status">Connecting…</div><div id="mode">Waiting for bridge</div></div><div id="active" class="chip">—</div></div>
+  <div class="readouts">
+   <div class="readout"><span class="eyebrow">Speed</span><b><span id="spd">—</span><small>m/s</small></b></div>
+   <div class="readout"><span class="eyebrow">To spot</span><b><span id="dist">—</span><small>m</small></b></div>
+   <div class="readout"><span class="eyebrow">Heading</span><b><span id="heading">—</span></b></div>
+   <div class="readout"><span class="eyebrow">Update</span><b><span id="lat">—</span><small>ms</small></b></div>
+  </div>
+ </section>
  <section class="panel plan-panel">
-  <div class="status-row"><div><div id="status">Connecting…</div><div id="mode">Waiting for bridge</div></div><div id="active" class="chip">—</div></div>
-  <div class="plan"><canvas id="map" aria-label="Room plan. Tap to set where to summon the desk."></canvas></div>
-  <div class="plan-foot"><div class="legend"><span><i style="background:var(--wall)"></i>Wall / object</span><span><i style="background:var(--floor)"></i>Seen floor</span><span><i style="background:var(--busy)"></i>Busy</span><span><i style="background:var(--accent)"></i>Desk</span></div><span>Tap the plan to set the summon spot</span></div>
-  <div class="small" id="mapinfo" style="margin-top:4px">Map updates with simulator state.</div>
+  <div class="panel-head"><h2 class="eyebrow">Room plan · live</h2><span class="eyebrow" style="color:var(--faint)">1 m grid</span></div>
+  <div class="plan"><canvas id="map" aria-label="Room plan. Tap to set where to summon the desk."></canvas><div class="plan-hint">Tap to set the summon spot</div></div>
+  <div class="legend"><span><i style="background:var(--wall)"></i>Wall / object</span><span><i style="background:var(--floor);outline:1px solid var(--line2)"></i>Seen floor</span><span><i style="background:var(--busy)"></i>Busy</span><span><i class="dot" style="background:var(--cyan)"></i>LiDAR</span><span><i style="background:var(--amber)"></i>Desk</span><span><i class="dot" style="background:var(--ink)"></i>You</span></div>
+  <div id="mapinfo">Map updates with simulator state.</div>
  </section>
  <section class="panel">
   <div class="actions">
-   <button class="btn primary" id="summon">Summon desk<small id="targetText">to 4.0 m, 3.0 m</small></button>
+   <button class="btn primary" id="summon"><span class="t">Summon desk</span><small id="targetText">to 4.0, 3.0 m</small></button>
    <button class="btn return" id="return">Return to dock</button>
   </div>
   <div id="message" class="toast" role="status" aria-live="polite">Connecting to the simulator…</div>
  </section>
  <section class="panel">
   <div class="power">
-   <div class="meter"><div class="label">Robot battery</div><div class="reading"><span id="battery">—</span><small>%</small></div><div class="bar"><span id="batterybar"></span></div></div>
-   <div class="meter"><div class="label">Desk power</div><div class="reading"><span id="ups">—</span><small>%</small></div><div class="bar"><span id="upsbar"></span></div><div class="meta">Charging: <span id="charging">—</span></div></div>
+   <div><div class="meter-head"><span class="eyebrow">Robot battery</span><b><span id="battery">—</span><small>%</small></b></div><div class="seg" id="batterybar"></div><div class="meta">12 V drive battery</div></div>
+   <div><div class="meter-head"><span class="eyebrow">Desk power</span><b><span id="ups">—</span><small>%</small></b></div><div class="seg" id="upsbar"></div><div class="meta">Charging: <span id="charging">—</span></div></div>
   </div>
   <div id="batteryWarnings" class="battery-warnings" aria-live="polite" aria-atomic="true"></div>
  </section>
  <section class="panel more">
   <details><summary>Summon spot</summary><div class="body"><p class="small" style="margin:0">Metres from the room's top-left corner. Tapping the plan fills these in.</p><div class="fields"><div class="field"><label for="x">X (m)</label><input id="x" type="number" step="0.1" min="0.5" value="4.0" inputmode="decimal"></div><div class="field"><label for="y">Y (m)</label><input id="y" type="number" step="0.1" min="0.5" value="3.0" inputmode="decimal"></div></div></div></details>
-  <details><summary>Position</summary><div class="body"><div class="kv"><div><span class="label">X</span><b id="px">—</b></div><div><span class="label">Y</span><b id="py">—</b></div><div><span class="label">Heading</span><b id="heading">—</b></div><div><span class="label">Room explored</span><b id="explored">—</b></div></div></div></details>
-  <details><summary>Safety &amp; dock</summary><div class="body"><div class="kv"><div><span class="label">E-stop</span><b id="estop" class="value">—</b></div><div><span class="label">Cord</span><b id="cord" class="value">—</b></div><div><span class="label">Interlock</span><b id="interlock" class="value">—</b></div></div></div></details>
+  <details><summary>Position &amp; map</summary><div class="body"><div class="kv"><div><span class="eyebrow">X</span><b id="px">—</b></div><div><span class="eyebrow">Y</span><b id="py">—</b></div><div><span class="eyebrow">Explored</span><b id="explored">—</b></div></div></div></details>
+  <details><summary>Safety &amp; dock</summary><div class="body"><div class="kv"><div><span class="eyebrow">E-stop</span><b id="estop" class="value">—</b></div><div><span class="eyebrow">Cord</span><b id="cord" class="value">—</b></div><div><span class="eyebrow">Interlock</span><b id="interlock" class="value">—</b></div></div></div></details>
   <details><summary>Simulator tools</summary><div class="body"><p class="small" style="margin:0">These change the simulated room only.</p><div class="actions"><button id="cordIn" class="btn subtle">Plug in cord</button><button id="cordOut" class="btn subtle">Unplug cord</button><button id="learn" class="btn subtle return">Map the room</button></div></div></details>
   <details id="eventLogDetails"><summary>History</summary><div class="body"><div class="event-log-tools"><span class="small">Saved in this browser</span><button id="clearEventLog" class="btn subtle" type="button">Clear</button></div><div id="eventLogList" class="event-log-list" aria-live="polite"><div class="event-log-empty">No events yet.</div></div></div></details>
   <details class="settings-card" id="settings"><summary>Connection</summary><div class="body"><div class="field"><label for="token">API token (simulator default: dev-token)</label><input id="token" type="password" autocomplete="off" value="dev-token"></div><button class="btn subtle" id="saveToken">Apply token</button><p class="small" style="margin:0">On your phone, open the computer's local address, for example http://192.168.1.25:8787, on the same trusted Wi-Fi. Don't expose this service to the internet.</p></div></details>
@@ -198,7 +215,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
  <section class="panel">
   <div class="drive-head"><div><h2>Manual drive</h2><p class="small" style="margin:2px 0 0">Drag to move in any direction. Hold a rotate button to turn.</p></div><span class="tag">SIM ONLY</span></div>
   <div class="drive-grid"><div><div class="stick-pad" id="stickPad" role="application" aria-label="Movement joystick"><span class="stick-label up">FWD</span><span class="stick-label down">BACK</span><span class="stick-label left">LEFT</span><span class="stick-label right">RIGHT</span><div class="stick-knob" id="stickKnob"></div></div><div class="small" style="text-align:center;margin-top:8px">Let go to stop</div></div>
-  <div class="drive-side"><div><div class="label">Rotate</div><div class="turn-controls"><button type="button" class="turn-btn" id="turnLeft">↶ Left</button><button type="button" class="turn-btn" id="turnRight">Right ↷</button></div></div><div class="drive-readout"><span>Command</span><strong id="driveVector">X 0.00 · Y 0.00 · Ω 0.00</strong></div><div class="drive-speed"><label for="driveSpeed" class="label">Speed limit <strong id="driveSpeedValue">35%</strong></label><input id="driveSpeed" type="range" min="8" max="100" value="35" step="1" aria-describedby="speedWarning speedLimitNote"><div id="speedLimitNote" class="small">35% of the simulator's maximum.</div><div id="speedWarning" class="speed-warning" role="status" aria-live="polite" hidden></div></div></div></div>
+  <div class="drive-side"><div><div class="eyebrow">Rotate</div><div class="turn-controls"><button type="button" class="turn-btn" id="turnLeft">↶ Left</button><button type="button" class="turn-btn" id="turnRight">Right ↷</button></div></div><div class="drive-readout"><span>Command</span><strong id="driveVector">X 0.00 · Y 0.00 · Ω 0.00</strong></div><div class="drive-speed"><label for="driveSpeed" class="eyebrow">Speed limit <strong id="driveSpeedValue">35%</strong></label><input id="driveSpeed" type="range" min="8" max="100" value="35" step="1" aria-describedby="speedWarning speedLimitNote"><div id="speedLimitNote" class="small">35% of the simulator's maximum.</div><div id="speedWarning" class="speed-warning" role="status" aria-live="polite" hidden></div></div></div></div>
   <div class="drive-safety">Simulation only. The simulator still applies its LiDAR footprint checks; this is not a safety certification for real hardware.</div>
   <div id="driveStatus" class="lidar-status" role="status" aria-live="polite">Manual drive idle.</div>
  </section>
@@ -207,7 +224,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 <section id="tab-lidar" class="tab-panel" role="tabpanel" aria-label="3D room">
  <section class="panel">
   <div class="drive-head"><div><h2>3D room</h2><p class="small" style="margin:2px 0 0">Built from the live map. Drag to orbit, pinch to zoom.</p></div><span id="lidarBadge" class="tag">BUILDING</span></div>
-  <div class="lidar-stats"><div><span class="label">Obstacles</span><strong id="lidarPoints">—</strong></div><div><span class="label">Room</span><strong id="lidarRange">—</strong></div><div><span class="label">Updated</span><strong id="lidarAge">Waiting</strong></div></div>
+  <div class="lidar-stats"><div><span class="eyebrow">Obstacles</span><strong id="lidarPoints">—</strong></div><div><span class="eyebrow">Room</span><strong id="lidarRange">—</strong></div><div><span class="eyebrow">Updated</span><strong id="lidarAge">Waiting</strong></div></div>
   <div class="lidar-wrap"><canvas id="lidarCanvas" aria-label="3D room model"></canvas><div class="lidar-legend"><span><i class="lidar-key wall"></i>Obstacle</span><span><i class="lidar-key"></i>Floor</span><span><i class="lidar-key robot"></i>Desk</span></div></div>
   <div id="lidarStatus" class="lidar-status" role="status" aria-live="polite">Waiting for the map…</div>
   <p class="small lidar-note">From <code>/v1/map</code> and <code>/v1/state</code>. A picture of the map, not an obstacle-detection system.</p>
@@ -219,7 +236,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 </main>
 <div class="stopbar"><div class="stopbar-inner"><button class="btn stop" id="stop">STOP</button><div class="stop-note">Software stop. Keep the physical E-stop in reach on real hardware.</div></div></div>
 <script>
-(()=>{'use strict';let token='dev-token',busy=false,lastMap=0,lastMapSignature='',currentEpoch=null,mapData=null,lastState=null;const $=id=>document.getElementById(id);const fmt=(n,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d):'—';const say=(s,kind='')=>{ $('message').textContent=s;$('message').className='toast '+kind};
+(()=>{'use strict';let token='dev-token',busy=false,lastMap=0,lastMapSignature='',currentEpoch=null;const $=id=>document.getElementById(id);const fmt=(n,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d):'—';const say=(s,kind='')=>{ $('message').textContent=s;$('message').className='toast '+kind};
 const EVENT_LOG_KEY='summonDeskEventLogV1';let eventItems=[],lastObservedState=null;
 function renderEventLog(){
  const host=$('eventLogList');if(!host)return;host.replaceChildren();
@@ -250,28 +267,58 @@ function observeState(s){
  lastObservedState=next;
 }
 
+
 async function api(path,method='GET',body){if(method==='POST'&&body!==undefined&&currentEpoch!==null&&body.epoch===undefined){body={...body,epoch:currentEpoch}}const r=await fetch(path,{method,headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});let data={};try{data=await r.json()}catch{}if(!r.ok){const e=new Error(data.status||data.error||('HTTP '+r.status));e.statusCode=r.status;e.response=data;throw e}return data}
 function setText(id,v){$(id).textContent=v}
-function updateTargetText(){setText('targetText','to '+fmt($('x').value,1)+' m, '+fmt($('y').value,1)+' m')}
-function render(s){observeState(s);lastState=s;if(Number.isFinite(Number(s.epoch)))currentEpoch=Number(s.epoch);const off=s.simulator_connected===false;const connected=$('connection');connected.textContent=off?'Simulator offline':'Connected';connected.classList.toggle('online',!off);setText('status',s.status||'Unknown');$('status').className=s.severity==='bad'?'bad':s.severity==='warn'?'warn':'';setText('mode',off?'Open /simulator in another tab to connect':'Mode: '+(s.mode||'—'));setText('active',off?'Unknown':s.active?'Moving':'Parked');$('active').classList.toggle('moving',!off&&!!s.active);const rb=Number(s.battery?.robot_pct),ub=Number(s.battery?.ups_pct),robotKnown=!off&&Number.isFinite(rb)&&s.battery?.robot_pct!==null&&s.battery?.robot_pct!==undefined,upsKnown=!off&&Number.isFinite(ub)&&s.battery?.ups_pct!==null&&s.battery?.ups_pct!==undefined;setText('battery',robotKnown?fmt(rb,0):'—');$('batterybar').style.width=(robotKnown?Math.max(0,Math.min(100,rb)):0)+'%';$('batterybar').classList.toggle('low',robotKnown&&rb<=20);setText('ups',upsKnown?fmt(ub,0):'—');$('upsbar').style.width=(upsKnown?Math.max(0,Math.min(100,ub)):0)+'%';$('upsbar').classList.toggle('low',upsKnown&&ub<=20);setText('charging',typeof s.charging==='boolean'?(s.charging?'yes':'no'):'unknown');const warnings=[];if(off)warnings.push({kind:'warn',title:'Simulator disconnected',body:'Open /simulator and keep it running to update controls and readings.'});if(!robotKnown)warnings.push({kind:'warn',title:'Robot battery unavailable',body:'No valid robot battery reading.'});else if(rb<=20)warnings.push({kind:'danger',title:'Robot battery low',body:'At '+fmt(rb,0)+'%. Recharge before the next run.'});if(!upsKnown)warnings.push({kind:'warn',title:'Desk power unavailable',body:'No valid desk power reading.'});else if(ub<=20)warnings.push({kind:'danger',title:'Desk power low',body:'At '+fmt(ub,0)+'%. Check the power station.'});$('batteryWarnings').replaceChildren(...warnings.map(w=>{const el=document.createElement('div');el.className='battery-warning '+w.kind;const title=document.createElement('strong');title.textContent=w.title;const body=document.createElement('span');body.textContent=w.body;el.append(title,body);return el}));setText('px',fmt(s.pose?.x,2)+' m');setText('py',fmt(s.pose?.y,2)+' m');setText('heading',fmt((Number(s.pose?.theta)||0)*180/Math.PI,0)+'°');setText('estop',off?'Unknown':s.estop?'ENGAGED':'Clear');$('estop').className='value '+(off?'warn':s.estop?'danger':'good');setText('cord',s.cord?.plugged?'Plugged in':'Unplugged');$('cord').className='value '+(s.cord?.plugged?'warn':'');setText('interlock',s.cord?.interlock_on?'On':'Off');setText('explored',fmt(s.explored_pct,0)+'%');if(!$('x').dataset.edited){$('x').value=fmt(s.user?.x,1);$('y').value=fmt(s.user?.y,1)}updateTargetText();drawPlan()}
 
-// ============ Room plan (2D canvas): map cells, desk, you, summon spot. Tap sets the summon spot. ============
-const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-function drawPlan(){
- const cv=$('map'),m=mapData;if(!cv)return;const r=cv.getBoundingClientRect();if(r.width<2)return;
- const dpr=Math.min(2,window.devicePixelRatio||1),Wp=Math.round(r.width*dpr),Hp=Math.round(r.height*dpr);if(cv.width!==Wp||cv.height!==Hp){cv.width=Wp;cv.height=Hp}
- const g=cv.getContext('2d');g.setTransform(1,0,0,1,0,0);g.fillStyle=css('--unknown');g.fillRect(0,0,Wp,Hp);if(!m)return;
- const sx=Wp/m.width_m,sy=Hp/m.height_m,cw=Wp/m.gw,ch=Hp/m.gh,floor=css('--floor'),wall=css('--wall'),busyC=css('--busy');
- for(let y=0;y<m.gh;y++){const row=m.rows[y];for(let x=0;x<m.gw;x++){const c=row[x];if(c==='.')continue;g.fillStyle=c==='#'?wall:c==='+'?busyC:floor;g.fillRect(Math.floor(x*cw),Math.floor(y*ch),Math.ceil(cw),Math.ceil(ch))}}
- const s=lastState;
- const tx=Number($('x').value),ty=Number($('y').value);
- if(Number.isFinite(tx)&&Number.isFinite(ty)){const px=tx*sx,py=ty*sy,k=9*dpr;g.strokeStyle=css('--accent');g.lineWidth=2*dpr;g.beginPath();g.arc(px,py,k,0,7);g.moveTo(px-k*1.6,py);g.lineTo(px+k*1.6,py);g.moveTo(px,py-k*1.6);g.lineTo(px,py+k*1.6);g.stroke()}
- if(s&&s.user&&Number.isFinite(+s.user.x)){g.fillStyle=css('--warn');g.beginPath();g.arc(s.user.x*sx,s.user.y*sy,6*dpr,0,7);g.fill()}
- if(s&&s.pose&&Number.isFinite(+s.pose.x)){g.save();g.translate(s.pose.x*sx,s.pose.y*sy);g.rotate(+s.pose.theta||0);const w=1.12*sx,h=0.72*sy;g.fillStyle=css('--accent');g.fillRect(-w/2,-h/2,w,h);
-  g.fillStyle=css('--accent-ink');g.beginPath();g.moveTo(0,-h/2+2*dpr);g.lineTo(-5*dpr,-h/2+10*dpr);g.lineTo(5*dpr,-h/2+10*dpr);g.closePath();g.fill();g.restore()}
+// ============ Live state: polled 4x a second on the Control tab; the plan slides between updates ============
+const POLL_CONTROL_MS=250,POLL_OTHER_MS=1000,POLL_HIDDEN_MS=2000,MAP_MS=2000;
+let mapData=null,mapLayer=null,lastState=null,latencyMs=null,speedEMA=0,prevPose=null,trail=[];
+const anim={from:null,to:null,t0:0,dur:POLL_CONTROL_MS};
+const wrapPi=a=>Math.atan2(Math.sin(a),Math.cos(a));
+function posePoint(p){return p&&Number.isFinite(+p.x)?{x:+p.x,y:+p.y,th:+p.theta||0}:null}
+function shownPose(now=performance.now()){const {from,to}=anim;if(!to)return null;if(!from)return to;const k=Math.min(1,(now-anim.t0)/anim.dur);return {x:from.x+(to.x-from.x)*k,y:from.y+(to.y-from.y)*k,th:from.th+wrapPi(to.th-from.th)*k}}
+function segs(id,pct,known){const host=$(id);if(host.children.length!==10)host.replaceChildren(...Array.from({length:10},()=>document.createElement('i')));const lit=known?Math.round(Math.max(0,Math.min(100,pct))/10):0;[...host.children].forEach((c,i)=>c.classList.toggle('on',i<lit));host.classList.toggle('low',known&&pct<=20);host.classList.toggle('mid',known&&pct>20&&pct<=40)}
+function updateTargetText(){setText('targetText','to '+fmt($('x').value,1)+', '+fmt($('y').value,1)+' m')}
+function render(s){observeState(s);lastState=s;if(Number.isFinite(Number(s.epoch)))currentEpoch=Number(s.epoch);const off=s.simulator_connected===false;const connected=$('connection');connected.textContent=off?'Simulator offline':'Live';connected.classList.toggle('online',!off);setText('status',s.status||'Unknown');$('status').className=s.severity==='bad'?'bad':s.severity==='warn'?'warn':'';setText('mode',off?'Open /simulator in another tab to connect':'mode: '+(s.mode||'—'));setText('active',off?'Unknown':s.active?'Moving':'Parked');$('active').classList.toggle('moving',!off&&!!s.active);
+ const rb=Number(s.battery?.robot_pct),ub=Number(s.battery?.ups_pct),robotKnown=!off&&Number.isFinite(rb)&&s.battery?.robot_pct!==null&&s.battery?.robot_pct!==undefined,upsKnown=!off&&Number.isFinite(ub)&&s.battery?.ups_pct!==null&&s.battery?.ups_pct!==undefined;setText('battery',robotKnown?fmt(rb,0):'—');segs('batterybar',rb,robotKnown);setText('ups',upsKnown?fmt(ub,0):'—');segs('upsbar',ub,upsKnown);setText('charging',typeof s.charging==='boolean'?(s.charging?'yes':'no'):'unknown');
+ const warnings=[];if(off)warnings.push({kind:'warn',title:'Simulator disconnected',body:'Open /simulator and keep it running to update controls and readings.'});if(!robotKnown)warnings.push({kind:'warn',title:'Robot battery unavailable',body:'No valid robot battery reading.'});else if(rb<=20)warnings.push({kind:'danger',title:'Robot battery low',body:'At '+fmt(rb,0)+'%. Recharge before the next run.'});if(!upsKnown)warnings.push({kind:'warn',title:'Desk power unavailable',body:'No valid desk power reading.'});else if(ub<=20)warnings.push({kind:'danger',title:'Desk power low',body:'At '+fmt(ub,0)+'%. Check the power station.'});$('batteryWarnings').replaceChildren(...warnings.map(w=>{const el=document.createElement('div');el.className='battery-warning '+w.kind;const title=document.createElement('strong');title.textContent=w.title;const body=document.createElement('span');body.textContent=w.body;el.append(title,body);return el}));
+ setText('px',fmt(s.pose?.x,2)+' m');setText('py',fmt(s.pose?.y,2)+' m');setText('heading',fmt((((Number(s.pose?.theta)||0)*180/Math.PI)%360+360)%360,0)+'°');setText('estop',off?'Unknown':s.estop?'ENGAGED':'Clear');$('estop').className='value '+(off?'warn':s.estop?'danger':'good');setText('cord',s.cord?.plugged?'Plugged in':'Unplugged');$('cord').className='value '+(s.cord?.plugged?'warn':'');setText('interlock',s.cord?.interlock_on?'On':'Off');setText('explored',fmt(s.explored_pct,0)+'%');
+ if(!$('x').dataset.edited){$('x').value=fmt(s.user?.x,1);$('y').value=fmt(s.user?.y,1)}updateTargetText();
+ const p=posePoint(s.pose),now=performance.now();
+ if(p){anim.from=shownPose(now)||p;anim.to=p;anim.t0=now;
+  if(prevPose){const dt=(now-prevPose.t)/1000;if(dt>0.05){const v=Math.hypot(p.x-prevPose.x,p.y-prevPose.y)/dt;speedEMA=speedEMA*.5+v*.5}}prevPose={...p,t:now};
+  const last=trail[trail.length-1];if(!last||Math.hypot(p.x-last.x,p.y-last.y)>0.05){trail.push({x:p.x,y:p.y});if(trail.length>240)trail.shift()}
+  const tx=Number($('x').value),ty=Number($('y').value);setText('dist',Number.isFinite(tx)&&Number.isFinite(ty)?fmt(Math.hypot(p.x-tx,p.y-ty),1):'—')}
+ setText('spd',off||!p?'—':fmt(speedEMA<0.01?0:speedEMA,2));setText('lat',latencyMs===null?'—':String(latencyMs));
 }
-$('map').addEventListener('click',e=>{if(!mapData)return;const r=$('map').getBoundingClientRect();const x=(e.clientX-r.left)/r.width*mapData.width_m,y=(e.clientY-r.top)/r.height*mapData.height_m;$('x').value=x.toFixed(1);$('y').value=y.toFixed(1);$('x').dataset.edited='1';$('y').dataset.edited='1';updateTargetText();drawPlan();say('Summon spot set to '+x.toFixed(1)+' m, '+y.toFixed(1)+' m. Press Summon desk.')});
-window.addEventListener('resize',()=>drawPlan());
+
+// ============ Room plan: cached map layer + live desk, trail, LiDAR hits, you and the summon spot ============
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function buildMapLayer(Wp,Hp){const m=mapData;if(!m)return null;const c=document.createElement('canvas');c.width=Wp;c.height=Hp;const g=c.getContext('2d');
+ g.fillStyle=css('--unknown');g.fillRect(0,0,Wp,Hp);const cw=Wp/m.gw,ch=Hp/m.gh,floor=css('--floor'),wall=css('--wall'),busyC=css('--busy');
+ for(let y=0;y<m.gh;y++){const row=m.rows[y];for(let x=0;x<m.gw;x++){const v=row[x];if(v==='.'||v==='#')continue;g.fillStyle=v==='+'?busyC:floor;g.fillRect(Math.floor(x*cw),Math.floor(y*ch),Math.ceil(cw),Math.ceil(ch))}}
+ g.strokeStyle=css('--grid');g.lineWidth=1;g.beginPath();const sx=Wp/m.width_m,sy=Hp/m.height_m;for(let mx=1;mx<m.width_m;mx++){g.moveTo(Math.round(mx*sx)+.5,0);g.lineTo(Math.round(mx*sx)+.5,Hp)}for(let my=1;my<m.height_m;my++){g.moveTo(0,Math.round(my*sy)+.5);g.lineTo(Wp,Math.round(my*sy)+.5)}g.stroke();
+ g.fillStyle=wall;for(let y=0;y<m.gh;y++){const row=m.rows[y];for(let x=0;x<m.gw;x++)if(row[x]==='#')g.fillRect(Math.floor(x*cw),Math.floor(y*ch),Math.ceil(cw),Math.ceil(ch))}
+ return c}
+function drawPlan(){
+ const cv=$('map');if(!cv)return;const r=cv.getBoundingClientRect();if(r.width<2)return;
+ const dpr=Math.min(2,window.devicePixelRatio||1),Wp=Math.round(r.width*dpr),Hp=Math.round(r.height*dpr);if(cv.width!==Wp||cv.height!==Hp){cv.width=Wp;cv.height=Hp;mapLayer=null}
+ const g=cv.getContext('2d'),m=mapData;if(!m){g.fillStyle=css('--unknown');g.fillRect(0,0,Wp,Hp);return}
+ if(!mapLayer)mapLayer=buildMapLayer(Wp,Hp);g.drawImage(mapLayer,0,0);
+ const sx=Wp/m.width_m,sy=Hp/m.height_m,s=lastState,p=shownPose();
+ if(trail.length>1){g.strokeStyle='rgba(244,177,61,.45)';g.lineWidth=2*dpr;g.setLineDash([4*dpr,4*dpr]);g.beginPath();trail.forEach((q,i)=>i?g.lineTo(q.x*sx,q.y*sy):g.moveTo(q.x*sx,q.y*sy));if(p)g.lineTo(p.x*sx,p.y*sy);g.stroke();g.setLineDash([])}
+ if(p&&s&&Array.isArray(s.lidar)){const cyan=css('--cyan'),warn=css('--warn');for(const h of s.lidar){const a=p.th+(+h.angle)*Math.PI/180,rr=+h.range;if(!Number.isFinite(a)||!Number.isFinite(rr))continue;g.fillStyle=h.type==='person'?warn:cyan;g.fillRect((p.x+Math.cos(a)*rr)*sx-1.5*dpr,(p.y+Math.sin(a)*rr)*sy-1.5*dpr,3*dpr,3*dpr)}}
+ const tx=Number($('x').value),ty=Number($('y').value);
+ if(Number.isFinite(tx)&&Number.isFinite(ty)){const px=tx*sx,py=ty*sy,k=10*dpr;g.strokeStyle=css('--amber');g.lineWidth=2*dpr;g.beginPath();g.arc(px,py,k,0,7);g.moveTo(px-k*1.7,py);g.lineTo(px-k*.6,py);g.moveTo(px+k*.6,py);g.lineTo(px+k*1.7,py);g.moveTo(px,py-k*1.7);g.lineTo(px,py-k*.6);g.moveTo(px,py+k*.6);g.lineTo(px,py+k*1.7);g.stroke()}
+ if(s&&s.user&&Number.isFinite(+s.user.x)){g.fillStyle=css('--ink');g.beginPath();g.arc(s.user.x*sx,s.user.y*sy,6*dpr,0,7);g.fill();g.strokeStyle=css('--bg');g.lineWidth=2*dpr;g.stroke()}
+ if(p){g.save();g.translate(p.x*sx,p.y*sy);g.rotate(p.th);const w=1.12*sx,h=0.72*sy;g.fillStyle=css('--amber');g.strokeStyle=css('--amber-ink');g.lineWidth=1.5*dpr;g.beginPath();g.rect(-w/2,-h/2,w,h);g.fill();g.stroke();
+  g.fillStyle=css('--amber-ink');g.beginPath();g.moveTo(0,-h/2+2*dpr);g.lineTo(-5*dpr,-h/2+10*dpr);g.lineTo(5*dpr,-h/2+10*dpr);g.closePath();g.fill();g.restore()}
+}
+let planRAF=0;function planLoop(){drawPlan();planRAF=$('tab-control').classList.contains('active')&&!document.hidden?requestAnimationFrame(planLoop):0}
+function startPlanLoop(){if(!planRAF)planRAF=requestAnimationFrame(planLoop)}
+$('map').addEventListener('click',e=>{if(!mapData)return;const r=$('map').getBoundingClientRect();const x=(e.clientX-r.left)/r.width*mapData.width_m,y=(e.clientY-r.top)/r.height*mapData.height_m;$('x').value=x.toFixed(1);$('y').value=y.toFixed(1);$('x').dataset.edited='1';$('y').dataset.edited='1';updateTargetText();say('Summon spot set to '+x.toFixed(1)+', '+y.toFixed(1)+' m. Press Summon desk.')});
+window.addEventListener('resize',()=>{mapLayer=null});
 // ============ LiDAR 3D room view (Three.js) ============
 var lidarTimer=null, lidarRenderer=null, lidarScene=null, lidarCamera=null;
 var lidarRoom=null, lidarRobot=null, lidarGrid=null;
@@ -478,15 +525,14 @@ function stopLidar(){
   if(lidarTimer){clearInterval(lidarTimer); lidarTimer=null}
   if(lidarRAF){cancelAnimationFrame(lidarRAF); lidarRAF=0}
 }
-function activateTab(name){document.querySelectorAll('.tab').forEach(t=>{const on=t.dataset.tab===name;t.classList.toggle('active',on);t.setAttribute('aria-selected',on?'true':'false')});document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));if(name==='lidar'){requestAnimationFrame(()=>startLidar())}else stopLidar();if(name==='control')requestAnimationFrame(drawPlan)}
-async function refresh(){try{const s=await api('/v1/state');render(s);if(!lastMap||Date.now()-lastMap>4000)await refreshMap()}catch(e){$('connection').textContent='Disconnected';$('connection').classList.remove('online');setText('status','Offline');setText('mode','Check the bridge and Wi-Fi');say(e.message,'danger');render({simulator_connected:false})}}
-async function refreshMap(){try{const m=await api('/v1/map');const signature=[m.gw,m.gh,m.width_m,m.height_m,...m.rows].join('|');lastMap=Date.now();if(signature===lastMapSignature)return;lastMapSignature=signature;mapData=m;drawPlan();setText('mapinfo',`${fmt(m.width_m,1)} × ${fmt(m.height_m,1)} m room · ${m.gw} × ${m.gh} cells`)}catch{}}
+
+function activateTab(name){document.querySelectorAll('.tab').forEach(t=>{const on=t.dataset.tab===name;t.classList.toggle('active',on);t.setAttribute('aria-selected',on?'true':'false')});document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));if(name==='lidar'){requestAnimationFrame(()=>startLidar())}else stopLidar();if(name==='control')startPlanLoop()}
+async function refresh(){try{const t0=performance.now();const s=await api('/v1/state');latencyMs=Math.round(performance.now()-t0);render(s);if(!lastMap||Date.now()-lastMap>MAP_MS)await refreshMap()}catch(e){$('connection').textContent='Disconnected';$('connection').classList.remove('online');setText('status','Offline');setText('mode','Check the bridge and Wi-Fi');say(e.message,'danger');latencyMs=null;render({simulator_connected:false})}}
+async function refreshMap(){try{const m=await api('/v1/map');const signature=[m.gw,m.gh,m.width_m,m.height_m,...m.rows].join('|');lastMap=Date.now();if(signature===lastMapSignature)return;lastMapSignature=signature;mapData=m;mapLayer=null;setText('mapinfo',`${fmt(m.width_m,1)} × ${fmt(m.height_m,1)} m room · ${m.gw} × ${m.gh} cells of ${fmt(m.cell_m*100,0)} cm`)}catch{}}
+async function pollLoop(){const t0=performance.now();await refresh();const wait=document.hidden?POLL_HIDDEN_MS:$('tab-control').classList.contains('active')?POLL_CONTROL_MS:POLL_OTHER_MS;anim.dur=wait;setTimeout(pollLoop,Math.max(0,wait-(performance.now()-t0)))}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('tab-control').classList.contains('active'))startPlanLoop()});
 async function command(path,body,msg,buttonId){const button=buttonId?$(buttonId):null;if(busy||(button&&button.disabled))return;busy=true;if(button)button.disabled=true;say(msg+'…');try{const r=await api(path,'POST',body);const failed=r.accepted===false;say(r.status||'Command accepted',failed?'danger':'good');logEvent((failed?'Command refused: ':'Command accepted: ')+msg,r.status||path,failed?'warn':'');await refresh()}catch(e){if(e.response&&e.response.stale_epoch){say('Session expired. Reconnecting…','danger');logEvent('Command refused: stale session','Bridge reconnected since this page last saw state','warn');currentEpoch=null;try{await refresh()}catch(_){}return}const refused=Number(e.statusCode)>=400&&Number(e.statusCode)<500;say(e.message,'danger');logEvent((refused?'Command refused: ':'Command failed: ')+msg,e.message,refused?'warn':'danger')}finally{busy=false;if(button)button.disabled=false}}
 async function urgentCommand(path,body,msg){say(msg+'…');try{const r=await api(path,'POST',body);const failed=r.accepted===false;say(r.status||'Command accepted',failed?'danger':'good');logEvent((failed?'Command refused: ':'Command accepted: ')+msg,r.status||path,failed?'warn':'');await refresh()}catch(e){if(e.response&&e.response.stale_epoch){say('Session expired. Reconnecting…','danger');logEvent('Command refused: stale session','Bridge reconnected since this page last saw state','warn');currentEpoch=null;try{await refresh()}catch(_){}return}const refused=Number(e.statusCode)>=400&&Number(e.statusCode)<500;say(e.message,'danger');logEvent((refused?'Command refused: ':'Command failed: ')+msg,e.message,refused?'warn':'danger')}}
-// Theme: auto follows the phone; light and dark override it.
-const THEMES=['auto','light','dark'];
-function applyTheme(theme){const t=THEMES.includes(theme)?theme:'auto';if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;$('themeToggle').textContent=t[0].toUpperCase()+t.slice(1);$('themeToggle').setAttribute('aria-label','Theme: '+t+'. Tap to change.');try{localStorage.setItem('summonDeskTheme',t)}catch(_){}requestAnimationFrame(drawPlan)}
-function initTheme(){let saved='auto';try{saved=localStorage.getItem('summonDeskTheme')||'auto'}catch(_){}applyTheme(saved)}
 // Virtual joystick sends only to the browser simulator bridge. Releasing any control sends zero commands.
 let stickPointer=null,driveX=0,driveY=0,driveTurn=0,driveActive=false,driveLoop=null;
 function drivePayload(){return {x:driveX,y:driveY,turn:driveTurn,speed:Number($('driveSpeed').value)/100}}
@@ -498,11 +544,11 @@ function moveStick(e){const r=$('stickPad').getBoundingClientRect(),cx=r.left+r.
 $('stickPad').addEventListener('pointerdown',e=>{if(stickPointer!==null)return;stickPointer=e.pointerId;driveActive=true;$('stickPad').setPointerCapture(e.pointerId);moveStick(e);driveTickStart()});$('stickPad').addEventListener('pointermove',e=>{if(e.pointerId===stickPointer){moveStick(e);pushDrive()}});$('stickPad').addEventListener('pointerup',e=>{if(e.pointerId===stickPointer)releaseDrive()});$('stickPad').addEventListener('pointercancel',releaseDrive);
 function turnDown(dir,e){e.preventDefault();try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}driveActive=true;driveTurn=dir;driveTickStart()}function turnUp(){driveTurn=0;if(Math.abs(driveX)<.02&&Math.abs(driveY)<.02)releaseDrive();else pushDrive()}$('turnLeft').addEventListener('pointerdown',e=>turnDown(-1,e));$('turnRight').addEventListener('pointerdown',e=>turnDown(1,e));for(const id of ['turnLeft','turnRight']){const b=$(id);b.addEventListener('pointerup',turnUp);b.addEventListener('pointercancel',turnUp);b.addEventListener('pointerleave',e=>{if(e.buttons===0)turnUp()})}
 $('driveSpeed').addEventListener('input',()=>{updateSpeedWarning();if(driveActive)pushDrive()});updateSpeedWarning();window.addEventListener('blur',()=>{if(driveActive)releaseDrive()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&driveActive)releaseDrive()});
+
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.tab)));
 initEventLog();$('clearEventLog').addEventListener('click',()=>{eventItems=[];try{localStorage.removeItem(EVENT_LOG_KEY)}catch(_){}renderEventLog()});
-$('themeToggle').addEventListener('click',()=>{const cur=document.documentElement.dataset.theme||'auto';applyTheme(THEMES[(THEMES.indexOf(cur)+1)%THEMES.length])});initTheme();
-$('summon').addEventListener('click',()=>{const x=Number($('x').value),y=Number($('y').value);if(!Number.isFinite(x)||!Number.isFinite(y)){say('Enter a valid summon spot.','danger');return}command('/v1/summon',{x,y},'Sending summon command','summon')});for(const id of ['x','y'])$(id).addEventListener('input',()=>{$(id).dataset.edited='1';updateTargetText();drawPlan()});
-$('return').onclick=()=>{releaseDrive(false);command('/v1/return',{},'Returning to dock','return')};$('stop').onclick=()=>{releaseDrive(false);urgentCommand('/v1/stop',{},'Sending software stop')};$('learn').onclick=()=>command('/v1/learn',{},'Starting mapping tour','learn');$('cordIn').onclick=()=>command('/v1/sim/cord',{plugged:true},'Connecting simulated cord','cordIn');$('cordOut').onclick=()=>command('/v1/sim/cord',{plugged:false},'Disconnecting simulated cord','cordOut');$('saveToken').onclick=()=>{token=$('token').value.trim();say('Token applied. Checking connection…');refresh()};$('settingsLink').onclick=()=>{$('settings').scrollIntoView({behavior:'smooth',block:'center'});$('settings').open=true};refresh();setInterval(()=>{refresh()},1500);
+$('summon').addEventListener('click',()=>{const x=Number($('x').value),y=Number($('y').value);if(!Number.isFinite(x)||!Number.isFinite(y)){say('Enter a valid summon spot.','danger');return}trail=[];command('/v1/summon',{x,y},'Sending summon command','summon')});for(const id of ['x','y'])$(id).addEventListener('input',()=>{$(id).dataset.edited='1';updateTargetText()});
+$('return').onclick=()=>{releaseDrive(false);trail=[];command('/v1/return',{},'Returning to dock','return')};$('stop').onclick=()=>{releaseDrive(false);urgentCommand('/v1/stop',{},'Sending software stop')};$('learn').onclick=()=>command('/v1/learn',{},'Starting mapping tour','learn');$('cordIn').onclick=()=>command('/v1/sim/cord',{plugged:true},'Connecting simulated cord','cordIn');$('cordOut').onclick=()=>command('/v1/sim/cord',{plugged:false},'Disconnecting simulated cord','cordOut');$('saveToken').onclick=()=>{token=$('token').value.trim();say('Token applied. Checking connection…');refresh()};$('settingsLink').onclick=()=>{$('settings').scrollIntoView({behavior:'smooth',block:'center'});$('settings').open=true};pollLoop();startPlanLoop();
 // Offline caching is not configured: avoid registering a missing /sw.js endpoint.
 })();
 </script></body></html>

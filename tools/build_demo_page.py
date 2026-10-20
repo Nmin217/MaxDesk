@@ -67,7 +67,9 @@ bridge = """<script>
       pose:{x:+(T.x*PX).toFixed(3),y:+(T.y*PX).toFixed(3),theta:+T.th.toFixed(3)},user:{x:+(user.x*PX).toFixed(3),y:+(user.y*PX).toFixed(3)},
       battery:{robot_pct:+bat.r.toFixed(1),ups_pct:+bat.a.toFixed(1)},charging,cord:{plugged:cordIn,interlock_on:!!$('il').checked,breakaways},
       dock_type:$('dm').value,desk_height_cm:Math.round(deskH*100),alert:alertT>0,explored_pct:Math.round(100*seenCount/(GW*GH)),remembered_cells:remembered,
-      people:people.map(p=>({x:+(p.x*PX).toFixed(2),y:+(p.y*PX).toFixed(2),settled:!!p.settled})),simulator_connected:true,epoch:EPOCH}}
+      people:people.map(p=>({x:+(p.x*PX).toFixed(2),y:+(p.y*PX).toFixed(2),settled:!!p.settled})),
+      lidar:hits.filter(h=>h&&h.hit&&Number.isFinite(h.d)&&h.d>0).map(h=>({angle:+(((h.a-T.th)*180/Math.PI+540)%360-180).toFixed(2),range:+(h.d*PX).toFixed(3),type:h.type||'obstacle'})),
+      simulator_connected:true,epoch:EPOCH}}
   function map(){const rows=[];for(let y=0;y<GH;y++){let row='';for(let x=0;x<GW;x++){const i=y*GW+x;row+=smap[i]>0?'#':traffic[i]>2?'+':seen[i]?'_':'.'}rows.push(row)}
     return {width_m:W*PX,height_m:H*PX,cell_m:CS*PX,gw:GW,gh:GH,rows,epoch:EPOCH}}
   function apply(c){

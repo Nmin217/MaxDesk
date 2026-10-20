@@ -92,7 +92,7 @@ function httpJson(method, urlStr, token, body) {
 function createRuntime({
   io, bridgeUrl, token, hz = 60,
   nowMs = () => Date.now(),
-  statePushMs = 350, pollMs = 350, staleBridgeMs = 2000
+  statePushMs = 100, pollMs = 100, staleBridgeMs = 2000   // 100 ms: a Stop reaches the wheels within ~0.1 s plus Wi-Fi
 } = {}) {
   if (!io) throw new Error('io is required');
   if (!bridgeUrl) throw new Error('bridgeUrl is required');
@@ -180,11 +180,20 @@ function createRuntime({
     else io.stopAll();
   }
 
+  // Network calls run beside the control loop, one of each in flight at a time: a slow or hung
+  // request must never hold up the wheel update (the stale-bridge check stops the wheels instead).
+  let pushing = false, polling = false;
   async function loop() {
     if (!running) return;
     const t = nowMs();
-    if (t - lastStatePush >= statePushMs) { lastStatePush = t; await pushStateNow(); }
-    if (t - lastPoll >= pollMs) { lastPoll = t; await pollNow(); }
+    if (!pushing && t - lastStatePush >= statePushMs) {
+      lastStatePush = t; pushing = true;
+      pushStateNow().catch(() => {}).finally(() => { pushing = false; });
+    }
+    if (!polling && t - lastPoll >= pollMs) {
+      lastPoll = t; polling = true;
+      pollNow().catch(() => {}).finally(() => { polling = false; });
+    }
     await tickOnce(1 / hz);
   }
 

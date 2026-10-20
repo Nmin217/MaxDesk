@@ -1345,8 +1345,9 @@ cam.position.set(TX+Math.sin(yaw)*Math.cos(pit)*R,TY+Math.sin(pit)*R,TZ+Math.cos
     else if(c.type==='stop'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;$('stop').click()}
     else if(c.type==='cord'&&!!c.plugged!==cordIn)$('cord').click();
   }
-  let lastMapAt=0,lastStatus='';
+  let lastMapAt=0,lastStatus='',ticking=false;
   async function tick(){
+    if(ticking)return;ticking=true;   // a slow network must not stack up overlapping syncs
     try{
       await send('/v1/sim/state',snapshot());
       const now=Date.now();if(now-lastMapAt>1200){await send('/v1/sim/map',mapSnapshot());lastMapAt=now}
@@ -1362,8 +1363,9 @@ cam.position.set(TX+Math.sin(yaw)*Math.cos(pit)*R,TY+Math.sin(pit)*R,TZ+Math.cos
       if(lastStatus!==$('st').textContent){lastStatus=$('st').textContent;}
       document.documentElement.dataset.bridge='connected';
     }catch(e){document.documentElement.dataset.bridge='disconnected';console.warn('Summon Desk bridge sync:',e.message)}
+    finally{ticking=false}
   }
-  tick();setInterval(tick,350);
+  tick();setInterval(tick,100);   // 100 ms: phone commands (Stop included) reach the simulator within ~0.1 s
 })();
 </script>
 </body></html>
