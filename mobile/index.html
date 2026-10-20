@@ -1,213 +1,229 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b171b"><meta name="description" content="Local Summon Desk simulator controller"><link rel="manifest" href="/manifest.webmanifest"><title>MaxSwerve Desk · Control</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f2f3ef"><meta name="description" content="Summon Desk controller"><link rel="manifest" href="/manifest.webmanifest"><title>Summon Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-:root{color-scheme:dark;--bg:#09151d;--panel:#102530;--panel2:#163440;--line:#294a55;--text:#f1f8f8;--muted:#9bb6bd;--blue:#55a7d4;--teal:#63dbc0;--green:#63dbc0;--red:#ff6979;--amber:#f2bd68}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 50% -15%,#17464a 0,#0a1921 52%,#071219 100%);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text);min-height:100vh;padding:env(safe-area-inset-top) 14px env(safe-area-inset-bottom)}
-main{max-width:760px;margin:auto;padding:15px 0 32px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 17px}.brand{display:flex;align-items:center;gap:11px;min-width:0}.logo{width:43px;height:43px;flex:0 0 43px;border-radius:13px;background:linear-gradient(145deg,#73e0c6,#58a9d2);display:grid;place-items:center;font-size:23px;font-weight:900;color:#08232b;box-shadow:0 5px 22px #53d1b826}.eyebrow{font-size:10px;letter-spacing:.17em;color:#8dd9cd;text-transform:uppercase}.top h1{font-size:23px;line-height:1.1;margin:3px 0 0;letter-spacing:-.04em}.pill{border:1px solid var(--line);background:#102630;border-radius:99px;padding:7px 10px;font-size:10px;color:var(--muted);white-space:nowrap;max-width:48%;overflow:hidden;text-overflow:ellipsis}.pill:before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);margin-right:6px}.pill.online:before{background:var(--teal);box-shadow:0 0 8px #63dbc099}
-.layout{display:grid;grid-template-columns:1fr;gap:12px}.card{background:linear-gradient(150deg,rgba(19,43,54,.98),rgba(12,30,40,.99));border:1px solid var(--line);border-radius:20px;padding:15px;min-width:0;box-shadow:0 12px 30px #0002}.card h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;margin:0 0 12px;color:#b8d5d8}.hero{position:relative;overflow:hidden;padding:18px;background:linear-gradient(125deg,#153c43,#102a38 68%,#153344)}.hero:after{content:'';position:absolute;width:180px;height:180px;border:1px solid #73e0c61a;border-radius:50%;right:-76px;top:-92px;box-shadow:0 0 0 22px #73e0c608,0 0 0 45px #73e0c605;pointer-events:none}.herohead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;position:relative;z-index:1}.hero h2{margin:0 0 7px}.metric{font-size:28px;font-weight:780;letter-spacing:-.045em;line-height:1.15;overflow-wrap:anywhere}.small{font-size:12px;color:var(--muted)}.value{font-size:13px;font-weight:680;overflow-wrap:anywhere}.status-chip{border:1px solid #47746e;background:#123d3b;color:#aaf2df;border-radius:9px;padding:5px 8px;font-size:10px;font-weight:750;white-space:nowrap}.herofoot{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px;position:relative;z-index:1}.hero-stat{border-top:1px solid #ffffff17;padding-top:11px}.hero-stat .small{display:block;margin-bottom:3px}.bar{height:7px;border-radius:99px;background:#294550;overflow:hidden;margin-top:8px}.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--teal));width:0%;transition:width .3s}.section-kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8fb0b8;margin:3px 2px 0}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.btn{min-height:52px;border:1px solid var(--line);border-radius:14px;font-size:13px;font-weight:760;color:var(--text);background:#203d49;cursor:pointer;touch-action:manipulation;padding:11px 9px;transition:transform .12s,filter .12s}.btn:active{transform:scale(.985)}.btn:disabled{opacity:.45}.btn.primary{background:linear-gradient(125deg,#70e0c5,#4ba9ca);border-color:#7be6d0;color:#08272e;box-shadow:0 7px 20px #53d1b81a}.btn.return{background:#163949;border-color:#3d7184;color:#e4f7fa}.btn.stop{background:#51242e;border-color:#b44c5b;color:#ffe3e6;min-height:48px}.btn.subtle{background:#102631}.btn.full{grid-column:1/-1}.toast{font-size:12px;color:var(--muted);min-height:18px;margin:10px 2px 0}.danger{color:#ff9aa4}.good{color:var(--green)}.mapcard{padding:14px}.maphead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.maphead h2{margin-bottom:4px}.map-live{font-size:10px;color:#83dfc8;white-space:nowrap}.map{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:2px;aspect-ratio:1.25;background:#08151c;padding:7px;border:1px solid #294650;border-radius:13px;overflow:hidden}.cell{background:#192f3a;border-radius:2px;min-height:4px}.cell.free{background:#34766f}.cell.obstacle{background:#e7ae57}.cell.busy{background:#d75d70}.maplegend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-top:9px}.dot{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:4px}.mapinfo{margin-top:7px}.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.mini{background:#0c202a;border:1px solid #24434e;border-radius:14px;padding:12px}.mini-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}.mini .value{font-size:15px}.mini .subvalue{font-size:11px;color:var(--muted);margin-top:3px}.safety-list{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}.statusline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0}.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px;margin:8px 0}.field label{font-size:12px;color:var(--muted)}input{width:100%;min-height:43px;border:1px solid var(--line);border-radius:11px;background:#091a23;color:var(--text);padding:9px 11px;font:inherit}details summary{cursor:pointer;color:#c9e2e5;font-weight:680;font-size:13px;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px}details summary::-webkit-details-marker{display:none}details summary:after{content:'＋';font-size:16px;color:var(--teal)}details[open] summary:after{content:'−'}details[open] summary{margin-bottom:12px}.notice{padding:10px 12px;border-radius:12px;background:#17313e;border:1px solid #315a67;color:#c8e5e9;font-size:11px;margin-top:11px}.notice.warn{border-color:#765a32;color:#ffdda5;background:#302719}.links{display:flex;gap:12px;flex-wrap:wrap;margin:13px 3px}.links a{color:#7bd9ca;font-size:12px;text-decoration:none}.footer{text-align:center;color:#78939e;font-size:10px;margin:20px 0 0}.target-card,.advanced-card{padding:14px}.target-card .small{line-height:1.5}
-@media(min-width:600px){main{padding-top:23px}.top h1{font-size:27px}.layout{grid-template-columns:1fr 1fr}.hero,.action-card,.mapcard,.target-card,.advanced-card,.settings-card{grid-column:1/-1}.hero{padding:22px}.metric{font-size:32px}.card{padding:18px}.map{aspect-ratio:1.8}.stats-grid{grid-template-columns:repeat(4,1fr)}}@media(max-width:360px){body{padding-left:9px;padding-right:9px}.card{padding:12px;border-radius:16px}.top h1{font-size:20px}.pill{font-size:9px;padding:6px 8px}.btn{font-size:12px;padding:9px 6px}.metric{font-size:25px}.maplegend{gap:7px}}
-
-/* MaxSwerve identity and view tabs */
-:root{--brand-primary:#006769;--brand-secondary:#134b70;--brand-action:#40a578;--brand-accent:#e8501f}
-.logo-mark{width:44px;height:44px;flex:0 0 44px;filter:drop-shadow(0 3px 8px rgba(0,103,105,.22))}.logo-mark svg{display:block;width:100%;height:100%}
-.tabs{display:flex;gap:4px;margin:0 0 14px;border-bottom:2px solid #dce7e3;overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{appearance:none;border:0;border-bottom:2px solid transparent;margin-bottom:-2px;background:transparent;color:#6b7f85;font:700 12px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.08em;text-transform:uppercase;padding:12px 18px;cursor:pointer;touch-action:manipulation;white-space:nowrap}.tab.active{color:var(--brand-primary);border-bottom-color:var(--brand-primary)}.tab-panel{display:none;animation:tabfade .18s ease}.tab-panel.active{display:block}@keyframes tabfade{from{opacity:.75;transform:translateY(2px)}to{opacity:1;transform:none}}
-/* Keep the prior mobile-first hierarchy but blend in the supplied light dashboard palette. */
-body{background:#f7faf9;color:#1a2e35}.top h1{color:#1a2e35}.eyebrow{color:#6b7f85}.pill{background:#fff;border-color:#e2e8e5;color:#6b7f85}.layout .card{background:#fff;border-color:#e2e8e5;box-shadow:0 2px 12px rgba(0,0,0,.04)}.layout .hero{background:linear-gradient(125deg,#eaf6f2,#f4faf9 70%,#eef6fa)}.hero h2,.card h2{color:#006769}.hero .metric,.mini .value{color:#1a2e35}.hero .small,.mini-label,.mini .subvalue,.section-kicker,.small{color:#6b7f85}.hero-stat{border-top-color:#dce8e4}.status-chip{border-color:#b7dfd0;background:#e9f7f0;color:#287552}.bar{background:#e5efeb}.mini{background:#f8fbfa;border-color:#e2e8e5}.btn{background:#fff;border-color:#d8e4df;color:#1a2e35}.btn.primary{background:linear-gradient(125deg,#006769,#00897b);border-color:#006769;color:#fff;box-shadow:0 4px 14px rgba(0,103,105,.17)}.btn.return{background:#fff;border-color:#134b70;color:#134b70}.btn.stop{background:#fff5f3;border-color:#e0b4b0;color:#b8382d}.btn.subtle{background:#fff;color:#134b70}.notice{background:#eef8f3;border-color:#c5e3d5;color:#2a6e4f}.notice.warn{background:#fdf6e3;border-color:#eed9a3;color:#8a6516}.toast{color:#6b7f85}.links a{color:#006769}.footer{color:#8a9a96}.map{background:#f4f8f7;border-color:#e2e8e5}.cell{background:#e4ecea}.cell.free{background:#6bbfae}.cell.obstacle{background:#e0a83e}.cell.busy{background:#d75d70}.maplegend{color:#6b7f85}
-.lidar-card{padding:15px!important}.lidar-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.lidar-head h2{margin:0 0 4px}.lidar-head p{margin:0}.lidar-badge{flex-shrink:0;border-radius:999px;padding:6px 9px;font-size:9px;font-weight:800;letter-spacing:.06em;border:1px solid #e7d6b3;background:#fff8e8;color:#916a19}.lidar-badge.live{border-color:#b9dfce;background:#eaf8f0;color:#26734e}.lidar-badge.error{border-color:#e5c0bd;background:#fff0ef;color:#a33b34}.lidar-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px}.lidar-stats>div{min-width:0;background:#f5f9f7;border:1px solid #e2e8e5;border-radius:10px;padding:9px 10px}.lidar-stat-label{display:block;font-size:9px;color:#6b7f85;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}.lidar-stats strong{font-size:14px;color:#1a2e35;overflow-wrap:anywhere}.lidar-wrap{position:relative;aspect-ratio:1/1;width:100%;max-height:68vh;min-height:260px;overflow:hidden;background:#0e1a20;border:1px solid #1e323c;border-radius:15px;box-shadow:0 6px 22px rgba(6,32,30,.16)}.lidar-wrap canvas{display:block;width:100%;height:100%;touch-action:none}.lidar-legend{position:absolute;right:9px;top:9px;display:grid;gap:5px;padding:7px 8px;border:1px solid rgba(125,190,176,.2);border-radius:8px;background:rgba(8,26,32,.78);color:#b7d1d4;font-size:9px;line-height:1.3}.lidar-legend span{display:flex;align-items:center;gap:5px}.lidar-key{display:inline-block;width:7px;height:7px;border-radius:50%;background:#53d1b8}.lidar-key.robot{background:#e8501f}.lidar-key.wall{background:#e0a83e}.lidar-crosshair-label{position:absolute;top:10px;left:10px;font:700 9px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:#91c6b9;background:rgba(8,26,32,.7);border:1px solid rgba(125,190,176,.2);border-radius:6px;padding:6px 7px}.lidar-status{font-size:11px;color:#49666b;margin-top:10px;padding:9px 10px;background:#f4f8f7;border:1px solid #e2e8e5;border-radius:9px}.lidar-note{line-height:1.55;margin:11px 2px 0}.lidar-note code{color:#006769;background:#eef6f3;border-radius:4px;padding:1px 4px}
-/* Simulation drive pad */
-.drive-hero{background:radial-gradient(circle at 80% 0%,#e0f4ed,#fff 58%)!important}.drive-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:14px;align-items:center}.stick-pad{position:relative;width:min(100%,290px);aspect-ratio:1;border-radius:50%;margin:auto;background:radial-gradient(circle,#fff 0 16%,#e6f4ef 17% 38%,#d2e9e2 39% 40%,#f4f8f6 41% 66%,#d9e7e2 67% 68%,#eef5f2 69%);border:1px solid #c8ddd5;box-shadow:inset 0 2px 18px #144a3520,0 8px 20px #173d2b10;touch-action:none;user-select:none}.stick-pad:before,.stick-pad:after{content:"";position:absolute;background:#b6d2c8}.stick-pad:before{width:1px;height:72%;left:50%;top:14%}.stick-pad:after{height:1px;width:72%;top:50%;left:14%}.stick-knob{position:absolute;left:50%;top:50%;width:31%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:linear-gradient(145deg,#008c83,#006769);border:3px solid #fff;box-shadow:0 6px 16px #00676955;z-index:1;pointer-events:none}.stick-label{position:absolute;font-size:10px;font-weight:800;letter-spacing:.08em;color:#50746b;z-index:2}.stick-label.up{top:7%;left:50%;transform:translateX(-50%)}.stick-label.down{bottom:7%;left:50%;transform:translateX(-50%)}.stick-label.left{left:7%;top:50%;transform:translateY(-50%)}.stick-label.right{right:7%;top:50%;transform:translateY(-50%)}.turn-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}.turn-btn{min-height:54px;border:1px solid #cbded6;background:#f4faf7;color:#134b46;border-radius:14px;font-size:12px;font-weight:800;touch-action:none}.drive-readout{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;background:#f5f9f7;border:1px solid #e2e8e5;border-radius:11px}.drive-readout strong{font-size:12px;color:#006769}.drive-speed{margin-top:15px}.drive-speed input{accent-color:#006769}.drive-panel-note{font-size:11px;line-height:1.5;color:#6b7f85;margin-top:12px}.drive-safety{padding:10px 12px;border:1px solid #eed9a3;border-radius:12px;background:#fdf6e3;color:#8a6516;font-size:11px;margin-top:12px}@media(max-width:420px){.drive-grid{grid-template-columns:1fr}.stick-pad{width:min(100%,260px)}.drive-side{display:grid;grid-template-columns:1fr 1fr;gap:10px}.drive-side .drive-speed{grid-column:1/-1}}
-@media(max-width:360px){.logo-mark{width:38px;height:38px;flex-basis:38px}.tab{padding:11px 13px}.lidar-stats{gap:5px}.lidar-stats>div{padding:8px}.lidar-stats strong{font-size:12px}.lidar-wrap{min-height:230px}}
-
-
-/* SUMMON DESK COMMAND-CENTER REDESIGN — real UI styling, not a mockup */
-:root{color-scheme:dark;--bg:#07141b;--panel:#0d222c;--panel2:#122d38;--line:#254551;--text:#eaf5f6;--muted:#8daab3;--blue:#54b6df;--teal:#51dfc1;--green:#51dfad;--red:#ff687b;--amber:#f2b85c;--brand-primary:#00a6a0;--brand-secondary:#134b70;--brand-action:#40a578;--brand-accent:#f07842}
-html{background:var(--bg)}body{background:radial-gradient(ellipse at 45% -18%,#16404a 0,#0a1a23 43%,#071219 78%);color:var(--text);padding:env(safe-area-inset-top) 22px env(safe-area-inset-bottom)}
-main{max-width:1240px;padding:28px 0 42px}.top{padding:0 0 20px;margin:0 0 18px;border-bottom:1px solid #284752}.logo-mark{width:52px;height:52px;flex-basis:52px;filter:drop-shadow(0 0 18px #00a6a044)}.eyebrow{color:#62cfc5;font-size:10px;letter-spacing:.22em}.top h1{color:#f1fbfb;font-size:30px;letter-spacing:-.055em}.pill{background:#0e2832;border-color:#2b4d58;color:#a7c3ca;padding:9px 12px;font-size:11px}.tabs{display:flex;gap:6px;border:1px solid #274853;border-radius:15px;background:#0b2029;padding:5px;margin:0 0 18px;width:max-content;max-width:100%;border-bottom:1px solid #274853}.tab{border:1px solid transparent;border-radius:10px;margin:0;padding:12px 19px;color:#89a7b0;font-size:11px;letter-spacing:.12em}.tab.active{color:#eafffb;background:linear-gradient(135deg,#087c7b,#135b69);border-color:#218d8a;box-shadow:0 4px 18px #00a69b22}.tab-panel.active{animation:tabfade .18s ease}.layout{grid-template-columns:minmax(0,1.15fr) minmax(330px,.85fr);gap:14px}.card,.layout .card{position:relative;overflow:hidden;min-width:0;background:linear-gradient(145deg,rgba(15,37,47,.98),rgba(10,27,36,.99));border:1px solid #254551;border-radius:18px;padding:18px;box-shadow:0 12px 34px #0002}.card:before{content:"";position:absolute;left:0;top:0;width:3px;height:42px;background:linear-gradient(var(--teal),transparent);opacity:.7}.card h2{color:#a7cbd0;font-size:10px;letter-spacing:.16em;margin-bottom:14px}.hero,.layout .hero{background:linear-gradient(120deg,#10343c,#0e2836 72%,#10232e);border-color:#2a5960;padding:23px}.hero:after{border-color:#55dfc112;box-shadow:0 0 0 22px #55dfc108,0 0 0 45px #55dfc105}.hero .metric{color:#f2ffff;font-size:34px}.hero .small,.small{color:var(--muted)}.hero .herofoot{gap:22px}.hero-stat{border-top-color:#ffffff19}.hero-stat .metric{font-size:29px}.status-chip{background:#123b3b;border-color:#286b66;color:#8ef0d7;padding:7px 10px}.bar{background:#203d47}.bar span{background:linear-gradient(90deg,#208fba,#55dfc1)}.section-kicker{display:none}.action-card .actions{grid-template-columns:1fr 1fr;gap:10px}.btn{border-radius:12px;background:#163541;border-color:#315462;color:#dceef1;min-height:52px}.btn.primary{background:linear-gradient(125deg,#0eaaa0,#167c96);border-color:#37c8b8;color:#f4fffe;box-shadow:0 6px 22px #00a69b22}.btn.return{background:#143b50;border-color:#276780;color:#d9f3ff}.btn.stop{background:#4a202c;border-color:#a84558;color:#ffe6e9}.btn.subtle{background:#102934}.notice{background:#2c251b;border-color:#6b5330;color:#f4d9a2}.mapcard{background:#0b1d26!important}.maphead{margin-bottom:13px}.map-live{color:#64e3c1;font-size:10px;letter-spacing:.1em}.map{background:#061219;border-color:#294954;border-radius:13px;gap:3px;min-height:300px;aspect-ratio:1.1;padding:9px}.cell{background:#142a34}.cell.free{background:#23534f}.cell.obstacle{background:#b57a2c}.cell.busy{background:#bd465a}.maplegend{font-size:10px;color:#91adb5}.mini{background:#0a1c25;border-color:#254550;border-radius:12px}.mini-label{color:#87a8b2}.mini .value{color:#e7f5f6;font-size:17px}.mini .subvalue{color:#7e9ca6}.statusline .value{color:#cfe7e8}.good{color:#58dfad!important}.danger{color:#ff8290!important}.controls input,input{background:#071820;border-color:#2a4b56;color:#effafa}.links{margin:17px 3px;gap:18px}.links a{color:#69d8cc}.settings-card{background:#0d222c!important}.settings-card .small{line-height:1.6}.drive-hero{background:linear-gradient(145deg,#0e2732,#0b1d27)!important}.stick-pad{background:radial-gradient(circle,#1a4d55 0 16%,#143943 17% 38%,#2c6570 39% 40%,#102d38 41% 66%,#28515b 67% 68%,#0d2630 69%);border-color:#3a6872;box-shadow:inset 0 2px 25px #0005,0 8px 25px #0003}.stick-pad:before,.stick-pad:after{background:#356570}.stick-knob{background:linear-gradient(145deg,#19bfae,#087c87);border-color:#d9fffa;box-shadow:0 6px 20px #00b9a955}.stick-label{color:#9ec8ca}.turn-btn{background:#112f3b;border-color:#2c5864;color:#d8f5f1;border-radius:12px}.drive-readout,.lidar-stats>div{background:#091c25;border-color:#274752}.drive-readout strong{color:#65dfcb}.drive-speed input{accent-color:#18b7a7}.drive-safety{background:#30271b;border-color:#725631;color:#f4d8a1}.lidar-badge{background:#332a1b;border-color:#725b34;color:#f5ce82}.lidar-badge.live{background:#123a32;border-color:#287565;color:#86f0c8}.lidar-stats strong{color:#e5f6f7}.lidar-stat-label{color:#8daab3}.lidar-status{background:#0a202a;border-color:#284c58;color:#a6c6ce}.lidar-note code{color:#72e4d0;background:#12343a}.lidar-wrap{border-color:#2b535f;box-shadow:0 10px 32px #0003}.lidar-legend,.lidar-crosshair-label{border-color:#31515a}.footer{color:#65838d}
-@media(min-width:760px){main{padding-top:32px}.top h1{font-size:32px}.layout{grid-template-columns:minmax(0,1.12fr) minmax(330px,.88fr);align-items:stretch}.layout .hero{grid-column:1;grid-row:1;padding:23px}.layout .action-card{grid-column:1;grid-row:2}.layout .mapcard{grid-column:2;grid-row:1 / span 3;align-self:stretch}.layout .map{aspect-ratio:auto;min-height:380px;height:calc(100% - 80px)}.layout .mapcard{display:flex;flex-direction:column}.layout .maplegend{margin-top:auto;padding-top:12px}.layout>section:nth-of-type(4){grid-column:1;grid-row:3}.layout>section:nth-of-type(5){grid-column:2;grid-row:4}.layout .target-card{grid-column:1;grid-row:4}.layout .advanced-card{grid-column:2;grid-row:5}.stats-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.hero .herofoot{grid-template-columns:1fr 1fr}}
-@media(max-width:759px){body{padding-left:12px;padding-right:12px}main{padding-top:15px}.top{gap:8px}.logo-mark{width:44px;height:44px;flex-basis:44px}.top h1{font-size:23px}.eyebrow{font-size:9px}.tabs{width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:3px}.tab{padding:12px 7px;font-size:10px}.layout{grid-template-columns:1fr;gap:11px}.layout .hero,.layout .action-card,.layout .mapcard,.layout>section:nth-of-type(4),.layout>section:nth-of-type(5),.layout .target-card,.layout .advanced-card{grid-column:1;grid-row:auto}.layout .map{min-height:280px;aspect-ratio:1.1;height:auto}.hero .metric{font-size:28px}.card,.layout .card{padding:15px;border-radius:15px}.drive-grid{grid-template-columns:minmax(0,1fr) minmax(0,.95fr);gap:12px}.stick-pad{width:min(100%,290px)}}
-@media(max-width:430px){.drive-grid{grid-template-columns:1fr}.drive-side{display:grid;grid-template-columns:1fr 1fr;gap:10px}.drive-side .drive-speed{grid-column:1/-1}.stick-pad{width:min(100%,265px)}.hero .herofoot{gap:12px}.hero .hero-stat .metric{font-size:24px}.lidar-wrap{min-height:255px}.pill{max-width:46%;font-size:9px}}
-
-/* Split-screen / narrow desktop: stack the grid in one column so the map isn't squished. */
-@media(min-width:760px) and (max-width:1080px){
-  .layout{grid-template-columns:1fr}
-  .layout .hero,.layout .action-card,.layout .mapcard,
-  .layout>section:nth-of-type(4),.layout>section:nth-of-type(5),
-  .layout .target-card,.layout .advanced-card{grid-column:1;grid-row:auto}
-  .layout .map{aspect-ratio:1.5;min-height:280px;height:auto}
+/* Layout: one column on a phone (plan, actions, power, details); plan beside controls on wide screens.
+   Stop lives in a bar pinned to the bottom so it is reachable from every tab. */
+:root{
+  --paper:#f2f3ef;--surface:#ffffff;--sunk:#e8eae4;--ink:#14171c;--mute:#5c636b;--line:#d5d8d0;
+  --accent:#2147c9;--accent-ink:#ffffff;--go:#1d7a52;--warn:#9a5a00;--stop:#c42b1c;--stop-ink:#ffffff;
+  --floor:#dfe7dc;--wall:#14171c;--busy:#e9b3aa;--unknown:#eceee8;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;--body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:14px;color-scheme:light
 }
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0f1114;--surface:#171a1f;--sunk:#1e2228;--ink:#e9ebee;--mute:#9aa1a9;--line:#2b3037;
+  --accent:#8aa4ff;--accent-ink:#0c1230;--go:#4cc28c;--warn:#e2a54b;--stop:#ff5a4a;--stop-ink:#1c0503;
+  --floor:#233128;--wall:#e9ebee;--busy:#6b2c27;--unknown:#1b1f24;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0f1114;--surface:#171a1f;--sunk:#1e2228;--ink:#e9ebee;--mute:#9aa1a9;--line:#2b3037;
+  --accent:#8aa4ff;--accent-ink:#0c1230;--go:#4cc28c;--warn:#e2a54b;--stop:#ff5a4a;--stop-ink:#1c0503;
+  --floor:#233128;--wall:#e9ebee;--busy:#6b2c27;--unknown:#1b1f24;color-scheme:dark}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 var(--body);
+  padding-top:env(safe-area-inset-top,0px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+main{max-width:980px;margin:0 auto;padding-block:14px 8px;display:grid;gap:14px}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2{font-family:var(--display);margin:0;text-wrap:balance}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.label{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);font-weight:600}
 
-/* Compact mobile command dashboard + optional dark-teal theme */
-:root{--bg:#080f12;--panel:#101b20;--panel2:#17262c;--line:#293a40;--text:#f2f7f7;--muted:#a1b2b7;--blue:#69a8c7;--teal:#65d6c0;--green:#65d6a4;--red:#ff727d;--amber:#f2c16c}
-body{background:radial-gradient(ellipse at 50% -18%,#183239 0,#0b1418 48%,#070c0f 100%);padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
-main{max-width:680px;padding-top:10px;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
-.top{margin:2px 0 10px;gap:8px}.top h1{font-size:21px}.logo-mark{width:38px;height:38px;flex-basis:38px}.eyebrow{font-size:9px;letter-spacing:.13em}
-.header-tools{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0}.pill{padding:6px 8px;font-size:9px;max-width:48%}.theme-toggle{border:1px solid var(--line);border-radius:9px;padding:7px 9px;background:var(--panel2);color:var(--text);font:600 10px/1.1 system-ui,-apple-system,sans-serif;white-space:nowrap;min-height:32px}
-.tabs{position:sticky;top:env(safe-area-inset-top);z-index:10;margin-bottom:10px;padding:4px;background:#10191deF;border:1px solid var(--line);border-radius:13px;backdrop-filter:blur(16px)}
-.tab{padding:9px 7px;border-radius:9px;font-size:11px}.layout{gap:9px}.card,.layout .card{padding:12px;border-radius:15px;box-shadow:0 8px 20px #0002}.hero{padding:14px;background:linear-gradient(135deg,#14252b,#101a20 78%)}.hero h2{font-size:10px;margin-bottom:5px}.metric{font-size:25px}.hero .herofoot{margin-top:12px;gap:12px}.hero-stat{padding-top:9px}.hero-stat .small{font-size:10px}.hero .hero-stat .metric{font-size:23px}.bar{height:6px;margin-top:6px}.upsbar span{background:linear-gradient(90deg,#6ca9c7,var(--teal))}
-.section-kicker{margin:1px 2px -2px;font-size:9px;letter-spacing:.14em}.action-card .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.btn{min-height:44px;border-radius:12px;font-size:12px;padding:11px 10px}.btn.primary{background:linear-gradient(135deg,#2b9d8b,#237b75)}.btn.return{background:#24363d}.btn.stop{grid-column:1/-1;min-height:48px;background:#9b343d;border:1px solid #bf4a53;font-weight:800;letter-spacing:.025em}.notice{margin-top:9px;padding:8px 10px;border-radius:10px;font-size:10px;line-height:1.4}.toast{margin-top:8px;padding:7px 9px;font-size:11px;border-radius:9px}
-.battery-warnings{display:grid;gap:6px;margin-top:10px}.battery-warning{display:flex;flex-direction:column;gap:2px;padding:9px 10px;border:1px solid #795e32;border-radius:10px;background:#2a2418;color:#f4d49a;font-size:11px;line-height:1.35}.battery-warning strong{font-size:11px}.battery-warning.danger{border-color:#843b43;background:#2d191d;color:#ffb4ba}.battery-warning span{opacity:.92}.bar span.low{background:var(--red)!important}
-.speed-warning{margin-top:8px;padding:9px 10px;border-radius:10px;border:1px solid #795e32;background:#2a2418;color:#f4d49a;font-size:11px;line-height:1.4;font-weight:650}.speed-warning.critical{border-color:#843b43;background:#2d191d;color:#ffb4ba}.speed-warning[hidden]{display:none}
-.layout .mapcard{margin-top:0}.layout .mapcard summary,.target-card summary,.advanced-card summary{font-size:12px}.layout .card h2{margin-bottom:9px}.stats-grid{gap:7px}.mini{padding:9px}.mini-label,.subvalue{font-size:10px}
-@media(max-width:430px){body{padding-left:9px;padding-right:9px}main{padding-top:8px}.top h1{font-size:19px}.logo-mark{width:35px;height:35px;flex-basis:35px}.header-tools{gap:4px}.pill{font-size:8px;padding:6px;max-width:46%}.theme-toggle{font-size:9px;padding:7px 6px}.hero .metric{font-size:24px}.hero .hero-stat .metric{font-size:21px}.card,.layout .card{padding:11px}.action-card .actions{gap:7px}.btn{font-size:11px;padding:10px 7px}.btn.stop{min-height:46px}}
-@media(min-width:760px){.top h1{font-size:23px}.layout{gap:10px}.card,.layout .card{padding:14px}}
-html[data-theme="teal"]{color-scheme:dark;--bg:#0b1b1e;--panel:#122a2e;--panel2:#1a383c;--line:#31545a;--text:#f0f8f7;--muted:#a4c1c1;--blue:#73b9d4;--teal:#6adcc5;--green:#6adcb0;--red:#ff7785;--amber:#f3c477}
-html[data-theme="teal"] body{background:radial-gradient(ellipse at 50% -18%,#205056 0,#10272b 48%,#0a171a 100%)}
-html[data-theme="teal"] .hero{background:linear-gradient(135deg,#194247,#132c32 78%)}
-html[data-theme="teal"] .tabs{background:#13272beF}
-html[data-theme="teal"] .card{background:linear-gradient(150deg,rgba(23,53,59,.98),rgba(16,39,44,.99))}
-html[data-theme="teal"] .theme-toggle{background:#214247}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* Header */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.wordmark{display:flex;align-items:baseline;gap:8px;min-width:0}
+.wordmark h1{font-size:22px;font-weight:800;font-stretch:115%;letter-spacing:-.01em}
+.wordmark span{font-size:12px;color:var(--mute);white-space:nowrap}
+@media (max-width:440px){.wordmark span{display:none}}
+.header-tools{display:flex;align-items:center;gap:8px;min-width:0}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid var(--line);border-radius:99px;background:var(--surface);font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40vw}
+.pill:before{content:"";flex:0 0 8px;height:8px;border-radius:50%;background:var(--warn)}
+.pill.online:before{background:var(--go)}
+.theme-toggle{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 11px;font-size:12px;cursor:pointer;white-space:nowrap}
 
+/* Tabs */
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:var(--sunk);border-radius:12px}
+.tab{appearance:none;border:0;background:transparent;border-radius:9px;padding:9px 6px;font-weight:650;font-size:13px;color:var(--mute);cursor:pointer}
+.tab.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.tab-panel{display:none}.tab-panel.active{display:grid;gap:14px}
 
-/* Desktop command-center layout: full browser width on wide screens;
-   medium and narrow windows retain the compact app-like layout. */
-@media (min-width:1081px){
-  body{padding-left:clamp(18px,2.2vw,36px);padding-right:clamp(18px,2.2vw,36px)}
-  main{width:100%;max-width:1560px;margin:0 auto;padding:22px 0 36px}
-  .top{margin-bottom:18px}
-  .top h1{font-size:29px}
-  .tabs{width:100%;margin-bottom:16px}
-  .tab{padding:11px 18px;font-size:13px}
-  #tab-control .layout{grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;align-items:stretch}
-  #tab-control .layout>.section-kicker{display:none}
-  #tab-control .layout>.hero{grid-column:span 7;padding:22px}
-  #tab-control .layout>.action-card{grid-column:span 5;padding:22px;display:flex;flex-direction:column;justify-content:center}
-  #tab-control .layout>.mapcard{grid-column:span 6}
-  #tab-control .layout>.diagnostics-card{grid-column:span 3}
-  #tab-control .layout>.target-card,#tab-control .layout>.advanced-card{grid-column:span 6}
-  #tab-control .layout .card{padding:20px;border-radius:18px}
-  #tab-control .layout .hero{padding:24px}
-  #tab-control .layout .hero .metric{font-size:clamp(27px,2vw,36px)}
-  #tab-control .layout .actions{gap:12px}
-  #tab-control .layout .btn{min-height:54px;font-size:14px}
-  #tab-control .layout .map{aspect-ratio:1.65;min-height:320px}
-  .drive-hero,.lidar-card{width:100%;padding:22px}
-  .drive-grid{grid-template-columns:minmax(280px,1fr) minmax(260px,.8fr);gap:28px;align-items:center}
-  .stick-pad{width:min(100%,390px);height:auto;aspect-ratio:1}
-  .lidar-wrap{height:min(65vh,680px);min-height:420px}
-  .links{margin-top:18px}
-  .footer{margin-top:26px}
-}
+/* Surfaces */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.layout{display:grid;gap:14px}
+@media (min-width:900px){.layout{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}.layout>.plan-panel{grid-row:span 3}}
 
+/* Status + plan */
+.status-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+#status{font-family:var(--display);font-size:26px;line-height:1.15;font-weight:750;font-stretch:108%;overflow-wrap:anywhere;color:var(--ink)}
+#status.warn{color:var(--warn)}#status.bad{color:var(--stop)}
+#mode{font-size:13px;color:var(--mute);margin-top:2px}
+.chip{flex:0 0 auto;padding:5px 10px;border-radius:99px;font-size:12px;font-weight:650;background:var(--sunk);color:var(--mute)}
+.chip.moving{background:var(--accent);color:var(--accent-ink)}
+.plan{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--unknown);aspect-ratio:8/5;max-width:100%}
+.plan canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:manipulation}
+.plan-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;margin-top:9px;font-size:12px;color:var(--mute)}
+.legend{display:flex;flex-wrap:wrap;gap:10px}.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 
-/* Event history: compact, local-only audit trail */
-.event-log-list{display:grid;gap:8px;max-height:340px;overflow:auto}
-.event-entry{display:grid;grid-template-columns:74px minmax(0,1fr);gap:9px;padding:9px 10px;border:1px solid #294752;border-radius:10px;background:#091c25}
-.event-time{font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#8daab3}
-.event-title{font-size:12px;font-weight:750;color:#eaf5f6}
-.event-detail{font-size:11px;color:#8daab3;margin-top:2px;overflow-wrap:anywhere}
-.event-entry.warn{border-color:#725631}.event-entry.warn .event-title{color:#f2bd68}
-.event-entry.danger{border-color:#8c3f4c}.event-entry.danger .event-title{color:#ff8290}
-.event-log-tools{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
-.event-log-tools .btn{min-height:34px;padding:7px 10px;font-size:11px}
-.event-log-empty{font-size:12px;color:#8daab3;padding:12px 0}
-@media(min-width:1081px){#tab-control .layout>.event-log-card{grid-column:span 6}}
+/* Actions */
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{min-height:50px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:15px;cursor:pointer;padding:10px 12px;touch-action:manipulation}
+.btn:active{transform:translateY(1px)}.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{grid-column:1/-1;min-height:62px;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-size:18px;font-family:var(--display);font-stretch:110%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.btn.primary small{font:500 12px/1.2 var(--mono);opacity:.85}
+.btn.return{grid-column:1/-1}
+.btn.subtle{font-weight:600;font-size:14px}
+.toast{font-size:13px;color:var(--mute);min-height:19px;margin-top:10px}
+.toast.good{color:var(--go)}.toast.danger{color:var(--stop)}
 
+/* Power */
+.power{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.meter .reading{font:600 26px/1.1 var(--mono);font-variant-numeric:tabular-nums;margin-top:4px}.meter .reading small{font-size:13px;color:var(--mute);margin-left:2px}
+.bar{height:6px;border-radius:99px;background:var(--sunk);overflow:hidden;margin-top:8px}
+.bar span{display:block;height:100%;width:0;background:var(--go);transition:width .3s}.bar span.low{background:var(--stop)}
+.meta{font-size:12px;color:var(--mute);margin-top:6px}
+.battery-warnings{display:grid;gap:6px;margin-top:12px}.battery-warnings:empty{display:none}
+.battery-warning{display:grid;gap:1px;padding:9px 11px;border-radius:10px;border-left:3px solid var(--warn);background:var(--sunk);font-size:12px}
+.battery-warning.danger{border-left-color:var(--stop)}.battery-warning strong{font-size:13px}
 
-/* Targeted desktop layout correction */
-@media (min-width: 1081px) {
-  main {
-    width: 100%;
-    max-width: 1180px;
-    margin-inline: auto;
-    padding-top: 24px;
-  }
+/* Details list */
+.more{padding:0;overflow:hidden}
+.more details{border-top:1px solid var(--line)}.more details:first-child{border-top:0}
+.more summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;font-weight:650}
+.more summary::-webkit-details-marker{display:none}
+.more summary:after{content:"+";font:500 18px/1 var(--mono);color:var(--mute)}.more details[open] summary:after{content:"–"}
+.more .body{padding:0 16px 16px;display:grid;gap:10px}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kv div{background:var(--sunk);border-radius:10px;padding:9px 11px;min-width:0}
+.kv b{display:block;font:600 16px/1.3 var(--mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.value.good{color:var(--go)}.value.danger{color:var(--stop)}.value.warn{color:var(--warn)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:grid;gap:5px}.field label{font-size:12px;color:var(--mute)}
+input[type=number],input[type=password]{width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:9px 11px;font-family:var(--mono)}
+.small{font-size:12px;color:var(--mute)}
+.event-log-tools{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.event-log-tools .btn{min-height:34px;padding:6px 10px;font-size:12px}
+.event-log-list{display:grid;gap:6px;max-height:300px;overflow:auto}
+.event-entry{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;padding:8px 10px;border-radius:9px;background:var(--sunk)}
+.event-time{font:11px/1.5 var(--mono);color:var(--mute)}.event-title{font-size:13px;font-weight:650}.event-detail{font-size:12px;color:var(--mute);overflow-wrap:anywhere}
+.event-entry.warn .event-title{color:var(--warn)}.event-entry.danger .event-title{color:var(--stop)}
+.event-log-empty{font-size:13px;color:var(--mute)}
 
-  #tab-control .layout {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-    align-items: start;
-  }
+/* Drive */
+.drive-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.drive-head h2{font-size:18px;font-stretch:108%}
+.tag{flex:0 0 auto;padding:4px 8px;border-radius:6px;font:600 11px/1.2 var(--mono);letter-spacing:.05em;background:var(--sunk);color:var(--mute)}
+.tag.live{background:var(--go);color:var(--surface)}.tag.error{background:var(--stop);color:var(--stop-ink)}
+.drive-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:center}
+@media (max-width:560px){.drive-grid{grid-template-columns:1fr}}
+.stick-pad{position:relative;width:min(100%,280px);aspect-ratio:1;margin:0 auto;border-radius:50%;background:radial-gradient(circle,var(--surface) 0 30%,var(--sunk) 31% 100%);border:1px solid var(--line);touch-action:none;user-select:none}
+.stick-pad:before,.stick-pad:after{content:"";position:absolute;background:var(--line)}.stick-pad:before{width:1px;height:76%;left:50%;top:12%}.stick-pad:after{height:1px;width:76%;top:50%;left:12%}
+.stick-knob{position:absolute;left:50%;top:50%;width:30%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:var(--accent);box-shadow:0 4px 12px rgba(0,0,0,.25);z-index:1;pointer-events:none}
+.stick-label{position:absolute;font:600 10px/1 var(--mono);letter-spacing:.08em;color:var(--mute);z-index:2}
+.stick-label.up{top:6%;left:50%;transform:translateX(-50%)}.stick-label.down{bottom:6%;left:50%;transform:translateX(-50%)}.stick-label.left{left:5%;top:50%;transform:translateY(-50%)}.stick-label.right{right:5%;top:50%;transform:translateY(-50%)}
+.drive-side{display:grid;gap:14px}
+.turn-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.turn-btn{min-height:50px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-weight:650;cursor:pointer;touch-action:none}
+.drive-readout{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px 11px;border-radius:10px;background:var(--sunk);font-size:12px}
+.drive-readout strong{font:600 12px/1.3 var(--mono)}
+.drive-speed input{width:100%;accent-color:var(--accent)}
+.speed-warning{padding:9px 11px;border-radius:10px;border-left:3px solid var(--warn);background:var(--sunk);font-size:12px}.speed-warning.critical{border-left-color:var(--stop)}
+.drive-safety,.lidar-status{font-size:12px;color:var(--mute);padding:9px 11px;border-radius:10px;background:var(--sunk);margin-top:12px}
 
-  /* Clear older desktop column spans and fixed row placements */
-  #tab-control .layout > * {
-    grid-column: auto !important;
-    grid-row: auto !important;
-    min-width: 0;
-  }
+/* 3D */
+.lidar-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.lidar-stats div{background:var(--sunk);border-radius:10px;padding:8px 10px;min-width:0}.lidar-stats strong{display:block;font:600 14px/1.3 var(--mono);overflow-wrap:anywhere}
+.lidar-wrap{position:relative;aspect-ratio:1;max-height:65vh;min-height:260px;width:100%;border-radius:12px;overflow:hidden;background:#0e1a20}
+.lidar-wrap canvas{display:block;width:100%;height:100%;touch-action:none}
+.lidar-legend{position:absolute;right:8px;top:8px;display:grid;gap:4px;padding:7px 8px;border-radius:8px;background:rgba(8,18,24,.78);color:#cfdadd;font-size:11px}
+.lidar-legend span{display:flex;align-items:center;gap:6px}.lidar-key{width:8px;height:8px;border-radius:50%;background:#53d1b8}.lidar-key.robot{background:#e8501f}.lidar-key.wall{background:#e0a83e}
+.lidar-note code{font-family:var(--mono);font-size:12px}
 
-  /* Keep the main controls and status panels at consistent widths */
-  #tab-control .layout > .hero,
-  #tab-control .layout > .action-card,
-  #tab-control .layout > .mapcard,
-  #tab-control .layout > .diagnostics-card,
-  #tab-control .layout > .target-card,
-  #tab-control .layout > .advanced-card {
-    width: 100%;
-    min-width: 0;
-  }
+/* Stop bar */
+.stopbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--paper);border-top:1px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.stopbar-inner{max-width:980px;margin:0 auto;display:grid;gap:4px}
+.btn.stop{width:100%;min-height:54px;background:var(--stop);border-color:var(--stop);color:var(--stop-ink);font-family:var(--display);font-size:18px;font-stretch:112%;letter-spacing:.04em}
+.stop-note{font-size:11px;color:var(--mute);text-align:center}
 
-  #tab-control .layout .map {
-    width: 100%;
-    height: auto;
-    min-height: 260px;
-    aspect-ratio: 1.45;
-  }
-
-  /* Let event history use the full row for readable entries */
-  #tab-control .layout > .event-log-card {
-    grid-column: 1 / -1 !important;
-  }
-
-  /* Prevent the header and tabs from spreading awkwardly */
-  .top {
-    gap: 16px;
-  }
-
-  .tabs {
-    width: fit-content;
-    max-width: 100%;
-  }
-}
+.links{display:flex;gap:16px;flex-wrap:wrap;font-size:13px}.links a{color:var(--accent)}
+.footer{font-size:12px;color:var(--mute);text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body><main>
-<header class="top"><div class="brand"><div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 48 48" role="img"><defs><linearGradient id="hexg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00787a"/><stop offset="1" stop-color="#00a88c"/></linearGradient></defs><polygon points="24,1.5 44.5,13 44.5,35 24,46.5 3.5,35 3.5,13" fill="url(#hexg)" stroke="#004d4f" stroke-width="1.2"/><polygon points="24,5 41,14.5 41,33.5 24,43 7,33.5 7,14.5" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1"/><text x="24" y="30.5" text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="17" font-weight="900" fill="#ffffff" letter-spacing="-0.8">MS</text><rect x="15" y="34.5" width="18" height="3" rx="1.5" fill="#e8501f"/></svg></div><div><div class="eyebrow">Mobile workspace system</div><h1>Summon Desk</h1></div></div><div class="header-tools"><div id="connection" class="pill">Connecting</div><button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to dark teal theme" title="Switch theme">Teal mode</button></div></header>
-<div class="tabs" role="tablist" aria-label="Dashboard views"><button class="tab active" data-tab="control" role="tab" aria-selected="true" aria-controls="tab-control">Control</button><button class="tab" data-tab="drive" role="tab" aria-selected="false" aria-controls="tab-drive">Drive sim</button><button class="tab" data-tab="lidar" role="tab" aria-selected="false" aria-controls="tab-lidar">LiDAR 3D</button></div>
+<header class="top"><div class="wordmark"><h1>Summon Desk</h1><span>MAXSwerve · sim</span></div><div class="header-tools"><div id="connection" class="pill">Connecting</div><button id="themeToggle" class="theme-toggle" type="button">Auto</button></div></header>
+<nav class="tabs" role="tablist" aria-label="Views"><button class="tab active" data-tab="control" role="tab" aria-selected="true" aria-controls="tab-control">Control</button><button class="tab" data-tab="drive" role="tab" aria-selected="false" aria-controls="tab-drive">Drive</button><button class="tab" data-tab="lidar" role="tab" aria-selected="false" aria-controls="tab-lidar">3D room</button></nav>
+
 <section id="tab-control" class="tab-panel active" role="tabpanel">
 <div class="layout">
- <section class="card hero"><div class="herohead"><div><h2>System overview</h2><div id="status" class="metric">Connecting…</div><div class="small" id="mode">Waiting for bridge</div></div><div id="active" class="status-chip">—</div></div><div class="herofoot"><div class="hero-stat"><span class="small">Robot battery</span><div class="metric"><span id="battery">—</span><span class="small">%</span></div><div class="bar"><span id="batterybar"></span></div></div><div class="hero-stat"><span class="small">Desk / UPS power</span><div class="metric"><span id="ups">—</span><span class="small">%</span></div><div class="bar upsbar"><span id="upsbar"></span></div><div class="statusline"><span class="small">Charging</span><span class="value" id="charging">—</span></div></div></div><div id="batteryWarnings" class="battery-warnings" aria-live="polite" aria-atomic="true"></div></section>
- <div class="section-kicker">Movement controls</div>
- <section class="card action-card"><div class="actions"><button class="btn primary" id="summon">⌖ &nbsp; Summon desk</button><button class="btn return" id="return">↶ &nbsp; Return to dock</button><button class="btn stop full" id="stop">■ &nbsp; Stop movement</button></div><div class="notice warn">Software stop only — not a hardware emergency stop. Keep the physical E-stop accessible whenever real hardware is operated.</div><div id="message" class="toast" role="status" aria-live="polite">Connecting to local simulator…</div></section>
- <section class="card mapcard"><details><summary>Live room map</summary><div id="map" class="map" aria-label="Occupancy map"></div><div class="maplegend"><span><i class="dot" style="background:#192f3a"></i>Unknown</span><span><i class="dot" style="background:#34766f"></i>Clear</span><span><i class="dot" style="background:#e7ae57"></i>Obstacle</span><span><i class="dot" style="background:#d75d70"></i>Busy</span></div><div class="small mapinfo" id="mapinfo">Map updates with simulator state.</div></details></section>
- <section class="card diagnostics-card"><details><summary>Robot telemetry</summary><div class="stats-grid"><div class="mini"><div class="mini-label">Position X</div><div class="value" id="px">—</div><div class="subvalue">meters</div></div><div class="mini"><div class="mini-label">Position Y</div><div class="value" id="py">—</div><div class="subvalue">meters</div></div><div class="mini"><div class="mini-label">Heading</div><div class="value" id="heading">—</div><div class="subvalue">degrees</div></div><div class="mini"><div class="mini-label">Map explored</div><div class="value" id="explored">—</div><div class="subvalue">coverage</div></div></div></details></section>
- <section class="card diagnostics-card"><details><summary>Safety & dock diagnostics</summary><div class="safety-list"><div class="statusline"><span class="small">E-stop</span><span class="value" id="estop">—</span></div><div class="statusline"><span class="small">Cord</span><span class="value" id="cord">—</span></div><div class="statusline"><span class="small">Interlock</span><span class="value" id="interlock">—</span></div><div class="statusline"><span class="small">Navigation</span><span class="value">Robot state</span></div></div></details></section>
- <section class="card target-card"><details><summary>Custom summon target</summary><p class="small">Set a destination in meters relative to the simulator room. The Summon button uses these coordinates.</p><div class="controls"><div class="field"><label for="x">Target X · meters</label><input id="x" type="number" step="0.1" min="0.5" value="4.0" inputmode="decimal"></div><div class="field"><label for="y">Target Y · meters</label><input id="y" type="number" step="0.1" min="0.5" value="3.0" inputmode="decimal"></div></div><div class="small">Choose a target inside the mapped room. Coordinates are relative to the simulator room.</div></details></section>
- <section class="card advanced-card"><details><summary>Advanced simulator controls</summary><p class="small">These controls change simulated sensors only. They do not control real hardware.</p><div class="actions"><button id="cordIn" class="btn subtle">Connect simulated cord</button><button id="cordOut" class="btn subtle">Unplug simulated cord</button><button id="learn" class="btn subtle full">Start mapping tour</button></div></details></section>
- <section class="card event-log-card"><details id="eventLogDetails"><summary>Event history</summary><div class="event-log-tools"><span class="small">Recent commands and safety/connection changes · saved in this browser</span><button id="clearEventLog" class="btn subtle" type="button">Clear history</button></div><div id="eventLogList" class="event-log-list" aria-live="polite"><div class="event-log-empty">No events recorded yet.</div></div></details></section>
+ <section class="panel plan-panel">
+  <div class="status-row"><div><div id="status">Connecting…</div><div id="mode">Waiting for bridge</div></div><div id="active" class="chip">—</div></div>
+  <div class="plan"><canvas id="map" aria-label="Room plan. Tap to set where to summon the desk."></canvas></div>
+  <div class="plan-foot"><div class="legend"><span><i style="background:var(--wall)"></i>Wall / object</span><span><i style="background:var(--floor)"></i>Seen floor</span><span><i style="background:var(--busy)"></i>Busy</span><span><i style="background:var(--accent)"></i>Desk</span></div><span>Tap the plan to set the summon spot</span></div>
+  <div class="small" id="mapinfo" style="margin-top:4px">Map updates with simulator state.</div>
+ </section>
+ <section class="panel">
+  <div class="actions">
+   <button class="btn primary" id="summon">Summon desk<small id="targetText">to 4.0 m, 3.0 m</small></button>
+   <button class="btn return" id="return">Return to dock</button>
+  </div>
+  <div id="message" class="toast" role="status" aria-live="polite">Connecting to the simulator…</div>
+ </section>
+ <section class="panel">
+  <div class="power">
+   <div class="meter"><div class="label">Robot battery</div><div class="reading"><span id="battery">—</span><small>%</small></div><div class="bar"><span id="batterybar"></span></div></div>
+   <div class="meter"><div class="label">Desk power</div><div class="reading"><span id="ups">—</span><small>%</small></div><div class="bar"><span id="upsbar"></span></div><div class="meta">Charging: <span id="charging">—</span></div></div>
+  </div>
+  <div id="batteryWarnings" class="battery-warnings" aria-live="polite" aria-atomic="true"></div>
+ </section>
+ <section class="panel more">
+  <details><summary>Summon spot</summary><div class="body"><p class="small" style="margin:0">Metres from the room's top-left corner. Tapping the plan fills these in.</p><div class="fields"><div class="field"><label for="x">X (m)</label><input id="x" type="number" step="0.1" min="0.5" value="4.0" inputmode="decimal"></div><div class="field"><label for="y">Y (m)</label><input id="y" type="number" step="0.1" min="0.5" value="3.0" inputmode="decimal"></div></div></div></details>
+  <details><summary>Position</summary><div class="body"><div class="kv"><div><span class="label">X</span><b id="px">—</b></div><div><span class="label">Y</span><b id="py">—</b></div><div><span class="label">Heading</span><b id="heading">—</b></div><div><span class="label">Room explored</span><b id="explored">—</b></div></div></div></details>
+  <details><summary>Safety &amp; dock</summary><div class="body"><div class="kv"><div><span class="label">E-stop</span><b id="estop" class="value">—</b></div><div><span class="label">Cord</span><b id="cord" class="value">—</b></div><div><span class="label">Interlock</span><b id="interlock" class="value">—</b></div></div></div></details>
+  <details><summary>Simulator tools</summary><div class="body"><p class="small" style="margin:0">These change the simulated room only.</p><div class="actions"><button id="cordIn" class="btn subtle">Plug in cord</button><button id="cordOut" class="btn subtle">Unplug cord</button><button id="learn" class="btn subtle return">Map the room</button></div></div></details>
+  <details id="eventLogDetails"><summary>History</summary><div class="body"><div class="event-log-tools"><span class="small">Saved in this browser</span><button id="clearEventLog" class="btn subtle" type="button">Clear</button></div><div id="eventLogList" class="event-log-list" aria-live="polite"><div class="event-log-empty">No events yet.</div></div></div></details>
+  <details class="settings-card" id="settings"><summary>Connection</summary><div class="body"><div class="field"><label for="token">API token (simulator default: dev-token)</label><input id="token" type="password" autocomplete="off" value="dev-token"></div><button class="btn subtle" id="saveToken">Apply token</button><p class="small" style="margin:0">On your phone, open the computer's local address, for example http://192.168.1.25:8787, on the same trusted Wi-Fi. Don't expose this service to the internet.</p></div></details>
+ </section>
 </div>
 </section>
 
-<section id="tab-drive" class="tab-panel" role="tabpanel" aria-label="Manual simulation drive">
- <section class="card drive-hero"><div class="lidar-head"><div><h2>Manual drive · simulation</h2><p class="small">Touch joystick · holonomic translation · independent rotation</p></div><span class="lidar-badge demo">SIM ONLY</span></div>
-  <div class="drive-grid"><div><div class="stick-pad" id="stickPad" role="application" aria-label="Virtual movement joystick"><span class="stick-label up">FORWARD</span><span class="stick-label down">BACK</span><span class="stick-label left">LEFT</span><span class="stick-label right">RIGHT</span><div class="stick-knob" id="stickKnob"></div></div><div class="small" style="text-align:center;margin-top:8px">Drag the pad; release to stop translating</div></div>
-  <div class="drive-side"><div><div class="mini-label">Rotate chassis</div><div class="turn-controls"><button type="button" class="turn-btn" id="turnLeft">↶ &nbsp; Rotate left</button><button type="button" class="turn-btn" id="turnRight">Rotate right &nbsp; ↷</button></div><div class="drive-readout"><span class="small">Command</span><strong id="driveVector">X 0.00 · Y 0.00 · Ω 0.00</strong></div></div><div class="drive-speed"><label for="driveSpeed" class="mini-label">Maximum speed <strong id="driveSpeedValue">35%</strong></label><input id="driveSpeed" type="range" min="8" max="100" value="35" step="1" aria-describedby="speedWarning speedLimitNote"><div id="speedLimitNote" class="small">35% of the simulator’s configured maximum. Real robot speed limits require separate validation.</div><div id="speedWarning" class="speed-warning" role="status" aria-live="polite" hidden></div></div></div></div>
-  <div class="drive-safety">Testing only: the simulator applies its simulated LiDAR footprint checks. This is not a real robot safety certification. Use the Stop button to cancel manual commands; a real robot still needs a physical E-stop.</div>
-  <div id="driveStatus" class="lidar-status" role="status" aria-live="polite">Manual drive idle. Open the simulator tab to connect.</div>
+<section id="tab-drive" class="tab-panel" role="tabpanel" aria-label="Manual drive">
+ <section class="panel">
+  <div class="drive-head"><div><h2>Manual drive</h2><p class="small" style="margin:2px 0 0">Drag to move in any direction. Hold a rotate button to turn.</p></div><span class="tag">SIM ONLY</span></div>
+  <div class="drive-grid"><div><div class="stick-pad" id="stickPad" role="application" aria-label="Movement joystick"><span class="stick-label up">FWD</span><span class="stick-label down">BACK</span><span class="stick-label left">LEFT</span><span class="stick-label right">RIGHT</span><div class="stick-knob" id="stickKnob"></div></div><div class="small" style="text-align:center;margin-top:8px">Let go to stop</div></div>
+  <div class="drive-side"><div><div class="label">Rotate</div><div class="turn-controls"><button type="button" class="turn-btn" id="turnLeft">↶ Left</button><button type="button" class="turn-btn" id="turnRight">Right ↷</button></div></div><div class="drive-readout"><span>Command</span><strong id="driveVector">X 0.00 · Y 0.00 · Ω 0.00</strong></div><div class="drive-speed"><label for="driveSpeed" class="label">Speed limit <strong id="driveSpeedValue">35%</strong></label><input id="driveSpeed" type="range" min="8" max="100" value="35" step="1" aria-describedby="speedWarning speedLimitNote"><div id="speedLimitNote" class="small">35% of the simulator's maximum.</div><div id="speedWarning" class="speed-warning" role="status" aria-live="polite" hidden></div></div></div></div>
+  <div class="drive-safety">Simulation only. The simulator still applies its LiDAR footprint checks; this is not a safety certification for real hardware.</div>
+  <div id="driveStatus" class="lidar-status" role="status" aria-live="polite">Manual drive idle.</div>
  </section>
 </section>
-<section id="tab-lidar" class="tab-panel" role="tabpanel" aria-label="3D room view from LiDAR">
- <section class="card lidar-card">
-  <div class="lidar-head"><div><h2>3D room model</h2><p class="small">Live occupancy grid · drag to orbit · pinch to zoom</p></div><span id="lidarBadge" class="lidar-badge demo">BUILDING…</span></div>
-  <div class="lidar-stats"><div><span class="lidar-stat-label">Obstacles</span><strong id="lidarPoints">—</strong></div><div><span class="lidar-stat-label">Room size</span><strong id="lidarRange">—</strong></div><div><span class="lidar-stat-label">Update</span><strong id="lidarAge">Waiting</strong></div></div>
-  <div class="lidar-wrap"><canvas id="lidarCanvas" aria-label="3D room model built from the live occupancy grid"></canvas><div class="lidar-legend"><span><i class="lidar-key wall"></i>Obstacle</span><span><i class="lidar-key"></i>Mapped floor</span><span><i class="lidar-key robot"></i>Robot</span></div></div>
+
+<section id="tab-lidar" class="tab-panel" role="tabpanel" aria-label="3D room">
+ <section class="panel">
+  <div class="drive-head"><div><h2>3D room</h2><p class="small" style="margin:2px 0 0">Built from the live map. Drag to orbit, pinch to zoom.</p></div><span id="lidarBadge" class="tag">BUILDING</span></div>
+  <div class="lidar-stats"><div><span class="label">Obstacles</span><strong id="lidarPoints">—</strong></div><div><span class="label">Room</span><strong id="lidarRange">—</strong></div><div><span class="label">Updated</span><strong id="lidarAge">Waiting</strong></div></div>
+  <div class="lidar-wrap"><canvas id="lidarCanvas" aria-label="3D room model"></canvas><div class="lidar-legend"><span><i class="lidar-key wall"></i>Obstacle</span><span><i class="lidar-key"></i>Floor</span><span><i class="lidar-key robot"></i>Desk</span></div></div>
   <div id="lidarStatus" class="lidar-status" role="status" aria-live="polite">Waiting for the map…</div>
-  <p class="small lidar-note">Built from the live occupancy grid (<code>/v1/map</code>) and robot pose (<code>/v1/state</code>). Visualisation only — not an obstacle-detection or safety system.</p>
+  <p class="small lidar-note">From <code>/v1/map</code> and <code>/v1/state</code>. A picture of the map, not an obstacle-detection system.</p>
  </section>
 </section>
+
 <nav class="links"><a href="/simulator" target="_blank" rel="noopener">Open full simulator ↗</a><a href="/v1/health" target="_blank" rel="noopener">Bridge health ↗</a><a href="#settings" id="settingsLink">Connection settings</a></nav>
-<section class="card settings-card" id="settings"><details><summary>Connection settings</summary><div class="field"><label for="token">API token (local simulator default: dev-token)</label><input id="token" type="password" autocomplete="off" value="dev-token"></div><button class="btn subtle full" id="saveToken">Apply token</button><p class="small">This page is hosted by the bridge. On your phone, open the computer's local address, for example http://192.168.1.25:8787. Keep both devices on the same trusted Wi-Fi network. Do not port-forward this service to the internet.</p></details></section>
 <div class="footer">Summon Desk · local network only · simulation mode</div>
-</main><script>
-(()=>{'use strict';let token='dev-token',busy=false,lastMap=0,lastMapSignature='',currentEpoch=null;const $=id=>document.getElementById(id);const fmt=(n,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d):'—';const say=(s,kind='')=>{ $('message').textContent=s;$('message').className='toast '+kind};
+</main>
+<div class="stopbar"><div class="stopbar-inner"><button class="btn stop" id="stop">STOP</button><div class="stop-note">Software stop. Keep the physical E-stop in reach on real hardware.</div></div></div>
+<script>
+(()=>{'use strict';let token='dev-token',busy=false,lastMap=0,lastMapSignature='',currentEpoch=null,mapData=null,lastState=null;const $=id=>document.getElementById(id);const fmt=(n,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d):'—';const say=(s,kind='')=>{ $('message').textContent=s;$('message').className='toast '+kind};
 const EVENT_LOG_KEY='summonDeskEventLogV1';let eventItems=[],lastObservedState=null;
 function renderEventLog(){
  const host=$('eventLogList');if(!host)return;host.replaceChildren();
- if(!eventItems.length){const empty=document.createElement('div');empty.className='event-log-empty';empty.textContent='No events recorded yet.';host.appendChild(empty);return}
+ if(!eventItems.length){const empty=document.createElement('div');empty.className='event-log-empty';empty.textContent='No events yet.';host.appendChild(empty);return}
  for(const item of eventItems){const row=document.createElement('div');row.className='event-entry '+(item.kind||'');const time=document.createElement('div');time.className='event-time';time.textContent=item.time;const content=document.createElement('div');const title=document.createElement('div');title.className='event-title';title.textContent=item.title;content.appendChild(title);if(item.detail){const detail=document.createElement('div');detail.className='event-detail';detail.textContent=item.detail;content.appendChild(detail)}row.append(time,content);host.appendChild(row)}
 }
 function logEvent(title,detail='',kind=''){
@@ -236,7 +252,26 @@ function observeState(s){
 
 async function api(path,method='GET',body){if(method==='POST'&&body!==undefined&&currentEpoch!==null&&body.epoch===undefined){body={...body,epoch:currentEpoch}}const r=await fetch(path,{method,headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});let data={};try{data=await r.json()}catch{}if(!r.ok){const e=new Error(data.status||data.error||('HTTP '+r.status));e.statusCode=r.status;e.response=data;throw e}return data}
 function setText(id,v){$(id).textContent=v}
-function render(s){observeState(s);if(Number.isFinite(Number(s.epoch)))currentEpoch=Number(s.epoch);const connected=$('connection');connected.textContent=s.simulator_connected===false?'Bridge online · simulator offline':'Bridge + simulator connected';connected.classList.toggle('online',s.simulator_connected!==false);setText('status',s.status||'Unknown');$('status').style.color=s.severity==='bad'?'var(--red)':s.severity==='warn'?'var(--amber)':'var(--green)';setText('mode',s.simulator_connected===false?'Open /simulator on another tab to connect':'Mode: '+(s.mode||'—'));setText('active',s.simulator_connected===false?'Unknown':s.active?'Moving':'Stationary');const rb=Number(s.battery?.robot_pct),ub=Number(s.battery?.ups_pct),robotKnown=s.simulator_connected!==false&&Number.isFinite(rb)&&s.battery?.robot_pct!==null&&s.battery?.robot_pct!==undefined,upsKnown=s.simulator_connected!==false&&Number.isFinite(ub)&&s.battery?.ups_pct!==null&&s.battery?.ups_pct!==undefined;setText('battery',robotKnown?fmt(rb):'—');$('batterybar').style.width=(robotKnown?Math.max(0,Math.min(100,rb)):0)+'%';$('batterybar').classList.toggle('low',robotKnown&&rb<=20);setText('ups',upsKnown?fmt(ub):'—');$('upsbar').style.width=(upsKnown?Math.max(0,Math.min(100,ub)):0)+'%';$('upsbar').classList.toggle('low',upsKnown&&ub<=20);setText('charging',typeof s.charging==='boolean'?(s.charging?'Yes':'No'):'Unknown');const warnings=[];if(s.simulator_connected===false)warnings.push({kind:'warn',title:'Simulator disconnected',body:'Open /simulator and keep it running to update controls and telemetry.'});if(!robotKnown)warnings.push({kind:'warn',title:'Robot battery unavailable',body:'No valid robot battery reading is available.'});else if(rb<=20)warnings.push({kind:'danger',title:'Robot battery low',body:'Battery is at '+fmt(rb)+'%. Recharge before the next run.'});if(!upsKnown)warnings.push({kind:'warn',title:'Desk / UPS battery unavailable',body:'No valid desk/UPS battery reading is available.'});else if(ub<=20)warnings.push({kind:'danger',title:'Desk / UPS battery low',body:'Battery is at '+fmt(ub)+'%. Check the power station.'});$('batteryWarnings').replaceChildren(...warnings.map(w=>{const el=document.createElement('div');el.className='battery-warning '+w.kind;const title=document.createElement('strong');title.textContent=w.title;const body=document.createElement('span');body.textContent=w.body;el.append(title,body);return el}));setText('px',fmt(s.pose?.x,2)+' m');setText('py',fmt(s.pose?.y,2)+' m');setText('heading',fmt((Number(s.pose?.theta)||0)*180/Math.PI,0)+'°');setText('estop',s.simulator_connected===false?'Unknown':s.estop?'ACTIVE':'Not active');$('estop').className='value '+(s.simulator_connected===false?'warn':s.estop?'danger':'good');setText('cord',s.cord?.plugged?'Plugged in':'Unplugged');setText('interlock',s.cord?.interlock_on?'On':'Off');setText('explored',fmt(s.explored_pct,0)+'%');if(!$('x').dataset.edited){$('x').value=fmt(s.user?.x,1);$('y').value=fmt(s.user?.y,1)} }
+function updateTargetText(){setText('targetText','to '+fmt($('x').value,1)+' m, '+fmt($('y').value,1)+' m')}
+function render(s){observeState(s);lastState=s;if(Number.isFinite(Number(s.epoch)))currentEpoch=Number(s.epoch);const off=s.simulator_connected===false;const connected=$('connection');connected.textContent=off?'Simulator offline':'Connected';connected.classList.toggle('online',!off);setText('status',s.status||'Unknown');$('status').className=s.severity==='bad'?'bad':s.severity==='warn'?'warn':'';setText('mode',off?'Open /simulator in another tab to connect':'Mode: '+(s.mode||'—'));setText('active',off?'Unknown':s.active?'Moving':'Parked');$('active').classList.toggle('moving',!off&&!!s.active);const rb=Number(s.battery?.robot_pct),ub=Number(s.battery?.ups_pct),robotKnown=!off&&Number.isFinite(rb)&&s.battery?.robot_pct!==null&&s.battery?.robot_pct!==undefined,upsKnown=!off&&Number.isFinite(ub)&&s.battery?.ups_pct!==null&&s.battery?.ups_pct!==undefined;setText('battery',robotKnown?fmt(rb,0):'—');$('batterybar').style.width=(robotKnown?Math.max(0,Math.min(100,rb)):0)+'%';$('batterybar').classList.toggle('low',robotKnown&&rb<=20);setText('ups',upsKnown?fmt(ub,0):'—');$('upsbar').style.width=(upsKnown?Math.max(0,Math.min(100,ub)):0)+'%';$('upsbar').classList.toggle('low',upsKnown&&ub<=20);setText('charging',typeof s.charging==='boolean'?(s.charging?'yes':'no'):'unknown');const warnings=[];if(off)warnings.push({kind:'warn',title:'Simulator disconnected',body:'Open /simulator and keep it running to update controls and readings.'});if(!robotKnown)warnings.push({kind:'warn',title:'Robot battery unavailable',body:'No valid robot battery reading.'});else if(rb<=20)warnings.push({kind:'danger',title:'Robot battery low',body:'At '+fmt(rb,0)+'%. Recharge before the next run.'});if(!upsKnown)warnings.push({kind:'warn',title:'Desk power unavailable',body:'No valid desk power reading.'});else if(ub<=20)warnings.push({kind:'danger',title:'Desk power low',body:'At '+fmt(ub,0)+'%. Check the power station.'});$('batteryWarnings').replaceChildren(...warnings.map(w=>{const el=document.createElement('div');el.className='battery-warning '+w.kind;const title=document.createElement('strong');title.textContent=w.title;const body=document.createElement('span');body.textContent=w.body;el.append(title,body);return el}));setText('px',fmt(s.pose?.x,2)+' m');setText('py',fmt(s.pose?.y,2)+' m');setText('heading',fmt((Number(s.pose?.theta)||0)*180/Math.PI,0)+'°');setText('estop',off?'Unknown':s.estop?'ENGAGED':'Clear');$('estop').className='value '+(off?'warn':s.estop?'danger':'good');setText('cord',s.cord?.plugged?'Plugged in':'Unplugged');$('cord').className='value '+(s.cord?.plugged?'warn':'');setText('interlock',s.cord?.interlock_on?'On':'Off');setText('explored',fmt(s.explored_pct,0)+'%');if(!$('x').dataset.edited){$('x').value=fmt(s.user?.x,1);$('y').value=fmt(s.user?.y,1)}updateTargetText();drawPlan()}
+
+// ============ Room plan (2D canvas): map cells, desk, you, summon spot. Tap sets the summon spot. ============
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function drawPlan(){
+ const cv=$('map'),m=mapData;if(!cv)return;const r=cv.getBoundingClientRect();if(r.width<2)return;
+ const dpr=Math.min(2,window.devicePixelRatio||1),Wp=Math.round(r.width*dpr),Hp=Math.round(r.height*dpr);if(cv.width!==Wp||cv.height!==Hp){cv.width=Wp;cv.height=Hp}
+ const g=cv.getContext('2d');g.setTransform(1,0,0,1,0,0);g.fillStyle=css('--unknown');g.fillRect(0,0,Wp,Hp);if(!m)return;
+ const sx=Wp/m.width_m,sy=Hp/m.height_m,cw=Wp/m.gw,ch=Hp/m.gh,floor=css('--floor'),wall=css('--wall'),busyC=css('--busy');
+ for(let y=0;y<m.gh;y++){const row=m.rows[y];for(let x=0;x<m.gw;x++){const c=row[x];if(c==='.')continue;g.fillStyle=c==='#'?wall:c==='+'?busyC:floor;g.fillRect(Math.floor(x*cw),Math.floor(y*ch),Math.ceil(cw),Math.ceil(ch))}}
+ const s=lastState;
+ const tx=Number($('x').value),ty=Number($('y').value);
+ if(Number.isFinite(tx)&&Number.isFinite(ty)){const px=tx*sx,py=ty*sy,k=9*dpr;g.strokeStyle=css('--accent');g.lineWidth=2*dpr;g.beginPath();g.arc(px,py,k,0,7);g.moveTo(px-k*1.6,py);g.lineTo(px+k*1.6,py);g.moveTo(px,py-k*1.6);g.lineTo(px,py+k*1.6);g.stroke()}
+ if(s&&s.user&&Number.isFinite(+s.user.x)){g.fillStyle=css('--warn');g.beginPath();g.arc(s.user.x*sx,s.user.y*sy,6*dpr,0,7);g.fill()}
+ if(s&&s.pose&&Number.isFinite(+s.pose.x)){g.save();g.translate(s.pose.x*sx,s.pose.y*sy);g.rotate(+s.pose.theta||0);const w=1.12*sx,h=0.72*sy;g.fillStyle=css('--accent');g.fillRect(-w/2,-h/2,w,h);
+  g.fillStyle=css('--accent-ink');g.beginPath();g.moveTo(0,-h/2+2*dpr);g.lineTo(-5*dpr,-h/2+10*dpr);g.lineTo(5*dpr,-h/2+10*dpr);g.closePath();g.fill();g.restore()}
+}
+$('map').addEventListener('click',e=>{if(!mapData)return;const r=$('map').getBoundingClientRect();const x=(e.clientX-r.left)/r.width*mapData.width_m,y=(e.clientY-r.top)/r.height*mapData.height_m;$('x').value=x.toFixed(1);$('y').value=y.toFixed(1);$('x').dataset.edited='1';$('y').dataset.edited='1';updateTargetText();drawPlan();say('Summon spot set to '+x.toFixed(1)+' m, '+y.toFixed(1)+' m. Press Summon desk.')});
+window.addEventListener('resize',()=>drawPlan());
 // ============ LiDAR 3D room view (Three.js) ============
 var lidarTimer=null, lidarRenderer=null, lidarScene=null, lidarCamera=null;
 var lidarRoom=null, lidarRobot=null, lidarGrid=null;
@@ -322,7 +357,6 @@ function initLidar3D(){
     lidarRenderer.setSize(r.width,r.height,false);
     lidarCamera.aspect=r.width/r.height; lidarCamera.updateProjectionMatrix();
   });
-
   return true;
 }
 
@@ -414,18 +448,18 @@ function pollLidar(){
     }
     buildRoom3D(m,s);
     var badge=$('lidarBadge');
-    badge.textContent='LIVE 3D'; badge.className='lidar-badge live';
+    badge.textContent='LIVE'; badge.className='tag live';
     var wallCount=0;
     for(var y=0;y<m.gh;y++)for(var x=0;x<m.gw;x++)if(m.rows[y][x]==='#')wallCount++;
     setText('lidarPoints',String(wallCount));
     setText('lidarRange',fmt(m.width_m,1)+' × '+fmt(m.height_m,1)+' m');
     setText('lidarAge','Just now');
-    var st=$('lidarStatus'); if(st) st.textContent='Live 3D room model from the occupancy grid.';
+    var st=$('lidarStatus'); if(st) st.textContent='Live 3D room model from the map.';
     renderLidar3D();
   }).catch(function(e){
     var badge=$('lidarBadge');
-    if(badge){badge.textContent='NO MAP'; badge.className='lidar-badge error'}
-    var st=$('lidarStatus'); if(st) st.textContent='Could not load map: '+e.message;
+    if(badge){badge.textContent='NO MAP'; badge.className='tag error'}
+    var st=$('lidarStatus'); if(st) st.textContent='Could not load the map: '+e.message;
   });
 }
 
@@ -444,17 +478,19 @@ function stopLidar(){
   if(lidarTimer){clearInterval(lidarTimer); lidarTimer=null}
   if(lidarRAF){cancelAnimationFrame(lidarRAF); lidarRAF=0}
 }
-function activateTab(name){document.querySelectorAll('.tab').forEach(t=>{const on=t.dataset.tab===name;t.classList.toggle('active',on);t.setAttribute('aria-selected',on?'true':'false')});document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));if(name==='lidar'){requestAnimationFrame(()=>startLidar())}else stopLidar()}
-async function refresh(){try{const s=await api('/v1/state');render(s);if(!lastMap||Date.now()-lastMap>4000)await refreshMap()}catch(e){$('connection').textContent='Disconnected';$('connection').classList.remove('online');setText('status','Offline');setText('mode','Check bridge / Wi-Fi');say(e.message,'danger');render({simulator_connected:false})}}
-async function refreshMap(){try{const m=await api('/v1/map');const signature=[m.gw,m.gh,m.width_m,m.height_m,...m.rows].join('|');lastMap=Date.now();if(signature===lastMapSignature)return;lastMapSignature=signature;const host=$('map');host.style.gridTemplateColumns=`repeat(${m.gw},minmax(0,1fr))`;host.replaceChildren();for(const row of m.rows){for(const c of row){const cell=document.createElement('i');cell.className='cell'+(c==='_'?' free':c==='#'?' obstacle':c==='+'?' busy':'');host.appendChild(cell)}}setText('mapinfo',`${fmt(m.width_m,1)} m × ${fmt(m.height_m,1)} m · ${m.gw} × ${m.gh} cells`)}catch{}}
-async function command(path,body,msg,buttonId){const button=buttonId?$(buttonId):null;if(busy||(button&&button.disabled))return;busy=true;if(button)button.disabled=true;say(msg+'…');try{const r=await api(path,'POST',body);const failed=r.accepted===false;say(r.status||'Command accepted',failed?'danger':'good');logEvent((failed?'Command refused: ':'Command accepted: ')+msg,r.status||path,failed?'warn':'');await refresh()}catch(e){if(e.response&&e.response.stale_epoch){say('Session expired — reconnecting…','danger');logEvent('Command refused: stale session','Bridge reconnected since this page last saw state','warn');currentEpoch=null;try{await refresh()}catch(_){}return}const refused=Number(e.statusCode)>=400&&Number(e.statusCode)<500;say(e.message,'danger');logEvent((refused?'Command refused: ':'Command failed: ')+msg,e.message,refused?'warn':'danger')}finally{busy=false;if(button)button.disabled=false}}
-async function urgentCommand(path,body,msg){say(msg+'…');try{const r=await api(path,'POST',body);const failed=r.accepted===false;say(r.status||'Command accepted',failed?'danger':'good');logEvent((failed?'Command refused: ':'Command accepted: ')+msg,r.status||path,failed?'warn':'');await refresh()}catch(e){if(e.response&&e.response.stale_epoch){say('Session expired — reconnecting…','danger');logEvent('Command refused: stale session','Bridge reconnected since this page last saw state','warn');currentEpoch=null;try{await refresh()}catch(_){}return}const refused=Number(e.statusCode)>=400&&Number(e.statusCode)<500;say(e.message,'danger');logEvent((refused?'Command refused: ':'Command failed: ')+msg,e.message,refused?'warn':'danger')}}
-function applyTheme(theme){const chosen=theme==='teal'?'teal':'deep';document.documentElement.dataset.theme=chosen;const b=$('themeToggle');if(b){b.textContent=chosen==='deep'?'Teal mode':'Deep dark';b.setAttribute('aria-label',chosen==='deep'?'Switch to dark teal theme':'Switch to deep dark mode');b.title=b.getAttribute('aria-label')}try{localStorage.setItem('summonDeskTheme',chosen)}catch(_){}}
-function initTheme(){let saved='deep';try{saved=localStorage.getItem('summonDeskTheme')||'deep'}catch(_){}applyTheme(saved)}
+function activateTab(name){document.querySelectorAll('.tab').forEach(t=>{const on=t.dataset.tab===name;t.classList.toggle('active',on);t.setAttribute('aria-selected',on?'true':'false')});document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));if(name==='lidar'){requestAnimationFrame(()=>startLidar())}else stopLidar();if(name==='control')requestAnimationFrame(drawPlan)}
+async function refresh(){try{const s=await api('/v1/state');render(s);if(!lastMap||Date.now()-lastMap>4000)await refreshMap()}catch(e){$('connection').textContent='Disconnected';$('connection').classList.remove('online');setText('status','Offline');setText('mode','Check the bridge and Wi-Fi');say(e.message,'danger');render({simulator_connected:false})}}
+async function refreshMap(){try{const m=await api('/v1/map');const signature=[m.gw,m.gh,m.width_m,m.height_m,...m.rows].join('|');lastMap=Date.now();if(signature===lastMapSignature)return;lastMapSignature=signature;mapData=m;drawPlan();setText('mapinfo',`${fmt(m.width_m,1)} × ${fmt(m.height_m,1)} m room · ${m.gw} × ${m.gh} cells`)}catch{}}
+async function command(path,body,msg,buttonId){const button=buttonId?$(buttonId):null;if(busy||(button&&button.disabled))return;busy=true;if(button)button.disabled=true;say(msg+'…');try{const r=await api(path,'POST',body);const failed=r.accepted===false;say(r.status||'Command accepted',failed?'danger':'good');logEvent((failed?'Command refused: ':'Command accepted: ')+msg,r.status||path,failed?'warn':'');await refresh()}catch(e){if(e.response&&e.response.stale_epoch){say('Session expired. Reconnecting…','danger');logEvent('Command refused: stale session','Bridge reconnected since this page last saw state','warn');currentEpoch=null;try{await refresh()}catch(_){}return}const refused=Number(e.statusCode)>=400&&Number(e.statusCode)<500;say(e.message,'danger');logEvent((refused?'Command refused: ':'Command failed: ')+msg,e.message,refused?'warn':'danger')}finally{busy=false;if(button)button.disabled=false}}
+async function urgentCommand(path,body,msg){say(msg+'…');try{const r=await api(path,'POST',body);const failed=r.accepted===false;say(r.status||'Command accepted',failed?'danger':'good');logEvent((failed?'Command refused: ':'Command accepted: ')+msg,r.status||path,failed?'warn':'');await refresh()}catch(e){if(e.response&&e.response.stale_epoch){say('Session expired. Reconnecting…','danger');logEvent('Command refused: stale session','Bridge reconnected since this page last saw state','warn');currentEpoch=null;try{await refresh()}catch(_){}return}const refused=Number(e.statusCode)>=400&&Number(e.statusCode)<500;say(e.message,'danger');logEvent((refused?'Command refused: ':'Command failed: ')+msg,e.message,refused?'warn':'danger')}}
+// Theme: auto follows the phone; light and dark override it.
+const THEMES=['auto','light','dark'];
+function applyTheme(theme){const t=THEMES.includes(theme)?theme:'auto';if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;$('themeToggle').textContent=t[0].toUpperCase()+t.slice(1);$('themeToggle').setAttribute('aria-label','Theme: '+t+'. Tap to change.');try{localStorage.setItem('summonDeskTheme',t)}catch(_){}requestAnimationFrame(drawPlan)}
+function initTheme(){let saved='auto';try{saved=localStorage.getItem('summonDeskTheme')||'auto'}catch(_){}applyTheme(saved)}
 // Virtual joystick sends only to the browser simulator bridge. Releasing any control sends zero commands.
 let stickPointer=null,driveX=0,driveY=0,driveTurn=0,driveActive=false,driveLoop=null;
 function drivePayload(){return {x:driveX,y:driveY,turn:driveTurn,speed:Number($('driveSpeed').value)/100}}
-function updateSpeedWarning(){const pct=Number($('driveSpeed').value),box=$('speedWarning'),note=$('speedLimitNote');$('driveSpeedValue').textContent=pct+'%';note.textContent=pct+'% of the simulator’s configured maximum. Real robot speed limits require separate validation.';box.hidden=false;box.className='speed-warning';if(pct>=80){box.classList.add('critical');box.textContent='VERY HIGH SPEED LIMIT SELECTED · '+pct+'%. If used, expect longer stopping distances and increased collision risk. Confirm the test area is clear.'}else if(pct>=50){box.classList.add('caution');box.textContent='HIGH SPEED LIMIT SELECTED · '+pct+'%. Higher speed increases stopping distance and collision risk.'}else{box.hidden=true;box.textContent=''}}
+function updateSpeedWarning(){const pct=Number($('driveSpeed').value),box=$('speedWarning'),note=$('speedLimitNote');$('driveSpeedValue').textContent=pct+'%';note.textContent=pct+'% of the simulator’s maximum. Real robot limits need their own testing.';box.hidden=false;box.className='speed-warning';if(pct>=80){box.classList.add('critical');box.textContent='Very high speed limit ('+pct+'%). Expect long stopping distances. Make sure the area is clear.'}else if(pct>=50){box.textContent='High speed limit ('+pct+'%). Stopping distance and collision risk go up.'}else{box.hidden=true;box.textContent=''}}
 async function pushDrive(){try{const r=await api('/v1/drive','POST',drivePayload());$('driveStatus').textContent=r.status||'Manual command queued';$('driveVector').textContent=`X ${driveX.toFixed(2)} · Y ${driveY.toFixed(2)} · Ω ${driveTurn.toFixed(2)}`}catch(e){$('driveStatus').textContent='Drive unavailable: '+e.message}}
 function driveTickStart(){if(driveLoop)clearInterval(driveLoop);pushDrive();driveLoop=setInterval(()=>{if(driveActive)pushDrive()},120)}
 function releaseDrive(sendZero=true){driveActive=false;stickPointer=null;driveX=0;driveY=0;driveTurn=0;$('stickKnob').style.left='50%';$('stickKnob').style.top='50%';$('turnLeft').dataset.down='0';$('turnRight').dataset.down='0';if(driveLoop){clearInterval(driveLoop);driveLoop=null}if(sendZero)pushDrive();$('driveVector').textContent='X 0.00 · Y 0.00 · Ω 0.00';}
@@ -464,9 +500,9 @@ function turnDown(dir,e){e.preventDefault();try{e.currentTarget.setPointerCaptur
 $('driveSpeed').addEventListener('input',()=>{updateSpeedWarning();if(driveActive)pushDrive()});updateSpeedWarning();window.addEventListener('blur',()=>{if(driveActive)releaseDrive()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&driveActive)releaseDrive()});
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.tab)));
 initEventLog();$('clearEventLog').addEventListener('click',()=>{eventItems=[];try{localStorage.removeItem(EVENT_LOG_KEY)}catch(_){}renderEventLog()});
-$('themeToggle').addEventListener('click',()=>applyTheme(document.documentElement.dataset.theme==='deep'?'teal':'deep'));initTheme();
-$('summon').addEventListener('click',()=>{const x=Number($('x').value),y=Number($('y').value);if(!Number.isFinite(x)||!Number.isFinite(y)){say('Enter valid X and Y coordinates.','danger');return}command('/v1/summon',{x,y},'Sending summon command','summon')});for(const id of ['x','y'])$(id).addEventListener('input',()=>{$(id).dataset.edited='1'});
-$('return').onclick=()=>{releaseDrive(false);command('/v1/return',{},'Returning to dock','return')};$('stop').onclick=()=>{releaseDrive(false);urgentCommand('/v1/stop',{},'Sending software stop')};$('learn').onclick=()=>command('/v1/learn',{},'Starting mapping tour','learn');$('cordIn').onclick=()=>command('/v1/sim/cord',{plugged:true},'Connecting simulated cord','cordIn');$('cordOut').onclick=()=>command('/v1/sim/cord',{plugged:false},'Disconnecting simulated cord','cordOut');$('saveToken').onclick=()=>{token=$('token').value.trim();say('Token applied. Checking connection…');refresh()};$('settingsLink').onclick=()=>{$('settings').scrollIntoView({behavior:'smooth',block:'center'});$('settings').querySelector('details').open=true};refresh();setInterval(()=>{refresh()},1500);
+$('themeToggle').addEventListener('click',()=>{const cur=document.documentElement.dataset.theme||'auto';applyTheme(THEMES[(THEMES.indexOf(cur)+1)%THEMES.length])});initTheme();
+$('summon').addEventListener('click',()=>{const x=Number($('x').value),y=Number($('y').value);if(!Number.isFinite(x)||!Number.isFinite(y)){say('Enter a valid summon spot.','danger');return}command('/v1/summon',{x,y},'Sending summon command','summon')});for(const id of ['x','y'])$(id).addEventListener('input',()=>{$(id).dataset.edited='1';updateTargetText();drawPlan()});
+$('return').onclick=()=>{releaseDrive(false);command('/v1/return',{},'Returning to dock','return')};$('stop').onclick=()=>{releaseDrive(false);urgentCommand('/v1/stop',{},'Sending software stop')};$('learn').onclick=()=>command('/v1/learn',{},'Starting mapping tour','learn');$('cordIn').onclick=()=>command('/v1/sim/cord',{plugged:true},'Connecting simulated cord','cordIn');$('cordOut').onclick=()=>command('/v1/sim/cord',{plugged:false},'Disconnecting simulated cord','cordOut');$('saveToken').onclick=()=>{token=$('token').value.trim();say('Token applied. Checking connection…');refresh()};$('settingsLink').onclick=()=>{$('settings').scrollIntoView({behavior:'smooth',block:'center'});$('settings').open=true};refresh();setInterval(()=>{refresh()},1500);
 // Offline caching is not configured: avoid registering a missing /sw.js endpoint.
 })();
 </script></body></html>
