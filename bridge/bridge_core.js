@@ -19,7 +19,8 @@ function drainHeadless(){
   while(pendingCommands.length){
     const c=pendingCommands.shift();
     try{
-      if(c.type==='summon'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;user.x=c.x/PX;user.y=c.y/PX;parkTh=null;mode='user';didArrive=false;active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;headTarget=T.th;headState='SETTLED';setSt('Driving to you','');}
+      // Same path as the browser (user target, then Come to me): cord, low-battery redirect and E-stop checks apply.
+      if(c.type==='summon'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;user.x=c.x/PX;user.y=c.y/PX;$('go').onclick();}
       else if(c.type==='return'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;startReturn();}
       else if(c.type==='stop'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;active=false;path=[];recovery=null;stuckTime=0;parkTh=null;setSt('Stopped','warn');}
       else if(c.type==='learn'){startTour();}
@@ -38,7 +39,9 @@ function stateJSON(){
 }
 function mapJSON(){const rows=[];for(let y=0;y<GH;y++){let r='';for(let x=0;x<GW;x++){const i=y*GW+x;r+=smap[i]>0?'#':traffic[i]>2?'+':seen[i]?'_':'.'}rows.push(r)}return {width_m:W*PX,height_m:H*PX,cell_m:CS*PX,gw:GW,gh:GH,rows}}
 function send(res,code,obj){const b=JSON.stringify(obj);res.writeHead(code,{'Content-Type':'application/json; charset=utf-8','Content-Length':Buffer.byteLength(b),'Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(b)}
-function sendFile(res,file,type){try{let b=require('fs').readFileSync(require('path').join(__dirname,'..',file));if(file==='robot/simulator/summon_table_sim.html'){let html=b.toString('utf8');html=html.replace('</head>','<script>window.SUMMON_BRIDGE_TOKEN='+JSON.stringify(TOKEN)+'</script></head>');b=Buffer.from(html)}res.writeHead(200,{'Content-Type':type,'Content-Length':b.length,'Cache-Control':'no-store'});res.end(b)}catch(e){send(res,404,{error:'file not found'})}}
+// The bridge listens on 0.0.0.0: only a page loaded from this machine gets the token injected.
+function isLoopback(a){return a==='127.0.0.1'||a==='::1'||a==='::ffff:127.0.0.1'}
+function sendFile(res,file,type,req){try{let b=require('fs').readFileSync(require('path').join(__dirname,'..',file));if(file==='robot/simulator/summon_table_sim.html'&&req&&isLoopback(req.socket.remoteAddress)){let html=b.toString('utf8');html=html.replace('</head>','<script>window.SUMMON_BRIDGE_TOKEN='+JSON.stringify(TOKEN)+'</script></head>');b=Buffer.from(html)}res.writeHead(200,{'Content-Type':type,'Content-Length':b.length,'Cache-Control':'no-store'});res.end(b)}catch(e){send(res,404,{error:'file not found'})}}
 function readBody(req,cb){let s='';req.on('data',c=>{s+=c;if(s.length>262144)req.destroy()});req.on('end',()=>{try{cb(s?JSON.parse(s):{})}catch(e){cb(null)}})}
 const server=require('http').createServer((req,res)=>{
   const url=req.url.split('?')[0];
@@ -46,7 +49,7 @@ const server=require('http').createServer((req,res)=>{
   // The web app and simulator are served by this same local server, so the phone only needs one URL.
   if(req.method==='GET'&&(url==='/'||url==='/app'||url==='/app/'))return sendFile(res,'mobile/index.html','text/html; charset=utf-8');
   if(req.method==='GET'&&url==='/manifest.webmanifest')return sendFile(res,'mobile/manifest.webmanifest','application/manifest+json; charset=utf-8');
-  if(req.method==='GET'&&url==='/simulator')return sendFile(res,'robot/simulator/summon_table_sim.html','text/html; charset=utf-8');
+  if(req.method==='GET'&&url==='/simulator')return sendFile(res,'robot/simulator/summon_table_sim.html','text/html; charset=utf-8',req);
   if(req.method==='GET'&&url==='/v1/health')return send(res,200,{ok:true,name:'summon-desk-bridge (simulator)',version:1,epoch:epoch});
   if((req.headers.authorization||'')!=='Bearer '+TOKEN)return send(res,401,{error:'unauthorized'});
   if(req.method==='GET'&&url==='/v1/state'){const live=!!browserState&&(Date.now()-browserStateAt<3000);return send(res,200,{...(live?browserState:stateJSON()),simulator_connected:live,epoch:epoch})}
@@ -119,14 +122,13 @@ const server=require('http').createServer((req,res)=>{
       }
       lastNavSignature=signature;lastNavAt=now;
     }
-    // Coalesce repeated software-stop clicks for 250 ms, while always allowing the first Stop through.
-    if(command.type==='stop'&&now-lastStopAt<250){
-      return send(res,429,{accepted:false,status:'Stop already sent.',severity:'warn'});
-    }
-    if(command.type==='stop')lastStopAt=now;
     if(command.type==='stop'){
-      // Stop supersedes queued motion commands; do not let an old joystick packet run after it.
+      // Stop ALWAYS supersedes queued motion commands (even a coalesced repeat); do not let an old joystick packet run after it.
       pendingCommands=pendingCommands.filter(c=>!['drive','summon','return','learn'].includes(c.type));
+      lastNavSignature='';lastNavAt=0;
+      // Coalesce repeated Stop clicks for 250 ms, but only while the earlier Stop is still queued.
+      if(now-lastStopAt<250&&pendingCommands.some(c=>c.type==='stop'))return send(res,200,{accepted:true,status:'Stop already queued',severity:'info'});
+      lastStopAt=now;
     }else if(['summon','return'].includes(command.type)){
       // Navigation commands replace stale manual-drive packets and older navigation requests.
       pendingCommands=pendingCommands.filter(c=>!['drive','summon','return','learn'].includes(c.type));

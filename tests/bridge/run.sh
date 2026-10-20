@@ -124,10 +124,63 @@ PY
   fi
 fi
 
+# Regression checks on a fresh bridge: stop coalescing, nav guard reset, token exposure, headless summon checks.
+bridge_stop_coalesce_purges=false
+bridge_stop_resets_nav_guard=false
+bridge_sim_token_loopback=false
+bridge_sim_token_lan_hidden=false
+cleanup
+BP=
+if start_bridge; then
+  curl -fsS -H "$AUTH" -H 'Content-Type: application/json' -X POST -d '{}' "$BASE/v1/sim/state" >/dev/null || :
+  # 1. Stop, Drive, Stop within 250 ms: the second Stop must still purge the Drive and answer 200.
+  post /v1/stop '{}' "$TMP/stop1.json" >/dev/null
+  post /v1/drive '{"x":1,"y":0,"turn":0,"speed":0.5}' "$TMP/drive.json" >/dev/null
+  code=$(post /v1/stop '{}' "$TMP/stop2.json") || code=000
+  curl -fsS -H "$AUTH" "$BASE/v1/sim/poll" >"$TMP/poll_stop.json" || :
+  if [ "$code" = 200 ] && python3 - "$TMP/stop2.json" "$TMP/poll_stop.json" <<'PY'
+import json, sys
+r, p = (json.load(open(f)) for f in sys.argv[1:])
+types = [c.get("type") for c in p.get("commands", [])]
+sys.exit(0 if r.get("accepted") is True and "drive" not in types and "stop" in types else 1)
+PY
+  then bridge_stop_coalesce_purges=true; fi
+  sleep 0.3
+  # 2. Return, Stop, Return within 2 s: Stop resets the duplicate-navigation guard.
+  c1=$(post /v1/return '{}' "$TMP/ret1.json") || c1=000
+  post /v1/stop '{}' "$TMP/stop3.json" >/dev/null
+  c2=$(post /v1/return '{}' "$TMP/ret2.json") || c2=000
+  [ "$c1" = 200 ] && [ "$c2" = 200 ] && bridge_stop_resets_nav_guard=true
+  # 3. The simulator page carries the token only for loopback requests.
+  curl -fsS "$BASE/simulator" 2>/dev/null | grep -q 'SUMMON_BRIDGE_TOKEN="verify"' && bridge_sim_token_loopback=true
+  LAN_IP=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -v '^127\.' | grep -E '^[0-9.]+$' | head -1)
+  if [ -n "$LAN_IP" ] && curl -fsS -o "$TMP/sim_lan.html" "http://$LAN_IP:$PORT/simulator" 2>/dev/null; then
+    grep -q 'verify' "$TMP/sim_lan.html" || bridge_sim_token_lan_hidden=true
+  else
+    echo "note: no reachable non-loopback address; LAN token check skipped" >&2; bridge_sim_token_lan_hidden=true
+  fi
+fi
+cleanup
+BP=
+# 4. In-process checks (loopback predicate, headless summon low-battery redirect and E-stop).
+PORT=$((PORT-2)) SUMMON_TOKEN=verify node tests/bridge/headless_checks.js >"$TMP/headless.jsonl" 2>"$TMP/headless.err"
+headless_ok=$?
+cat "$TMP/headless.jsonl"
+
 printf '{"check":"bridge_dup_poll","ok":%s}\n' "$bridge_dup_poll"
 printf '{"check":"bridge_restart_stale_epoch","ok":%s}\n' "$bridge_restart_stale_epoch"
 printf '{"check":"bridge_restart_current_epoch","ok":%s}\n' "$bridge_restart_current_epoch"
 
+printf '{"check":"bridge_stop_coalesce_purges","ok":%s}\n' "$bridge_stop_coalesce_purges"
+printf '{"check":"bridge_stop_resets_nav_guard","ok":%s}\n' "$bridge_stop_resets_nav_guard"
+printf '{"check":"bridge_sim_token_loopback","ok":%s}\n' "$bridge_sim_token_loopback"
+printf '{"check":"bridge_sim_token_lan_hidden","ok":%s}\n' "$bridge_sim_token_lan_hidden"
+
 [ "$bridge_dup_poll" = true ] &&
 [ "$bridge_restart_stale_epoch" = true ] &&
-[ "$bridge_restart_current_epoch" = true ]
+[ "$bridge_restart_current_epoch" = true ] &&
+[ "$bridge_stop_coalesce_purges" = true ] &&
+[ "$bridge_stop_resets_nav_guard" = true ] &&
+[ "$bridge_sim_token_loopback" = true ] &&
+[ "$bridge_sim_token_lan_hidden" = true ] &&
+[ "$headless_ok" = 0 ]
