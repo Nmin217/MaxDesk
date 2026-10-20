@@ -18,6 +18,7 @@
   color-scheme:dark
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{background:var(--bg)}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--body);
   padding-top:env(safe-area-inset-top,0px);padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));
@@ -37,6 +38,15 @@ h1,h2{font-family:var(--display);margin:0;text-wrap:balance}
 .wordmark h1{font-size:17px;font-weight:800;font-stretch:122%;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
 .wordmark span{display:block;font:500 11px/1.2 var(--mono);color:var(--mute);letter-spacing:.02em}
 .top>*{min-width:0}.pill{flex:0 1 auto}
+.header-tools{display:flex;align-items:center;gap:8px;min-width:0}.header-tools>.pill{min-width:0}
+main{grid-template-columns:minmax(0,1fr)}
+@media (max-width:400px){.wordmark span{display:none}.wordmark h1{font-size:15px;letter-spacing:.03em}.mark{flex-basis:26px;height:26px}.header-tools{gap:6px}}
+.hbat{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid var(--line2);border-radius:99px;background:var(--panel)}
+.hbat-body{position:relative;width:24px;height:12px;border:1.5px solid var(--mute);border-radius:3px;padding:1.5px}
+.hbat-body:after{content:"";position:absolute;right:-4px;top:3px;width:2px;height:4px;border-radius:0 1px 1px 0;background:var(--mute)}
+.hbat-fill{display:block;height:100%;width:0;border-radius:1px;background:var(--go);transition:width .3s}
+.hbat.mid .hbat-fill{background:var(--amber)}.hbat.low .hbat-fill{background:var(--stop)}.hbat.low b{color:var(--stop)}
+.hbat b{font:600 12px/1 var(--mono);font-variant-numeric:tabular-nums}
 @media (max-width:380px){.wordmark h1{font-size:15px;letter-spacing:.03em}.wordmark span{display:none}.mark{flex-basis:26px;height:26px}}
 .pill{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid var(--line2);border-radius:99px;background:var(--panel);font:500 12px/1 var(--mono);color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48vw}
 .pill:before{content:"";flex:0 0 8px;height:8px;border-radius:50%;background:var(--warn)}
@@ -153,6 +163,16 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 .lidar-legend span{display:flex;align-items:center;gap:6px}.lidar-key{width:8px;height:8px;border-radius:50%;background:#53d1b8}.lidar-key.robot{background:#e8501f}.lidar-key.wall{background:#e0a83e}
 .lidar-note code{font-family:var(--mono);font-size:12px}
 
+/* Speed override dialog */
+.modal{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:rgba(4,7,12,.72);backdrop-filter:blur(4px)}
+.modal-card{width:min(100%,400px);background:var(--panel);border:1px solid var(--line2);border-top:3px solid var(--warn);border-radius:16px;padding:18px;display:grid;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal-card h2{font-size:21px;font-stretch:108%}
+.modal-card p{margin:0;font-size:14px;color:var(--mute)}.modal-card p b{color:var(--ink)}
+.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.btn.danger{background:var(--warn);border-color:var(--warn);color:#1f0c00}
+.override-on{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 11px;border-radius:10px;border:1px solid var(--warn);color:var(--warn);font-size:12px;margin-top:8px}
+.override-on button{border:0;background:none;color:var(--ink);text-decoration:underline;cursor:pointer;font-size:12px;padding:4px}
+
 /* Stop bar */
 .stopbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:linear-gradient(to top,var(--bg) 70%,rgba(10,14,21,0));
   padding:14px max(14px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px))}
@@ -166,7 +186,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 </style>
 </head>
 <body><main>
-<header class="top"><div class="wordmark"><div class="mark" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="#1d1304" stroke-width="2"><rect x="3" y="6" width="14" height="8" rx="1.5"/><circle cx="5" cy="16.5" r="1.3" fill="#1d1304" stroke="none"/><circle cx="15" cy="16.5" r="1.3" fill="#1d1304" stroke="none"/><path d="M10 2.5v3"/></svg></div><div><h1>Summon Desk</h1><span>MAXSwerve · 4 modules</span></div></div><div id="connection" class="pill">Connecting</div></header>
+<header class="top"><div class="wordmark"><div class="mark" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="#1d1304" stroke-width="2"><rect x="3" y="6" width="14" height="8" rx="1.5"/><circle cx="5" cy="16.5" r="1.3" fill="#1d1304" stroke="none"/><circle cx="15" cy="16.5" r="1.3" fill="#1d1304" stroke="none"/><path d="M10 2.5v3"/></svg></div><div><h1>Summon Desk</h1><span>MAXSwerve · 4 modules</span></div></div><div class="header-tools"><div id="connection" class="pill">Connecting</div><div class="hbat" id="hbat" title="Robot battery"><span class="hbat-body"><span class="hbat-fill" id="hbatFill"></span></span><b id="hbatPct">—</b></div></div></header>
 <nav class="tabs" role="tablist" aria-label="Views"><button class="tab active" data-tab="control" role="tab" aria-selected="true" aria-controls="tab-control">Control</button><button class="tab" data-tab="drive" role="tab" aria-selected="false" aria-controls="tab-drive">Drive</button><button class="tab" data-tab="lidar" role="tab" aria-selected="false" aria-controls="tab-lidar">3D room</button></nav>
 
 <section id="tab-control" class="tab-panel active" role="tabpanel">
@@ -180,18 +200,18 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
    <div class="readout"><span class="eyebrow">Update</span><b><span id="lat">—</span><small>ms</small></b></div>
   </div>
  </section>
- <section class="panel plan-panel">
-  <div class="panel-head"><h2 class="eyebrow">Room plan · live</h2><span class="eyebrow" style="color:var(--faint)">1 m grid</span></div>
-  <div class="plan"><canvas id="map" aria-label="Room plan. Tap to set where to summon the desk."></canvas><div class="plan-hint">Tap to set the summon spot</div></div>
-  <div class="legend"><span><i style="background:var(--wall)"></i>Wall / object</span><span><i style="background:var(--floor);outline:1px solid var(--line2)"></i>Seen floor</span><span><i style="background:var(--busy)"></i>Busy</span><span><i class="dot" style="background:var(--cyan)"></i>LiDAR</span><span><i style="background:var(--amber)"></i>Desk</span><span><i class="dot" style="background:var(--ink)"></i>You</span></div>
-  <div id="mapinfo">Map updates with simulator state.</div>
- </section>
  <section class="panel">
   <div class="actions">
    <button class="btn primary" id="summon"><span class="t">Summon desk</span><small id="targetText">to 4.0, 3.0 m</small></button>
    <button class="btn return" id="return">Return to dock</button>
   </div>
   <div id="message" class="toast" role="status" aria-live="polite">Connecting to the simulator…</div>
+ </section>
+ <section class="panel plan-panel">
+  <div class="panel-head"><h2 class="eyebrow">Room plan · live</h2><span class="eyebrow" style="color:var(--faint)">1 m grid</span></div>
+  <div class="plan"><canvas id="map" aria-label="Room plan. Tap to set where to summon the desk."></canvas><div class="plan-hint">Tap to set the summon spot</div></div>
+  <div class="legend"><span><i style="background:var(--wall)"></i>Wall / object</span><span><i style="background:var(--floor);outline:1px solid var(--line2)"></i>Seen floor</span><span><i style="background:var(--busy)"></i>Busy</span><span><i class="dot" style="background:var(--cyan)"></i>LiDAR</span><span><i style="background:var(--amber)"></i>Desk</span><span><i class="dot" style="background:var(--ink)"></i>You</span></div>
+  <div id="mapinfo">Map updates with simulator state.</div>
  </section>
  <section class="panel">
   <div class="power">
@@ -215,7 +235,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
  <section class="panel">
   <div class="drive-head"><div><h2>Manual drive</h2><p class="small" style="margin:2px 0 0">Drag to move in any direction. Hold a rotate button to turn.</p></div><span class="tag">SIM ONLY</span></div>
   <div class="drive-grid"><div><div class="stick-pad" id="stickPad" role="application" aria-label="Movement joystick"><span class="stick-label up">FWD</span><span class="stick-label down">BACK</span><span class="stick-label left">LEFT</span><span class="stick-label right">RIGHT</span><div class="stick-knob" id="stickKnob"></div></div><div class="small" style="text-align:center;margin-top:8px">Let go to stop</div></div>
-  <div class="drive-side"><div><div class="eyebrow">Rotate</div><div class="turn-controls"><button type="button" class="turn-btn" id="turnLeft">↶ Left</button><button type="button" class="turn-btn" id="turnRight">Right ↷</button></div></div><div class="drive-readout"><span>Command</span><strong id="driveVector">X 0.00 · Y 0.00 · Ω 0.00</strong></div><div class="drive-speed"><label for="driveSpeed" class="eyebrow">Speed limit <strong id="driveSpeedValue">35%</strong></label><input id="driveSpeed" type="range" min="8" max="100" value="35" step="1" aria-describedby="speedWarning speedLimitNote"><div id="speedLimitNote" class="small">35% of the simulator's maximum.</div><div id="speedWarning" class="speed-warning" role="status" aria-live="polite" hidden></div></div></div></div>
+  <div class="drive-side"><div><div class="eyebrow">Rotate</div><div class="turn-controls"><button type="button" class="turn-btn" id="turnLeft">↶ Left</button><button type="button" class="turn-btn" id="turnRight">Right ↷</button></div></div><div class="drive-readout"><span>Command</span><strong id="driveVector">X 0.00 · Y 0.00 · Ω 0.00</strong></div><div class="drive-speed"><label for="driveSpeed" class="eyebrow">Speed limit <strong id="driveSpeedValue">35%</strong></label><input id="driveSpeed" type="range" min="8" max="100" value="35" step="1" aria-describedby="speedWarning speedLimitNote"><div id="speedLimitNote" class="small">35% of the simulator's maximum.</div><div id="speedWarning" class="speed-warning" role="status" aria-live="polite" hidden></div><div class="override-on" id="overrideOn" hidden><span>Speed override on: up to 100%</span><button type="button" id="overrideOff">Turn off</button></div></div></div></div>
   <div class="drive-safety">Simulation only. The simulator still applies its LiDAR footprint checks; this is not a safety certification for real hardware.</div>
   <div id="driveStatus" class="lidar-status" role="status" aria-live="polite">Manual drive idle.</div>
  </section>
@@ -234,6 +254,12 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 <nav class="links"><a href="/simulator" target="_blank" rel="noopener">Open full simulator ↗</a><a href="/v1/health" target="_blank" rel="noopener">Bridge health ↗</a><a href="#settings" id="settingsLink">Connection settings</a></nav>
 <div class="footer">Summon Desk · local network only · simulation mode</div>
 </main>
+<div class="modal" id="speedModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="speedModalTitle" aria-describedby="speedModalBody">
+ <div class="eyebrow" style="color:var(--warn)">Speed override</div>
+ <h2 id="speedModalTitle">Go faster than <span id="speedCap">50</span>%?</h2>
+ <p id="speedModalBody">You asked for <b id="speedAsk" class="mono">—</b>. Above <span id="speedCap2">50</span>% the desk needs more room to stop: about <b id="speedStop" class="mono">—</b> from that speed, plus Wi-Fi delay. Only do this with a clear area and someone at the E-stop.</p>
+ <div class="modal-actions"><button class="btn" id="speedCancel" type="button">Keep <span id="speedCap3">50</span>%</button><button class="btn danger" id="speedConfirm" type="button">Override</button></div>
+</div></div>
 <div class="stopbar"><div class="stopbar-inner"><button class="btn stop" id="stop">STOP</button><div class="stop-note">Software stop. Keep the physical E-stop in reach on real hardware.</div></div></div>
 <script>
 (()=>{'use strict';let token='dev-token',busy=false,lastMap=0,lastMapSignature='',currentEpoch=null;const $=id=>document.getElementById(id);const fmt=(n,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d):'—';const say=(s,kind='')=>{ $('message').textContent=s;$('message').className='toast '+kind};
@@ -281,7 +307,7 @@ function shownPose(now=performance.now()){const {from,to}=anim;if(!to)return nul
 function segs(id,pct,known){const host=$(id);if(host.children.length!==10)host.replaceChildren(...Array.from({length:10},()=>document.createElement('i')));const lit=known?Math.round(Math.max(0,Math.min(100,pct))/10):0;[...host.children].forEach((c,i)=>c.classList.toggle('on',i<lit));host.classList.toggle('low',known&&pct<=20);host.classList.toggle('mid',known&&pct>20&&pct<=40)}
 function updateTargetText(){setText('targetText','to '+fmt($('x').value,1)+', '+fmt($('y').value,1)+' m')}
 function render(s){observeState(s);lastState=s;if(Number.isFinite(Number(s.epoch)))currentEpoch=Number(s.epoch);const off=s.simulator_connected===false;const connected=$('connection');connected.textContent=off?'Simulator offline':'Live';connected.classList.toggle('online',!off);setText('status',s.status||'Unknown');$('status').className=s.severity==='bad'?'bad':s.severity==='warn'?'warn':'';setText('mode',off?'Open /simulator in another tab to connect':'mode: '+(s.mode||'—'));setText('active',off?'Unknown':s.active?'Moving':'Parked');$('active').classList.toggle('moving',!off&&!!s.active);
- const rb=Number(s.battery?.robot_pct),ub=Number(s.battery?.ups_pct),robotKnown=!off&&Number.isFinite(rb)&&s.battery?.robot_pct!==null&&s.battery?.robot_pct!==undefined,upsKnown=!off&&Number.isFinite(ub)&&s.battery?.ups_pct!==null&&s.battery?.ups_pct!==undefined;setText('battery',robotKnown?fmt(rb,0):'—');segs('batterybar',rb,robotKnown);setText('ups',upsKnown?fmt(ub,0):'—');segs('upsbar',ub,upsKnown);setText('charging',typeof s.charging==='boolean'?(s.charging?'yes':'no'):'unknown');
+ const rb=Number(s.battery?.robot_pct),ub=Number(s.battery?.ups_pct),robotKnown=!off&&Number.isFinite(rb)&&s.battery?.robot_pct!==null&&s.battery?.robot_pct!==undefined,upsKnown=!off&&Number.isFinite(ub)&&s.battery?.ups_pct!==null&&s.battery?.ups_pct!==undefined;setText('battery',robotKnown?fmt(rb,0):'—');setText('hbatPct',robotKnown?fmt(rb,0)+'%':'—');$('hbatFill').style.width=(robotKnown?Math.max(0,Math.min(100,rb)):0)+'%';$('hbat').classList.toggle('low',robotKnown&&rb<=20);$('hbat').classList.toggle('mid',robotKnown&&rb>20&&rb<=40);segs('batterybar',rb,robotKnown);setText('ups',upsKnown?fmt(ub,0):'—');segs('upsbar',ub,upsKnown);setText('charging',typeof s.charging==='boolean'?(s.charging?'yes':'no'):'unknown');
  const warnings=[];if(off)warnings.push({kind:'warn',title:'Simulator disconnected',body:'Open /simulator and keep it running to update controls and readings.'});if(!robotKnown)warnings.push({kind:'warn',title:'Robot battery unavailable',body:'No valid robot battery reading.'});else if(rb<=20)warnings.push({kind:'danger',title:'Robot battery low',body:'At '+fmt(rb,0)+'%. Recharge before the next run.'});if(!upsKnown)warnings.push({kind:'warn',title:'Desk power unavailable',body:'No valid desk power reading.'});else if(ub<=20)warnings.push({kind:'danger',title:'Desk power low',body:'At '+fmt(ub,0)+'%. Check the power station.'});$('batteryWarnings').replaceChildren(...warnings.map(w=>{const el=document.createElement('div');el.className='battery-warning '+w.kind;const title=document.createElement('strong');title.textContent=w.title;const body=document.createElement('span');body.textContent=w.body;el.append(title,body);return el}));
  setText('px',fmt(s.pose?.x,2)+' m');setText('py',fmt(s.pose?.y,2)+' m');setText('heading',fmt((((Number(s.pose?.theta)||0)*180/Math.PI)%360+360)%360,0)+'°');setText('estop',off?'Unknown':s.estop?'ENGAGED':'Clear');$('estop').className='value '+(off?'warn':s.estop?'danger':'good');setText('cord',s.cord?.plugged?'Plugged in':'Unplugged');$('cord').className='value '+(s.cord?.plugged?'warn':'');setText('interlock',s.cord?.interlock_on?'On':'Off');setText('explored',fmt(s.explored_pct,0)+'%');
  if(!$('x').dataset.edited){$('x').value=fmt(s.user?.x,1);$('y').value=fmt(s.user?.y,1)}updateTargetText();
@@ -543,7 +569,17 @@ function releaseDrive(sendZero=true){driveActive=false;stickPointer=null;driveX=
 function moveStick(e){const r=$('stickPad').getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,lim=r.width*.34;let dx=e.clientX-cx,dy=e.clientY-cy,d=Math.hypot(dx,dy);if(d>lim){dx=dx/d*lim;dy=dy/d*lim}driveX=dx/lim;driveY=-dy/lim;$('stickKnob').style.left=`${50+dx/r.width*100}%`;$('stickKnob').style.top=`${50+dy/r.height*100}%`;$('driveVector').textContent=`X ${driveX.toFixed(2)} · Y ${driveY.toFixed(2)} · Ω ${driveTurn.toFixed(2)}`}
 $('stickPad').addEventListener('pointerdown',e=>{if(stickPointer!==null)return;stickPointer=e.pointerId;driveActive=true;$('stickPad').setPointerCapture(e.pointerId);moveStick(e);driveTickStart()});$('stickPad').addEventListener('pointermove',e=>{if(e.pointerId===stickPointer){moveStick(e);pushDrive()}});$('stickPad').addEventListener('pointerup',e=>{if(e.pointerId===stickPointer)releaseDrive()});$('stickPad').addEventListener('pointercancel',releaseDrive);
 function turnDown(dir,e){e.preventDefault();try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}driveActive=true;driveTurn=dir;driveTickStart()}function turnUp(){driveTurn=0;if(Math.abs(driveX)<.02&&Math.abs(driveY)<.02)releaseDrive();else pushDrive()}$('turnLeft').addEventListener('pointerdown',e=>turnDown(-1,e));$('turnRight').addEventListener('pointerdown',e=>turnDown(1,e));for(const id of ['turnLeft','turnRight']){const b=$(id);b.addEventListener('pointerup',turnUp);b.addEventListener('pointercancel',turnUp);b.addEventListener('pointerleave',e=>{if(e.buttons===0)turnUp()})}
-$('driveSpeed').addEventListener('input',()=>{updateSpeedWarning();if(driveActive)pushDrive()});updateSpeedWarning();window.addEventListener('blur',()=>{if(driveActive)releaseDrive()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&driveActive)releaseDrive()});
+// Speed above SPEED_CAP needs an explicit override, asked for in a dialog. Until then the slider stops at the cap.
+const SPEED_CAP=50,FULL_SPEED_MPS=0.8,BRAKE_MPS2=2.4;let speedOverride=false,speedAsked=null,lastFocus=null;
+function openSpeedModal(pct){speedAsked=pct;for(const id of ['speedCap','speedCap2','speedCap3'])setText(id,String(SPEED_CAP));setText('speedAsk',pct+'%');const v=FULL_SPEED_MPS*pct/100;setText('speedStop',Math.round((v*0.1+v*v/(2*BRAKE_MPS2))*100)+' cm');lastFocus=document.activeElement;$('speedModal').hidden=false;$('speedCancel').focus()}
+function closeSpeedModal(){$('speedModal').hidden=true;speedAsked=null;if(lastFocus&&lastFocus.focus)lastFocus.focus()}
+function setOverride(on){speedOverride=on;$('overrideOn').hidden=!on;if(!on&&Number($('driveSpeed').value)>SPEED_CAP){$('driveSpeed').value=SPEED_CAP;updateSpeedWarning();if(driveActive)pushDrive()}}
+$('driveSpeed').addEventListener('input',()=>{const pct=Number($('driveSpeed').value);if(pct>SPEED_CAP&&!speedOverride){$('driveSpeed').value=SPEED_CAP;if($('speedModal').hidden)openSpeedModal(pct);else speedAsked=Math.max(speedAsked||0,pct)}updateSpeedWarning();if(driveActive)pushDrive()});
+$('speedCancel').addEventListener('click',closeSpeedModal);
+$('speedConfirm').addEventListener('click',()=>{const pct=speedAsked;setOverride(true);closeSpeedModal();if(pct){$('driveSpeed').value=pct;updateSpeedWarning();if(driveActive)pushDrive()}logEvent('Speed override on','Drive speed limit raised above '+SPEED_CAP+'%','warn')});
+$('overrideOff').addEventListener('click',()=>{setOverride(false);logEvent('Speed override off','Drive speed limited to '+SPEED_CAP+'%','')});
+$('speedModal').addEventListener('keydown',e=>{if(e.key==='Escape')closeSpeedModal()});
+$('speedModal').addEventListener('click',e=>{if(e.target===$('speedModal'))closeSpeedModal()});updateSpeedWarning();window.addEventListener('blur',()=>{if(driveActive)releaseDrive()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&driveActive)releaseDrive()});
 
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.tab)));
 initEventLog();$('clearEventLog').addEventListener('click',()=>{eventItems=[];try{localStorage.removeItem(EVENT_LOG_KEY)}catch(_){}renderEventLog()});
