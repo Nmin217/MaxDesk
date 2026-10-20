@@ -8,7 +8,16 @@
  * stop (contactor or brake) where the hardware allows it. Neither method
  * may throw under normal conditions.
  *
- * All coordinates are field-relative, in meters and radians.
+ * Frame: field-relative, right-handed, meters and radians.
+ *   +x  to the right on the floor plan (sim screen +x)
+ *   +y  up on the floor plan (sim screen -y; the simulator is y-down)
+ *   theta / omega  counter-clockwise positive, seen from above
+ * writeWheels(vx, vy, omega): field-frame m/s and rad/s. The runtime converts from simulator px/s
+ *   (y-down, clockwise theta) and clamps to |v| <= 1.0 m/s, |omega| <= 2.0 rad/s before calling.
+ * readCord(): { plugged: bool, interlock_on: bool }. plugged && interlock_on means the wheels must
+ *   not move; the runtime calls stopAll() instead of writeWheels(). If it throws, the runtime
+ *   treats the cord as locked (fail closed).
+ * estopEngaged(): bool. If it throws, the runtime treats the e-stop as engaged.
  *
  * Implementations:
  *   null_io.js   safe default: refuses all motion

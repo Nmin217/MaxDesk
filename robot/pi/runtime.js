@@ -14,7 +14,9 @@ const mkctx = () => new Proxy({}, {
 function el(id) {
   return global.els[id] || (global.els[id] = {
     id, width: 1600, height: 1000,
-    style: {}, dataset: {}, value: '1', checked: false,
+    // Select values default to '1' and checkboxes to off, except: the desk uses a manual charging
+    // cord ('dm') with the cord interlock on ('il'). Without these, cordLock() in the sim never engages.
+    style: {}, dataset: {}, value: id === 'dm' ? 'manual' : '1', checked: id === 'il',
     textContent: '', className: '',
     getContext: () => mkctx(),
     addEventListener() {}, appendChild() {}, setPointerCapture() {},
@@ -33,6 +35,20 @@ if (!global.document) {
 }
 
 const PX = 0.02; // 1 px = 0.02 m, same as simulator and bridge
+// Hard ceiling on anything sent to writeWheels, whatever the planner asks for (sim VMAX is ~0.8 m/s).
+const MAX_V = 1.0;   // m/s
+const MAX_W = 2.0;   // rad/s
+const HTTP_TIMEOUT_MS = 1500;
+
+// Sim velocity (px/s, screen frame: y down, theta clockwise) -> IO field frame (m/s, y up, omega CCW+),
+// clamped to MAX_V / MAX_W. See io.js for the frame.
+function toField(vx, vy, w) {
+  let fx = vx * PX, fy = -vy * PX, fw = -w;
+  const sp = Math.hypot(fx, fy);
+  if (!(sp <= MAX_V)) { const k = sp > 0 && Number.isFinite(sp) ? MAX_V / sp : 0; fx *= k; fy *= k; }   // NaN -> 0
+  fw = Number.isFinite(fw) ? Math.max(-MAX_W, Math.min(MAX_W, fw)) : 0;
+  return { vx: fx, vy: fy, omega: fw };
+}
 
 function loadSim() {
   const simPath = path.join(__dirname, '..', '..', 'bridge', 'sim_core.js');
@@ -75,6 +91,7 @@ function httpJson(method, urlStr, token, body) {
         ...(payload ? { 'Content-Length': payload.length } : {})
       }
     }, (res) => {
+      res.on('error', reject);
       let chunks = '';
       res.on('data', (c) => chunks += c);
       res.on('end', () => {
@@ -84,6 +101,8 @@ function httpJson(method, urlStr, token, body) {
       });
     });
     req.on('error', reject);
+    // A hung bridge must not leak a socket per poll: abort after HTTP_TIMEOUT_MS of inactivity.
+    req.setTimeout(HTTP_TIMEOUT_MS, () => req.destroy(new Error('http timeout')));
     if (payload) req.write(payload);
     req.end();
   });
@@ -106,6 +125,8 @@ function createRuntime({
   let lastBridgeOk = 0;
   let timer = null;
   let running = false;
+  let hwEstopLatched = false;   // we set the sim e-stop because the hardware one was engaged
+  let hwCordPlugged = null;     // last hardware cord state pushed into the sim (null = never read)
 
   async function healthCheck() {
     try {
@@ -148,7 +169,7 @@ function createRuntime({
     else if (c.type === 'cord') sim.setCord(!!c.plugged);
     else if (c.type === 'drive') sim.setManualDrive({
       enabled: true, x: c.x, y: c.y, turn: c.turn, speed: c.speed,
-      lastCommandAt: nowMs()
+      lastCommandAt: Date.now()   // the sim's 750 ms deadman compares against Date.now(), not nowMs
     });
   }
 
@@ -169,15 +190,28 @@ function createRuntime({
 
   async function tickOnce(dt) {
     if (dt <= 0) return;
-    const fresh = bridgeFresh();
-    const estop = io.estopEngaged();
-    if (estop) sim.setEstop(true);
-    sim.update(dt);
-    const s = sim.getState();
-    const moving = Math.hypot(s.T.vx, s.T.vy) > 0.01 || Math.abs(s.T.w) > 0.01;
-    if (estop || !fresh) { io.stopAll(); return; }
-    if (moving || s.active) io.writeWheels(s.T.vx, s.T.vy, s.T.w);
-    else io.stopAll();
+    try {
+      const fresh = bridgeFresh();
+      let estop;
+      try { estop = !!io.estopEngaged(); } catch (_) { estop = true; }   // unreadable e-stop = engaged
+      if (estop) { sim.setEstop(true); hwEstopLatched = true; }
+      else if (hwEstopLatched) { sim.setEstop(false); hwEstopLatched = false; }   // released: the sim left active=false, so no auto-resume
+      // Cord: {plugged, interlock_on}. Plugged with interlock on = no wheel command. Unreadable = locked.
+      let cordLocked;
+      try {
+        const c = io.readCord();
+        cordLocked = !c || (!!c.plugged && !!c.interlock_on);
+        if (c && hwCordPlugged !== !!c.plugged) { hwCordPlugged = !!c.plugged; sim.setCord(hwCordPlugged); }   // on change only, so bridge 'cord' commands still work
+      } catch (_) { cordLocked = true; }
+      sim.update(dt);
+      const s = sim.getState();
+      if (estop || !fresh || cordLocked) { io.stopAll(); return; }
+      const moving = Math.hypot(s.T.vx, s.T.vy) > 0.01 || Math.abs(s.T.w) > 0.01;
+      if (moving || s.active) { const v = toField(s.T.vx, s.T.vy, s.T.w); io.writeWheels(v.vx, v.vy, v.omega); }
+      else io.stopAll();
+    } catch (_) {
+      try { io.stopAll(); } catch (_) {}   // any failure in the tick leaves the wheels stopped
+    }
   }
 
   // Network calls run beside the control loop, one of each in flight at a time: a slow or hung
