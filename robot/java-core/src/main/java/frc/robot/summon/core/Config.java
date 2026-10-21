@@ -29,7 +29,7 @@ public final class Config {
     public double unknownPen = 0.15;             // per unseen cell
     public double trafficK = 0.015, trafficMax = 0.4;
     public double ringRadius = 1.40, ringTol = 0.12, heurRingRadius = 1.52;  // parking ring around the user (m)
-    public int maxPops = 64000;
+    public int maxPops = 20000;                  // heap pops per search pass (stale ones too); the test scenes need <= ~6000
 
     // ---- map memory ----
     public double persistSeconds = 1.0;          // a hit must be seen this long to count as static

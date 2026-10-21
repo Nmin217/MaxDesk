@@ -25,9 +25,11 @@ public final class OrientationPlanner {
     private final int[][] roomOffs, rotOffs;
     private final double roomyR, rotR;
     private final float[] G; private final int[] P; private final boolean[] closed;
-    private final float[] hf; private final int[] hi; private int hn;
+    private float[] hf; private int[] hi; private int hn;
     /** True if the last plan only fit with the tight margin. */
     public boolean squeeze = false;
+    /** Heap pops used by the last plan() (both passes), and whether a pass stopped at cfg.maxPops. */
+    public int lastPops = 0; public boolean capped = false;
 
     public OrientationPlanner(Config cfg) {
         this.cfg = cfg; gw = cfg.gw; gh = cfg.gh; nc = gw * gh; ns = nc * Config.NK;
@@ -40,7 +42,7 @@ public final class OrientationPlanner {
         double circ = Math.hypot(cfg.hw, cfg.hh);
         roomyR = circ + cfg.roomyMargin; rotR = circ + cfg.rotMargin;
         roomOffs = offsets(roomyR); rotOffs = offsets(rotR);
-        G = new float[ns]; P = new int[ns]; closed = new boolean[ns]; hf = new float[ns * 10]; hi = new int[ns * 10];
+        G = new float[ns]; P = new int[ns]; closed = new boolean[ns]; hf = new float[ns]; hi = new int[ns];   // grows in push() if needed
     }
 
     // ---------------- grids ----------------
@@ -115,6 +117,7 @@ public final class OrientationPlanner {
 
     // ---------------- heap ----------------
     private void push(float f, int i) {
+        if (hn == hf.length) { hf = Arrays.copyOf(hf, hn * 2); hi = Arrays.copyOf(hi, hn * 2); }
         int k = hn++;
         while (k > 0) { int p = (k - 1) >> 1; if (hf[p] <= f) break; hf[k] = hf[p]; hi[k] = hi[p]; k = p; }
         hf[k] = f; hi[k] = i;
@@ -166,10 +169,10 @@ public final class OrientationPlanner {
         int s0 = k0 * nc + sy * gw + sx; G[s0] = 0; push(hfa[s0 % nc], s0);
         int goalS = -1, pops = 0, bestS = -1; double bestC = 1e18;
         while (hn > 0) {
-            int e = pop();
+            if (pops >= cfg.maxPops) { capped = true; break; }   // every pop counts, stale ones too: bounds the work
+            int e = pop(); pops++;
             if (e < 0) { goalS = -e - 1; break; }
             int s = e; if (closed[s]) continue; closed[s] = true;
-            if (++pops > cfg.maxPops) break;
             int c = s % nc, k = s / nc;
             if (ring[c] && (kPk[c] == -2 || k == kPk[c])) {
                 double tc = G[s] + gpen[c]; if (tc < bestC) { bestC = tc; bestS = s; }
@@ -201,6 +204,7 @@ public final class OrientationPlanner {
                 if (ng < G[nsx]) { G[nsx] = (float) ng; P[nsx] = s; push((float) (ng + hfa[c]), nsx); }
             }
         }
+        lastPops += pops;
         if (goalS < 0) goalS = bestS;   // search cut short: use the best goal found so far
         if (goalS < 0) return Collections.emptyList();
         ArrayList<Waypoint> out = new ArrayList<>();
@@ -218,7 +222,7 @@ public final class OrientationPlanner {
     public List<Waypoint> plan(double x, double y, double th, GoalType type, double gx, double gy, boolean[] occ, float[] risk) {
         boolean[] roomy = buildRoomy(occ, roomOffs, roomyR), rotOk = buildRoomy(occ, rotOffs, rotR);
         boolean[][] Bt = buildBlocked(occ, kernTight, cfg.mgTight, x, y);
-        squeeze = false;
+        squeeze = false; lastPops = 0; capped = false;
         List<Waypoint> r = search(buildBlocked(occ, kernStrict, cfg.mgStrict, x, y), Bt, roomy, rotOk, risk, x, y, th, type, gx, gy);
         if (r.isEmpty()) {   // nothing fits with the full margin: retry tighter (the supervisor still guards contact)
             List<Waypoint> r2 = search(Bt, Bt, roomy, rotOk, risk, x, y, th, type, gx, gy);

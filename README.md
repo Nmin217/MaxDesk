@@ -40,7 +40,7 @@ Needs: a JDK (17 or newer), Node 18+, Python 3, curl. No other dependencies.
 | Part | Status |
 |---|---|
 | Simulator behaviour | Tested headlessly: stress runs with 0 collisions, slots, parking, round trips, batteries, the cord lock. |
-| Java core (planner, supervisor, memory) | Builds and passes its own 16 checks; matches the simulator's routes (see above). |
+| Java core (planner, supervisor, memory) | Builds and passes its own 18 checks; matches the simulator's routes (see above). |
 | Bridge and API | Tested with curl by `verify.sh`. |
 | 3D model | Geometry checked (every part connected at four desk heights, module dimensions match REV's figures). Not seen in a browser by the author. |
 | **Swift app** | **Never compiled.** Only a delimiter check. Build it in Xcode and expect small fixes. |

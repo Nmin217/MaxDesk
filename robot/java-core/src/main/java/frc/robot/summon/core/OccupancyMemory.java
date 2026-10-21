@@ -44,8 +44,8 @@ public final class OccupancyMemory {
         staticMem = new boolean[n]; seen = new boolean[n]; traffic = new float[n];
     }
 
-    private int cellX(double x) { return (int) (x / cfg.cell); }
-    private int cellY(double y) { return (int) (y / cfg.cell); }
+    private int cellX(double x) { return (int) Math.floor(x / cfg.cell); }   // floor: -0.1 m is off the map, not cell 0
+    private int cellY(double y) { return (int) Math.floor(y / cfg.cell); }
     private boolean in(int x, int y) { return x >= 0 && x < gw && y >= 0 && y < gh; }
 
     public void clear() {

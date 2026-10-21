@@ -20,7 +20,7 @@ and standard-library APIs (WPILib projects have used JDK 17; check yours).
 ## Build and test
 
     java tools/Build.java                                   # compiles src/ into out/
-    java -cp out frc.robot.summon.core.CoreTests            # 16 checks + cross-check lines
+    java -cp out frc.robot.summon.core.CoreTests            # 18 checks + cross-check lines
 
 The `XC ...` lines are the cross-check against the simulator: same scenes, same format, compare line by line.
 

@@ -112,6 +112,18 @@ public final class CoreTests {
         check("second target: path never overlaps real obstacles", truthHits(cfg, p450) == 0, "overlapping waypoints: " + truthHits(cfg, p450));
         check("second target: parks table-horizontal", p450.get(p450.size() - 1).k % 8 == 0, "k=" + p450.get(p450.size() - 1).k);
 
+        OccupancyMemory boxed = new OccupancyMemory(cfg);   // goal walled in on all sides: no route exists
+        int bx = 60, by = 25;
+        for (int dy = -6; dy <= 6; dy++) for (int dx = -6; dx <= 6; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) == 6) boxed.staticMem[(by + dy) * cfg.gw + bx + dx] = true;
+        Arrays.fill(boxed.seen, true);
+        long tb = System.nanoTime();
+        List<Waypoint> pBox = pl.plan(2.0, 2.0, 0, OrientationPlanner.GoalType.POINT, (bx + .5) * cfg.cell, (by + .5) * cfg.cell,
+                boxed.buildOccupancy(0, new ArrayList<>(), false, 2.0, 2.0), boxed.risk());
+        double msBox = (System.nanoTime() - tb) / 1e6;
+        check("unreachable goal: no path, search stops at maxPops instead of exhausting the state space",
+                pBox.isEmpty() && pl.capped && pl.lastPops <= 2 * cfg.maxPops,
+                "len " + pBox.size() + " pops " + pl.lastPops + " (cap " + cfg.maxPops + " per pass) capped " + pl.capped + String.format(" %.1f ms", msBox));
+
         System.out.println("--- safety supervisor");
         SafetySupervisor sup = new SafetySupervisor(cfg);
         // wall of lidar points at x = 7.0 m from y = 2 to 4 m; desk at (5.0, 3.0) heading +x, commanded 0.8 m/s
@@ -159,6 +171,12 @@ public final class CoreTests {
         List<OccupancyMemory.Ray> rays = new ArrayList<>(); rays.add(new OccupancyMemory.Ray(2.0, 4.1, 1, 0, 0.1, 3.0));   // a ray passes through the cell
         mem.update(t, new ArrayList<>(), rays);
         check("a lidar ray passing through clears it (moved furniture leaves no ghost)", !mem.staticMem[sc], "");
+        OccupancyMemory edge = new OccupancyMemory(cfg); List<OccupancyMemory.Hit> off = new ArrayList<>();   // just off the map
+        off.add(new OccupancyMemory.Hit(-0.1, 1.1, OccupancyMemory.HitType.STATIC)); off.add(new OccupancyMemory.Hit(1.1, -0.1, OccupancyMemory.HitType.STATIC));
+        t = 0; for (int i = 0; i < 90; i++) { edge.update(t, off, none); t += 1.0 / 60; }
+        int ex = (int) (1.1 / cfg.cell) * cfg.gw, ey = (int) (1.1 / cfg.cell);
+        check("hits just off the map (x or y = -0.1 m) are not stored on the edge cells", edge.countStatic() == 0 && edge.countSeen() == 0,
+                "static " + edge.countStatic() + " seen " + edge.countSeen() + " (cell x0 " + edge.staticMem[ex] + ", cell y0 " + edge.staticMem[ey] + ")");
 
         System.out.println("--- timing");
         scene("default"); m = memoryFor(cfg); double[] ts = new double[25];
