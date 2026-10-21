@@ -10,7 +10,9 @@
     "forward_angle_max_deg": 30,
     "stop_distance_m": 0.8,
     "slow_distance_m": 1.5,
-    "max_stale_scan_sec": 1.0
+    "max_stale_scan_sec": 1.0,
+    "min_sector_points": 5,
+    "loop_hz": 20
   },
   "networktables": {
     "server": "10.0.0.2",

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Safe LiDAR scan test. Never commands robot movement."""
+"""Safe LiDAR scan test. Never commands robot movement.
+
+rplidar 0.9.x reports distances in millimetres; output here is in metres.
+"""
 import argparse, json, sys, time
-try:
-    from rplidar import RPLidar, RPLidarException
-except ImportError:
-    raise SystemExit("Install rplidar: pip install -r requirements.txt")
+
+MM_PER_M = 1000.0
 
 def load_config(path):
     with open(path, "r", encoding="utf-8") as f:
@@ -21,11 +22,20 @@ def summarize(scan):
         valid.append((q, a, d))
     return valid, invalid
 
+def nearest_m(valid, k=5):
+    """k nearest valid points as (angle_deg, distance_m)."""
+    return [(round(a, 1), round(d / MM_PER_M, 3))
+            for _, a, d in sorted(valid, key=lambda x: x[2])[:k]]
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="../config.json")
     args = ap.parse_args()
     cfg = load_config(args.config)["lidar"]
+    try:
+        from rplidar import RPLidar, RPLidarException
+    except ImportError:
+        print("Install rplidar: pip install -r requirements.txt"); return 1
 
     print("Model:", cfg.get("model"))
     print("Port:", cfg["port"], "Baud:", cfg["baudrate"])
@@ -45,9 +55,8 @@ def main():
             n += 1
             valid, invalid = summarize(scan)
             if valid and time.time() - last >= 1.0:
-                nearest = sorted(valid, key=lambda x: x[2])[:5]
                 print(f"scan={n} valid={len(valid)} invalid={invalid} "
-                      f"nearest={[(round(a,1), round(d,3)) for _,a,d in nearest]}")
+                      f"nearest(deg,m)={nearest_m(valid)}")
                 last = time.time()
     except KeyboardInterrupt:
         print("\nStopped by user.")

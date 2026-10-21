@@ -8,3 +8,4 @@ maxdesk_review_bundle.txt
 bridge/*.bak
 robot/simulator/*.bak
 workspace.zip
+__pycache__/

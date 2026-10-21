@@ -1,3 +1,7 @@
-rplidar>=1.0.0
+# rplidar-roboticia: maintained fork of rplidar 0.9.2 (same `import rplidar` module).
+# Do not also install `rplidar`; both provide rplidar.py. Distances are in mm.
+rplidar-roboticia==0.9.5
 pyserial>=3.5
-networktables>=3.0.0
+# pyntcore = WPILib NT4 client (`import ntcore`). Wheels are 64-bit only
+# (aarch64 Raspberry Pi OS); NT4 talks to 2023+ roboRIO images.
+pyntcore==2026.2.2

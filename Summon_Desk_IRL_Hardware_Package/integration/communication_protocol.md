@@ -5,7 +5,7 @@ Transport: NetworkTables. Base table: SummonDesk
 | Topic | Type | Publisher | Meaning |
 |---|---|---|---|
 | Pi/Heartbeat | double | Pi | Stale detection |
-| LiDAR/Status | string | Pi | OK/STALE/OBSTACLE/ERROR/SHUTDOWN |
+| LiDAR/Status | string | Pi | OK/STALE/OBSTACLE/BLIND/ERROR/SHUTDOWN (BLIND: too few valid returns ahead, e.g. sensor covered; Stop is true) |
 | Obstacle/Forward | boolean | Pi | Obstacle in forward sector |
 | Obstacle/Distance | double | Pi | Nearest forward distance (m), -1 unknown |
 | Safety/Stop | boolean | Pi | roboRIO must stop |
