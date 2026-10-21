@@ -48,6 +48,16 @@ else
   no "recovery"; grep '"ok":false' /tmp/rec.log | head -6
 fi
 
+if node tests/sim/run.js batteryplan > /tmp/bp.log 2>&1 && grep -q "BATTERYPLAN PASS" /tmp/bp.log; then
+  ok "battery: refuses trips it can't get home from, turns back when low, logs trips"
+else
+  no "battery planning"; grep '"ok":false' /tmp/bp.log | head -6
+fi
+if node tests/sim/run.js zones > /tmp/zn.log 2>&1 && grep -q "ZONES PASS" /tmp/zn.log; then
+  ok "no-go zones: plans around them, never enters, validates input"
+else
+  no "no-go zones"; grep '"ok":false' /tmp/zn.log | head -6
+fi
 node tests/pi/test_runtime.js > /tmp/pi.log 2>&1 && ok "pi runtime: units, cord lock, exceptions, e-stop, timeouts" || { no "pi runtime"; tail -8 /tmp/pi.log; }
 python3 -B -m unittest discover -s tests/pi_python > /tmp/pipy.log 2>&1 && ok "pi lidar safety monitor (python): metres, stale, blind, heartbeat, NT4" || { no "pi lidar python"; tail -8 /tmp/pipy.log; }
 if bash tests/bridge/run.sh > /tmp/br.log 2>&1; then

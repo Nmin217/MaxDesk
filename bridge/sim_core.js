@@ -250,6 +250,66 @@ function makeKernels(mg){
 const KERN_STRICT=makeKernels(MG_STRICT), KERN_TIGHT=makeKernels(MG_TIGHT);
 function angleNear(thPlan,thCur){return thPlan+Math.round((thCur-thPlan)/(2*Math.PI))*2*Math.PI}   // full turn: the side that faces you matters
 
+// ===== Keep-out zones, battery return planning, trip log =====
+const M_PER_PX=0.02;   // same scale as the bridge and the Pi runtime
+// Keep-out zones: rectangles the user marks ("desk here", "don't touch this wall"). The planner treats them as solid,
+// so routes keep the desk's footprint plus its margin away. The safety supervisor only reacts to what the lidar sees.
+let zones=[];const MAX_ZONES=20;
+function zonesKey(){return 'summonZones:'+sceneKey}
+function setZonesM(list){
+  if(!Array.isArray(list))return false;
+  const out=[];
+  for(const z of list.slice(0,MAX_ZONES)){
+    const x=+z.x/M_PER_PX,y=+z.y/M_PER_PX,w=+z.w/M_PER_PX,h=+z.h/M_PER_PX;
+    if(![x,y,w,h].every(Number.isFinite)||w<5||h<5)continue;
+    const x0=Math.max(0,x),y0=Math.max(0,y),x1=Math.min(W,x+w),y1=Math.min(H,y+h);if(x1-x0<5||y1-y0<5)continue;
+    out.push({id:String(z.id||('z'+out.length+'-'+Date.now())).slice(0,40),name:String(z.name||'Keep out').slice(0,24),x:x0,y:y0,w:x1-x0,h:y1-y0});
+  }
+  zones=out;rp=0;homeDistAt=-99;try{localStorage.setItem(zonesKey(),JSON.stringify(zonesJSON()))}catch(e){}
+  return true;
+}
+function zonesJSON(){return zones.map(z=>({id:z.id,name:z.name,x:+(z.x*M_PER_PX).toFixed(2),y:+(z.y*M_PER_PX).toFixed(2),w:+(z.w*M_PER_PX).toFixed(2),h:+(z.h*M_PER_PX).toFixed(2)}))}
+function loadZones(){try{const raw=localStorage.getItem(zonesKey());zones=[];if(raw)setZonesM(JSON.parse(raw))}catch(e){zones=[]}}
+function markZones(occ){for(const z of zones){const x0=Math.max(0,Math.floor(z.x/CS)),x1=Math.min(GW-1,Math.ceil((z.x+z.w)/CS)-1),y0=Math.max(0,Math.floor(z.y/CS)),y1=Math.min(GH-1,Math.ceil((z.y+z.h)/CS)-1);
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)occ[y*GW+x]=1}}
+
+// Battery planning: the desk must always be able to get back to the charger. Drain while driving at cruise is about
+// BAT_PER_PX %/px (batStep: .03 + .35*v/VMAX %/s); BAT_DETOUR covers detours, recoveries and waiting for people.
+// A summon is refused unless (here -> you) + (you -> charger) + BAT_RESERVE fits; during a trip the desk turns back on
+// its own as soon as (here -> charger) + BAT_RESERVE no longer fits.
+const BAT_PER_PX=0.0105,BAT_DETOUR=1.4,BAT_RESERVE=8;
+let homeDist=null,homeDistAt=-99,batCheckAt=-99,alertText='';
+const DIST_DILATE=[];for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)if(a*a+b*b<=4)DIST_DILATE.push([a,b]);
+function computeHomeDist(){   // Dijkstra over free cells (obstacles grown ~ by the desk's half-width) from the dock
+  const occ=buildOccupancy(),blk=new Uint8Array(GW*GH);
+  for(let i=0;i<GW*GH;i++)if(occ[i]){const cx=i%GW,cy=i/GW|0;for(const[a,b]of DIST_DILATE){const x=cx+a,y=cy+b;if(x>=0&&x<GW&&y>=0&&y<GH)blk[y*GW+x]=1}}
+  const D=new Float32Array(GW*GH).fill(Infinity),hx=Math.min(GW-1,HOME.x/CS|0),hy=Math.min(GH-1,HOME.y/CS|0),h0=hy*GW+hx;blk[h0]=0;D[h0]=0;
+  const Q=[[0,h0]],push=(d,i)=>{Q.push([d,i]);let k=Q.length-1;while(k>0){const p=(k-1)>>1;if(Q[p][0]<=Q[k][0])break;[Q[p],Q[k]]=[Q[k],Q[p]];k=p}},
+    pop=()=>{const t=Q[0],l=Q.pop();if(Q.length){Q[0]=l;let k=0;for(;;){const a=2*k+1,b=a+1;let m=k;if(a<Q.length&&Q[a][0]<Q[m][0])m=a;if(b<Q.length&&Q[b][0]<Q[m][0])m=b;if(m===k)break;[Q[m],Q[k]]=[Q[k],Q[m]];k=m}}return t};
+  while(Q.length){const[d,i]=pop();if(d>D[i])continue;const x=i%GW,y=i/GW|0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;const j=ny*GW+nx;if(blk[j])continue;
+      const nd=d+(dx&&dy?1.414:1)*CS;if(nd<D[j]){D[j]=nd;push(nd,j)}}}
+  homeDist=D;homeDistAt=time;
+}
+function pxToHome(x,y){if(!homeDist)computeHomeDist();const cx=Math.max(0,Math.min(GW-1,x/CS|0)),cy=Math.max(0,Math.min(GH-1,y/CS|0)),d=homeDist[cy*GW+cx];
+  return Number.isFinite(d)?d:1.6*Math.hypot(x-HOME.x,y-HOME.y)}   // a cell we can't route from yet (e.g. inside a fresh obstacle): be pessimistic
+function batteryNeedHome(x,y){return pxToHome(x,y)*BAT_PER_PX*BAT_DETOUR}
+function batteryNeedTrip(ux,uy){return 1.4*Math.hypot(ux-T.x,uy-T.y)*BAT_PER_PX*BAT_DETOUR+batteryNeedHome(ux,uy)}
+function batAlert(text){alertText=text;alertT=10}
+
+// Trip log: one record per summon / return / tour, ended with how it finished. Kept small; the app keeps the history.
+let trip=null,trips=[],tripSeq=0;
+function startTrip(kind){if(trip)endTrip('replaced');trip={id:Date.now().toString(36)+'-'+(++tripSeq),kind,start:time,startedAt:Date.now(),dist:0,lx:T.x,ly:T.y,holds0:safetyHolds,bat0:bat.r}}
+function endTrip(outcome){if(!trip)return;
+  // A trip that went nowhere (already at the dock, stopped at once) isn't worth a history entry, unless it ended badly.
+  if(trip.dist*M_PER_PX<0.05&&time-trip.start<2&&outcome!=='e-stop'&&outcome!=='cord'){trip=null;return}
+  trips.unshift({id:trip.id,kind:trip.kind,outcome,started_at:trip.startedAt,duration_s:+(time-trip.start).toFixed(1),
+  distance_m:+(trip.dist*M_PER_PX).toFixed(2),safety_holds:safetyHolds-trip.holds0,battery_used_pct:+Math.max(0,trip.bat0-bat.r).toFixed(1)});trips=trips.slice(0,10);trip=null}
+// Extra state for the phone app; every state producer (simulator page, bridge, Pi runtime) adds this.
+function extraStateJSON(){const need=batteryNeedHome(T.x,T.y),tripNeed=batteryNeedTrip(user.x,user.y);
+  return {zones:zonesJSON(),battery_plan:{need_home_pct:+need.toFixed(1),need_trip_pct:+tripNeed.toFixed(1),reserve_pct:BAT_RESERVE,can_summon:bat.r>=tripNeed+BAT_RESERVE},
+    alert_text:alertT>0?alertText:'',trips:trips.slice(0,10),trip:trip?{id:trip.id,kind:trip.kind,distance_m:+(trip.dist*M_PER_PX).toFixed(2),duration_s:+(time-trip.start).toFixed(1)}:null}}
+
 function buildOccupancy(){
   const occ=new Uint8Array(GW*GH);
   for(let i=0;i<GW*GH;i++)if((time-last[i]<1.2&&last[i]-since[i]>=1)||smap[i]>0)occ[i]=1;
@@ -271,6 +331,7 @@ function buildOccupancy(){
       if(x>=0&&x<GW&&y>=0&&y<GH)occ[y*GW+x]=1;
     }
   }
+  markZones(occ);
   return occ;
 }
 function buildBlocked(occ,kern,mg){
@@ -519,22 +580,22 @@ function batStep(dt){
   if(charging){bat.r+=.9*dt;bat.a+=.6*dt}
   else{bat.r-=(.03+.35*sp/VMAX+.08*Math.abs(T.w))*dt;bat.a-=(.04+(lifting?.5:0))*dt}
   bat.r=Math.max(0,Math.min(100,bat.r));bat.a=Math.max(0,Math.min(100,bat.a));
-  if(!active&&!estop&&!charging&&mode==='user'&&parkTh===null&&(bat.r<25||bat.a<20)){
-    lowT+=dt;if(lowT>=3){startReturn();setSt('Low battery - returning to the dock to charge','warn')}
+  if(!active&&!estop&&!charging&&mode==='user'&&parkTh===null&&(bat.r<25||bat.a<20||bat.r<batteryNeedHome(T.x,T.y)+BAT_RESERVE+3)){
+    lowT+=dt;if(lowT>=3){startReturn();batAlert('Battery low: the desk went back to the charger.');setSt('Low battery - returning to the dock to charge','warn')}
   }else lowT=0;
 }
 function startTour(){
   manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
   if(cordBlocks())return;
   if(estop){setSt('E-stop engaged - release it first','bad');return}
-  mode='tour';active=true;parkTh=null;didArrive=false;arT=0;tourI=0;tourT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;
+  startTrip('tour');mode='tour';active=true;parkTh=null;didArrive=false;arT=0;tourI=0;tourT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;
   stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Learning the room: point 1 of '+tourPts().length,'');
 }
 function startReturn(){
   manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
   if(cordBlocks())return;
   if(estop){setSt('E-stop engaged - release it first','bad');return}
-  mode='home';active=true;parkTh=null;didArrive=false;arT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;
+  startTrip('return');mode='home';active=true;parkTh=null;didArrive=false;arT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;
   stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Returning to start…','');
 }
 function startParking(){
@@ -617,7 +678,7 @@ if(active){
      if(tourI>=tourPts().length){startReturn();setSt('Room mapped - returning to the dock','ok')}
      else setSt('Learning the room: point '+(tourI+1)+' of '+tourPts().length,'');
    }else{
-    active=false;
+    active=false;endTrip('arrived');
     if(mode==='home'){parkTh=Math.round(T.th/(2*Math.PI))*2*Math.PI;parkT=8;didArrive=false;readyPending=true;setSt('Arrived – back at start, turning to park','ok')}
     else{startParking();didArrive=true;arT=0;readyPending=true;setSt('Arrived – turning to face you','ok')}
    }
@@ -852,6 +913,11 @@ if(active&&!estop&&!recovery){
 }
 
 batStep(dt);
+// Trip distance, and the "always enough to get home" rule while travelling.
+if(trip){trip.dist+=Math.hypot(T.x-trip.lx,T.y-trip.ly);trip.lx=T.x;trip.ly=T.y;if(!active&&parkTh===null)endTrip('ended')}
+if(time-homeDistAt>1)computeHomeDist();
+if(active&&!estop&&(mode==='user'||mode==='tour')&&time-batCheckAt>.5){batCheckAt=time;
+  if(bat.r<batteryNeedHome(T.x,T.y)+BAT_RESERVE){endTrip('battery');batAlert('Battery low: heading back to the charger. It won\'t come to you until it has charged.');startReturn();setSt('Battery low - heading back to the charger','warn')}}
 
 // Optional auto-return: 10 s after it has arrived, parked and finished raising
 if($('ar').checked&&didArrive&&mode==='user'&&!active&&!estop&&parkTh===null){
@@ -907,7 +973,7 @@ if(held&&active&&!estop&&!recovery&&low&&du>(mode==='user'?80:10))setSt('Safety 
 // A trip that is under way when the cord goes in is cancelled and the desk brakes hard (the cord is attached).
 if(cordLock()){
   cx=0;cy=0;w=0;held=true;parkTh=null;
-  if(active){active=false;path=[];setSt('Cord plugged in: drive disabled, trip cancelled','bad');alertT=4}
+  if(active){active=false;path=[];endTrip('cord');setSt('Cord plugged in: drive disabled, trip cancelled','bad');alertText='Cord plugged in: the trip was cancelled.';alertT=4}
 }
 
 // Integrate swerve
@@ -959,6 +1025,7 @@ function draw(){
   }
   ctx.strokeStyle=roomStyle==='dark'?'#707985':'rgba(70,70,70,.45)';ctx.lineWidth=5;ctx.strokeRect(2.5,2.5,W-5,H-5);
   // Obstacles. Custom blocks are visually distinct and selectable in editor mode.
+  for(const z of zones){ctx.save();ctx.fillStyle='rgba(220,60,90,.14)';ctx.fillRect(z.x,z.y,z.w,z.h);ctx.strokeStyle='rgba(220,60,90,.8)';ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.strokeRect(z.x+.5,z.y+.5,z.w-1,z.h-1);ctx.setLineDash([]);ctx.fillStyle='rgba(180,30,60,.95)';ctx.font='600 11px system-ui';ctx.fillText(z.name,z.x+4,z.y+13);ctx.restore()}
   for(const r of rects){ctx.fillStyle=r._custom?(r===selectedBlock?'#f59e0b':'#d97706'):obs;ctx.fillRect(r.x,r.y,r.w,r.h);if(r._custom){ctx.strokeStyle=r===selectedBlock?'#7c2d12':'rgba(70,35,0,.8)';ctx.lineWidth=1.5;ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1)}}
   for(const c of circs){ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,7);ctx.fill()}
   // Costmap
@@ -1088,9 +1155,10 @@ cv.addEventListener('pointermove',e=>{const p=pos(e);if(blockDrag){const b=block
 function finishCanvasDrag(){drag=false;blockDrag=null}
 cv.addEventListener('pointerup',finishCanvasDrag);cv.addEventListener('pointercancel',finishCanvasDrag);
 
-$('go').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(bat.r<8&&!estop){startReturn();setSt('Battery too low - returning to the dock instead','warn');return}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
+$('go').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(!estop){const need=batteryNeedTrip(user.x,user.y)+BAT_RESERVE;if(bat.r<need){batAlert('Not enough battery to reach you and get back to the charger: needs '+Math.ceil(need)+'%, has '+Math.floor(bat.r)+'%.');
+  if(charging||dockedNow()){setSt('Charging - needs '+Math.ceil(need)+'% for that trip','warn')}else{startReturn();setSt('Battery too low for that trip - returning to the charger','warn')}return}}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}startTrip('summon');active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
 $('back').onclick=startReturn;
-$('stop').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;didArrive=false;arT=0;active=false;path=[];recovery=null;stuckTime=0;setSt('Stopped','warn')};
+$('stop').onclick=()=>{endTrip('stopped');manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;didArrive=false;arT=0;active=false;path=[];recovery=null;stuckTime=0;setSt('Stopped','warn')};
 $('rst').onclick=()=>{forgetMap();sceneKey='default';reset();clearMapArrays();loadMap()};
 $('learn').onclick=startTour;
 $('cord').onclick=()=>{
@@ -1113,7 +1181,7 @@ $('placeMode').onclick=()=>{placeBlocks=!placeBlocks;blockDrag=null;$('placeMode
 $('deleteBlock').onclick=()=>{if(!selectedBlock){$('editHint').textContent='Select an orange added block by clicking or dragging it first.';return}const i=rects.indexOf(selectedBlock);if(i>=0)rects.splice(i,1);selectedBlock=null;blockDrag=null};
 $('clearBlocks').onclick=()=>{for(let i=rects.length-1;i>=0;i--)if(rects[i]._custom)rects.splice(i,1);selectedBlock=null;blockDrag=null;$('editHint').textContent='All added blocks removed. Built-in room obstacles remain.'};
 
-function toggleEstop(){estop=!estop;parkTh=null;didArrive=false;if(estop){active=false;path=[];T.vx=T.vy=T.w=0;manualDrive={...manualDrive,x:0,y:0,turn:0};recovery=null;stuckTime=0}else setSt('E-stop released - press Come to me','')}
+function toggleEstop(){estop=!estop;parkTh=null;didArrive=false;if(estop){endTrip('e-stop');active=false;path=[];T.vx=T.vy=T.w=0;manualDrive={...manualDrive,x:0,y:0,turn:0};recovery=null;stuckTime=0}else setSt('E-stop released - press Come to me','')}
 addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();if(!estop)toggleEstop()}});
 function ahead(dd){for(const q of path)if(Math.hypot(q.x-T.x,q.y-T.y)>=dd)return q;return{x:T.x+Math.cos(T.th)*dd,y:T.y+Math.sin(T.th)*dd}}
 $('es').onclick=toggleEstop;
@@ -1157,5 +1225,5 @@ $('talk').onclick=()=>{
   people.push(mkTalker(cx2,cy2));
 };
 
-reset();loadMap();requestAnimationFrame(loop);
+reset();loadMap();loadZones();requestAnimationFrame(loop);
 

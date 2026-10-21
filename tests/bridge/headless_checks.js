@@ -8,10 +8,11 @@ setTimeout(()=>{
   const lb=typeof isLoopback==='function';
   add('bridge_loopback_predicate',lb&&isLoopback('127.0.0.1')&&isLoopback('::1')&&isLoopback('::ffff:127.0.0.1')&&
     !isLoopback('192.168.1.20')&&!isLoopback('::ffff:10.0.0.5')&&!isLoopback('fe80::1')&&!isLoopback(undefined)&&!isLoopback('127.0.0.1.evil'));
-  // Low battery: a headless summon must be redirected to the dock, as the simulator's Come-to-me button does.
+  // Low battery: a headless summon must be refused by the same battery check as the simulator's Come-to-me button
+  // (it can't reach you and get back). Away from the dock it heads home; on the dock it stays and charges.
   estop=false;cordIn=false;active=false;path=[];bat.r=5;mode='user';
   pendingCommands.push({id:9001,type:'summon',x:14,y:8.6,epoch});drainHeadless();
-  add('bridge_headless_summon_low_battery',mode==='home');
+  add('bridge_headless_summon_low_battery',(mode==='home'||(!active&&dockedNow()))&&/battery|charg/i.test($('st').textContent));
   // E-stop: a headless summon must not start a trip.
   active=false;path=[];bat.r=80;estop=true;
   pendingCommands.push({id:9002,type:'summon',x:14,y:8.6,epoch});drainHeadless();

@@ -162,6 +162,23 @@ PY
 fi
 cleanup
 BP=
+# 3b. Keep-out zones and the new state fields (headless bridge, no simulator page registered).
+bridge_zones=false
+PORT=$((PORT-4)); BASE="http://127.0.0.1:${PORT}"
+if start_bridge; then
+  zc=$(curl -s -o "$TMP/zones.json" -w '%{http_code}' -H "$AUTH" -H 'Content-Type: application/json' -X POST -d '{"zones":[{"name":"Desk","x":7,"y":3.8,"w":2,"h":1.6}]}' "$BASE/v1/zones")
+  bad=$(curl -s -o /dev/null -w '%{http_code}' -H "$AUTH" -H 'Content-Type: application/json' -X POST -d '{"zones":[{"name":"Off map","x":15,"y":9,"w":5,"h":5}]}' "$BASE/v1/zones")
+  sleep 0.3
+  curl -fsS -H "$AUTH" "$BASE/v1/state" >"$TMP/state_zones.json"
+  if [ "$zc" = 200 ] && [ "$bad" = 422 ] && python3 -c "
+import json,sys; s=json.load(open('$TMP/state_zones.json'))
+z=s.get('zones') or []; bp=s.get('battery_plan') or {}
+ok=len(z)==1 and z[0]['name']=='Desk' and abs(z[0]['x']-7)<1e-6 and isinstance(bp.get('need_home_pct'),(int,float)) and 'can_summon' in bp and isinstance(s.get('trips'),list) and 'alert_text' in s
+sys.exit(0 if ok else 1)"; then bridge_zones=true; else echo "zones: post=$zc bad=$bad state=$(head -c 400 "$TMP/state_zones.json")" >&2; fi
+fi
+cleanup
+BP=
+PORT=$((PORT+4)); BASE="http://127.0.0.1:${PORT}"
 # 4. In-process checks (loopback predicate, headless summon low-battery redirect and E-stop).
 PORT=$((PORT-2)) SUMMON_TOKEN=verify node tests/bridge/headless_checks.js >"$TMP/headless.jsonl" 2>"$TMP/headless.err"
 headless_ok=$?
@@ -175,6 +192,7 @@ printf '{"check":"bridge_stop_coalesce_purges","ok":%s}\n' "$bridge_stop_coalesc
 printf '{"check":"bridge_stop_resets_nav_guard","ok":%s}\n' "$bridge_stop_resets_nav_guard"
 printf '{"check":"bridge_sim_token_loopback","ok":%s}\n' "$bridge_sim_token_loopback"
 printf '{"check":"bridge_sim_token_lan_hidden","ok":%s}\n' "$bridge_sim_token_lan_hidden"
+printf '{"check":"bridge_zones_and_battery_plan","ok":%s}\n' "$bridge_zones"
 
 [ "$bridge_dup_poll" = true ] &&
 [ "$bridge_restart_stale_epoch" = true ] &&
@@ -183,4 +201,5 @@ printf '{"check":"bridge_sim_token_lan_hidden","ok":%s}\n' "$bridge_sim_token_la
 [ "$bridge_stop_resets_nav_guard" = true ] &&
 [ "$bridge_sim_token_loopback" = true ] &&
 [ "$bridge_sim_token_lan_hidden" = true ] &&
+[ "$bridge_zones" = true ] &&
 [ "$headless_ok" = 0 ]

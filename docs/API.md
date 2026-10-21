@@ -25,6 +25,7 @@ simulator bridge in `bridge/` implements it and has been tested with curl.
 | `POST /v1/learn` | `{}` | same (drives a mapping tour, then returns to the dock) |
 | `POST /v1/stop` | `{}` | same. A SOFT stop. Always purges queued drive/summon/return/learn and clears the duplicate-navigation guard. A repeat within 250 ms while the first Stop is still queued is coalesced: `200 { accepted: true, status: "Stop already queued" }`, never 429. There is deliberately no way to release the E-stop. |
 | `POST /v1/sim/cord` | `{ "plugged": true }` | simulator only: stands in for a person plugging the cord in |
+| `POST /v1/zones` | `{ "zones": [{ "name": "Desk", "x": 7, "y": 3.8, "w": 2, "h": 1.6 }] }` | same. Replaces all keep-out zones (metres from the room's top-left; up to 20; `[]` clears). The planner treats them as solid and keeps the desk's footprint plus margin away. 422 if a zone is outside the room or smaller than 0.1 m |
 | `GET /v1/sim/poll` | none | simulator page only: `{ commands, server_time, epoch }`, drains the queue (each command delivered once, current epoch only) |
 | `POST /v1/sim/state` | state object (may include `lidar`) | simulator page only: `{ ok, epoch }`. Makes the page the authoritative simulation; a reconnect after 3 s stale bumps `epoch`, drops queued commands and queues a Stop |
 | `POST /v1/sim/map` | map object | simulator page only: `{ ok, epoch }` |
@@ -44,7 +45,17 @@ the reason.
     battery {robot_pct, ups_pct}, charging, cord {plugged, interlock_on, breakaways},
     dock_type ("manual" | "auto"), desk_height_cm, alert (the robot wants attention),
     explored_pct, remembered_cells, people [{x, y, settled}],
-    simulator_connected (the simulator page is live and authoritative), epoch
+    simulator_connected (the simulator page is live and authoritative), epoch,
+    zones [{id, name, x, y, w, h}] (metres),
+    battery_plan {need_home_pct (to get back to the charger from here), need_trip_pct (to reach you and get back),
+                  reserve_pct (never planned below), can_summon},
+    alert_text (why the robot wants attention, e.g. "Battery low: heading back to the charger"; empty when none),
+    trip (the trip in progress or null: {id, kind, distance_m, duration_s}),
+    trips (last 10 finished: [{id, kind "summon"|"return"|"tour", outcome "arrived"|"stopped"|"battery"|"e-stop"|"cord"|"ended"|"replaced",
+           started_at (ms), duration_s, distance_m, safety_holds, battery_used_pct}])
+
+Battery rule: a summon is refused unless reaching you, getting back to the charger and the reserve all fit in the
+battery; during a trip the robot turns back on its own as soon as getting home plus the reserve no longer fits.
 
 ## Rules the real bridge must keep
 

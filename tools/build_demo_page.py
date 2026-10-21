@@ -69,7 +69,7 @@ bridge = """<script>
       dock_type:$('dm').value,desk_height_cm:Math.round(deskH*100),alert:alertT>0,explored_pct:Math.round(100*seenCount/(GW*GH)),remembered_cells:remembered,
       people:people.map(p=>({x:+(p.x*PX).toFixed(2),y:+(p.y*PX).toFixed(2),settled:!!p.settled})),
       lidar:hits.filter(h=>h&&h.hit&&Number.isFinite(h.d)&&h.d>0).map(h=>({angle:+(((h.a-T.th)*180/Math.PI+540)%360-180).toFixed(2),range:+(h.d*PX).toFixed(3),type:h.type||'obstacle'})),
-      simulator_connected:true,epoch:EPOCH}}
+      ...extraStateJSON(),simulator_connected:true,epoch:EPOCH}}
   function map(){const rows=[];for(let y=0;y<GH;y++){let row='';for(let x=0;x<GW;x++){const i=y*GW+x;row+=smap[i]>0?'#':traffic[i]>2?'+':seen[i]?'_':'.'}rows.push(row)}
     return {width_m:W*PX,height_m:H*PX,cell_m:CS*PX,gw:GW,gh:GH,rows,epoch:EPOCH}}
   function apply(c){
@@ -79,6 +79,7 @@ bridge = """<script>
     else if(c.type==='learn')$('learn').click();
     else if(c.type==='stop'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;$('stop').click()}
     else if(c.type==='cord'&&!!c.plugged!==cordIn)$('cord').click();
+    else if(c.type==='zones')setZonesM(c.zones);
   }
   function handle(method,path,b){
     if(method==='GET'){
@@ -100,6 +101,7 @@ bridge = """<script>
     else if(path==='/v1/learn')c={type:'learn'};
     else if(path==='/v1/stop')c={type:'stop'};
     else if(path==='/v1/sim/cord')c={type:'cord',plugged:!!b.plugged};
+    else if(path==='/v1/zones'){if(!Array.isArray(b.zones)||b.zones.length>20)return [422,{accepted:false,status:'zones must be a list of at most 20'}];c={type:'zones',zones:b.zones}}
     else return [404,{error:'not found'}];
     if(['summon','drive','return','learn'].includes(c.type)&&cordIn&&$('il').checked)
       return [409,{accepted:false,status:'Movement refused: desk cord is plugged in. Unplug the cord before moving.',severity:'bad'}];

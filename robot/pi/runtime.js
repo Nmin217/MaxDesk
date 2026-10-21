@@ -56,6 +56,8 @@ function loadSim() {
   const wrapped = code + `
     ;return {
       update: update, reset: reset, startReturn: startReturn, startTour: startTour,
+      getExtras: function () { return extraStateJSON(); },
+      setZones: function (z) { return setZonesM(z); },
       getState: function () {
         return {
           T: T, active: active, estop: estop, cordIn: cordIn,
@@ -149,7 +151,8 @@ function createRuntime({
       alert: s.alertT > 0, explored_pct: 0, remembered_cells: 0,
       people: s.people.map(p => ({
         x: +(p.x * PX).toFixed(2), y: +(p.y * PX).toFixed(2), settled: !!p.settled
-      }))
+      })),
+      ...sim.getExtras()   // keep-out zones, battery plan, alert text, trip log
     };
     try {
       const r = await httpJson('POST', bridgeUrl + '/v1/sim/state', token, payload);
@@ -167,6 +170,7 @@ function createRuntime({
     else if (c.type === 'stop') sim.clickStop();
     else if (c.type === 'learn') sim.clickLearn();
     else if (c.type === 'cord') sim.setCord(!!c.plugged);
+    else if (c.type === 'zones') sim.setZones(c.zones);
     else if (c.type === 'drive') sim.setManualDrive({
       enabled: true, x: c.x, y: c.y, turn: c.turn, speed: c.speed,
       lastCommandAt: Date.now()   // the sim's 750 ms deadman compares against Date.now(), not nowMs

@@ -25,6 +25,7 @@ function drainHeadless(){
       else if(c.type==='stop'){manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;active=false;path=[];recovery=null;stuckTime=0;parkTh=null;setSt('Stopped','warn');}
       else if(c.type==='learn'){startTour();}
       else if(c.type==='cord'){cordIn=!!c.plugged;setSt(cordIn?'Cord plugged in':'Cord unplugged','');}
+      else if(c.type==='zones'){setZonesM(c.zones);}
       else if(c.type==='drive'){active=false;path=[];parkTh=null;mode='manual';manualDrive.enabled=true;manualDrive.lastCommandAt=Date.now();manualDrive.x=c.x;manualDrive.y=c.y;manualDrive.turn=c.turn;manualDrive.speed=c.speed;}
     }catch(e){console.error('drainHeadless failed for',c.type,e.message)}
   }
@@ -35,7 +36,7 @@ function stateJSON(){
     pose:{x:+(T.x*PX).toFixed(3),y:+(T.y*PX).toFixed(3),theta:+T.th.toFixed(3)},user:{x:+(user.x*PX).toFixed(3),y:+(user.y*PX).toFixed(3)},
     battery:{robot_pct:+bat.r.toFixed(1),ups_pct:+bat.a.toFixed(1)},charging,cord:{plugged:cordIn,interlock_on:!!$('il').checked,breakaways},
     dock_type:$('dm').value,desk_height_cm:Math.round(deskH*100),alert:alertT>0,explored_pct:Math.round(100*ns/(GW*GH)),remembered_cells:no,
-    people:people.map(p=>({x:+(p.x*PX).toFixed(2),y:+(p.y*PX).toFixed(2),settled:!!p.settled}))};
+    people:people.map(p=>({x:+(p.x*PX).toFixed(2),y:+(p.y*PX).toFixed(2),settled:!!p.settled})),...extraStateJSON()};
 }
 function mapJSON(){const rows=[];for(let y=0;y<GH;y++){let r='';for(let x=0;x<GW;x++){const i=y*GW+x;r+=smap[i]>0?'#':traffic[i]>2?'+':seen[i]?'_':'.'}rows.push(r)}return {width_m:W*PX,height_m:H*PX,cell_m:CS*PX,gw:GW,gh:GH,rows}}
 function send(res,code,obj){const b=JSON.stringify(obj);res.writeHead(code,{'Content-Type':'application/json; charset=utf-8','Content-Length':Buffer.byteLength(b),'Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(b)}
@@ -101,6 +102,14 @@ const server=require('http').createServer((req,res)=>{
     else if(url==='/v1/learn')command={type:'learn'};
     else if(url==='/v1/stop')command={type:'stop'};
     else if(url==='/v1/sim/cord')command={type:'cord',plugged:!!body.plugged};
+    else if(url==='/v1/zones'){
+      // Keep-out zones in metres: [{name,x,y,w,h}], replaces the whole list (empty list clears them).
+      const zs=body.zones,roomW=W*PX,roomH=H*PX;
+      if(!Array.isArray(zs)||zs.length>20)return send(res,422,{accepted:false,status:'zones must be a list of at most 20'});
+      for(const z of zs){const v=[z&&z.x,z&&z.y,z&&z.w,z&&z.h].map(Number);
+        if(!v.every(Number.isFinite)||v[2]<0.1||v[3]<0.1||v[0]<0||v[1]<0||v[0]+v[2]>roomW+0.01||v[1]+v[3]>roomH+0.01)return send(res,422,{accepted:false,status:'Each zone needs x, y, w, h in metres inside the room (w, h at least 0.1 m)'})}
+      command={type:'zones',zones:zs.map(z=>({id:String(z.id||'').slice(0,40),name:String(z.name||'Keep out').slice(0,24),x:+z.x,y:+z.y,w:+z.w,h:+z.h}))};
+    }
     else return send(res,404,{error:'not found'});
     const browserLive=!!browserState&&(Date.now()-browserStateAt<3000);
     const browserEverSeen=!!browserState;

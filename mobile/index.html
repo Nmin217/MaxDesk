@@ -13,7 +13,7 @@
   --bg:#06131a;--panel:#0b1d26;--raise:#112a35;--sunk:#08171f;--line:#173341;--line2:#21465a;
   --ink:#e4f2f4;--mute:#86a5ad;--faint:#557680;
   --accent:#2fd4b0;--accent2:#2f8fe0;--accent-ink:#02201b;--accent-grad:linear-gradient(120deg,#2fd4b0,#2f8fe0);
-  --lidar:#5aa8ff;--go:#5ee08a;--warn:#ffa24c;--stop:#ff4d4d;--stop-ink:#ffffff;
+  --lidar:#5aa8ff;--zone:#ff6b8f;--go:#5ee08a;--warn:#ffa24c;--stop:#ff4d4d;--stop-ink:#ffffff;
   --floor:#0f2a2f;--wall:#cfe3e6;--busy:#4a2330;--unknown:#08171f;--grid:#14303b;
   --display:"Archivo","Arial Narrow",system-ui,sans-serif;--body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -57,7 +57,7 @@ main{grid-template-columns:minmax(0,1fr)}
 .pill.online{color:var(--ink)}.pill.online:before{background:var(--go);box-shadow:0 0 0 3px rgba(60,207,142,.18)}
 
 /* Tabs */
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:var(--sunk);border:1px solid var(--line);border-radius:12px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;background:var(--sunk);border:1px solid var(--line);border-radius:12px}
 .tab{appearance:none;border:0;background:transparent;border-radius:9px;padding:9px 6px;font:700 12px/1.2 var(--display);font-stretch:112%;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);cursor:pointer}
 .tab.active{background:var(--raise);color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent)}
 .tab-panel{display:none}.tab-panel.active{display:grid;gap:12px}
@@ -168,6 +168,32 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 .lidar-legend span{display:flex;align-items:center;gap:6px}.lidar-key{width:8px;height:8px;border-radius:50%;background:#53d1b8}.lidar-key.robot{background:#e8501f}.lidar-key.wall{background:#e0a83e}
 .lidar-note code{font-family:var(--mono);font-size:12px}
 
+/* Alert banner */
+.alert-banner{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:12px;border:1px solid var(--warn);background:rgba(255,162,76,.1);color:var(--ink);font-size:13px}
+.alert-banner b{color:var(--warn);font:700 10px/1.6 var(--display);font-stretch:118%;letter-spacing:.14em;text-transform:uppercase;flex:0 0 auto}
+/* No-go zones */
+.zones{margin-top:12px;display:grid;gap:8px}
+.zones-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.zone-list{display:flex;flex-wrap:wrap;gap:6px}
+.zone-chip{display:inline-flex;align-items:center;gap:8px;padding:5px 6px 5px 10px;border-radius:99px;border:1px solid var(--zone);background:rgba(255,107,143,.08);font-size:12px}
+.zone-chip span{font:500 11px/1 var(--mono);color:var(--mute)}
+.zone-chip button,.zone-x{border:0;background:var(--raise);color:var(--ink);border-radius:99px;width:22px;height:22px;cursor:pointer;font:600 13px/1 var(--mono)}
+.btn.small{min-height:34px;padding:6px 12px;font-size:13px}
+.btn.active-mode{border-color:var(--zone);color:var(--zone)}
+.zone-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}
+.zone-form input{width:100%;min-height:38px;border:1px solid var(--line2);border-radius:10px;background:var(--sunk);padding:7px 10px}
+/* History */
+.trip-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.trip-summary div{background:var(--sunk);padding:9px 10px;min-width:0}.trip-summary b{display:block;font:600 18px/1.2 var(--mono);margin-top:3px}
+.trip-list{display:grid;gap:8px}
+.trip{display:grid;gap:8px;padding:11px 12px;border-radius:12px;background:var(--sunk);border:1px solid var(--line)}
+.trip-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.trip-top strong{font-size:14px}.trip-top time{font:500 11px/1.3 var(--mono);color:var(--mute)}
+.trip-stats{display:flex;flex-wrap:wrap;gap:6px 14px;font:500 12px/1.3 var(--mono);color:var(--mute)}.trip-stats b{color:var(--ink);font-weight:600}
+.outcome{padding:3px 8px;border-radius:99px;font:700 10px/1.3 var(--display);font-stretch:112%;letter-spacing:.08em;text-transform:uppercase;background:var(--raise);color:var(--mute)}
+.outcome.ok{background:rgba(94,224,138,.15);color:var(--go)}.outcome.warn{background:rgba(255,162,76,.15);color:var(--warn)}.outcome.bad{background:rgba(255,77,77,.15);color:var(--stop)}
+.trip-empty{font-size:13px;color:var(--mute);padding:6px 0}
+
 /* Speed override dialog */
 .modal{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:rgba(4,7,12,.72);backdrop-filter:blur(4px)}
 .modal-card{width:min(100%,400px);background:var(--panel);border:1px solid var(--line2);border-top:3px solid var(--warn);border-radius:16px;padding:18px;display:grid;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
@@ -192,7 +218,8 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 </head>
 <body><main>
 <header class="top"><div class="wordmark"><svg class="badge" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fd4b0"/><stop offset="1" stop-color="#2f8fe0"/></linearGradient></defs><path d="M20 1.5 37 11v18L20 38.5 3 29V11z" fill="url(#bg1)" stroke="#06131a" stroke-width="1.5"/><path d="M20 6 33 13.4v13.2L20 34 7 26.6V13.4z" fill="#06131a"/><g transform="rotate(-28 20 20)"><path d="M20 10.5a9.5 9.5 0 1 1-9.1 6.8" fill="none" stroke="#2fd4b0" stroke-width="2.2" stroke-linecap="round"/><path d="m8.4 18.9 2.6-5.6 3.9 4.6z" fill="#2fd4b0"/></g><rect x="17" y="12.6" width="6" height="14.8" rx="2.2" fill="#2fd4b0" transform="rotate(24 20 20)"/><rect x="18.9" y="15" width="2.2" height="10" rx="1" fill="#06131a" transform="rotate(24 20 20)"/></svg><h1 class="brand"><span class="b1">MAXSWERVE</span><span class="b2">DESK</span></h1></div><div class="header-tools"><div id="connection" class="pill">Connecting</div><div class="hbat" id="hbat" title="Robot battery"><span class="hbat-body"><span class="hbat-fill" id="hbatFill"></span></span><b id="hbatPct">—</b></div></div></header>
-<nav class="tabs" role="tablist" aria-label="Views"><button class="tab active" data-tab="control" role="tab" aria-selected="true" aria-controls="tab-control">Control</button><button class="tab" data-tab="drive" role="tab" aria-selected="false" aria-controls="tab-drive">Drive</button><button class="tab" data-tab="lidar" role="tab" aria-selected="false" aria-controls="tab-lidar">3D room</button></nav>
+<nav class="tabs" role="tablist" aria-label="Views"><button class="tab active" data-tab="control" role="tab" aria-selected="true" aria-controls="tab-control">Control</button><button class="tab" data-tab="drive" role="tab" aria-selected="false" aria-controls="tab-drive">Drive</button><button class="tab" data-tab="lidar" role="tab" aria-selected="false" aria-controls="tab-lidar">3D</button><button class="tab" data-tab="history" role="tab" aria-selected="false" aria-controls="tab-history">History</button></nav>
+<div id="alertBanner" class="alert-banner" role="alert" hidden><b>Alert</b><span id="alertText"></span></div>
 
 <section id="tab-control" class="tab-panel active" role="tabpanel">
 <div class="layout">
@@ -215,12 +242,17 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
  <section class="panel plan-panel">
   <div class="panel-head"><h2 class="eyebrow">Room plan · live</h2><span class="eyebrow" style="color:var(--faint)">1 m grid</span></div>
   <div class="plan"><canvas id="map" aria-label="Room plan. Tap to set where to summon the desk."></canvas><div class="plan-hint"><b class="simtag">SIM</b> Tap to place yourself</div></div>
-  <div class="legend"><span><i style="background:var(--wall)"></i>Wall / object</span><span><i style="background:var(--floor);outline:1px solid var(--line2)"></i>Seen floor</span><span><i style="background:var(--busy)"></i>Busy</span><span><i class="dot" style="background:var(--lidar)"></i>LiDAR</span><span><i style="background:var(--accent)"></i>Desk</span><span><i class="dot" style="background:var(--ink)"></i>You</span></div>
+  <div class="legend"><span><i style="background:var(--wall)"></i>Wall / object</span><span><i style="background:var(--floor);outline:1px solid var(--line2)"></i>Seen floor</span><span><i style="background:var(--busy)"></i>Busy</span><span><i class="dot" style="background:var(--lidar)"></i>LiDAR</span><span><i style="background:var(--accent)"></i>Desk</span><span><i class="dot" style="background:var(--ink)"></i>You</span><span><i style="background:var(--zone)"></i>No-go</span></div>
   <div id="mapinfo">Map updates with simulator state.</div>
+  <div class="zones">
+   <div class="zones-head"><span class="eyebrow">No-go zones</span><button class="btn subtle small" id="zoneAdd" type="button">+ Add zone</button></div>
+   <div id="zoneForm" class="zone-form" hidden><input id="zoneName" maxlength="24" value="Keep out" aria-label="Zone name"><button class="btn small" id="zoneSave" type="button">Save</button><button class="zone-x" id="zoneCancel" type="button" aria-label="Cancel">×</button></div>
+   <div id="zoneList" class="zone-list"><span class="small">None yet. Add one around a desk, a cable or a wall it should keep clear of.</span></div>
+  </div>
  </section>
  <section class="panel">
   <div class="power">
-   <div><div class="meter-head"><span class="eyebrow">Robot battery</span><b><span id="battery">—</span><small>%</small></b></div><div class="seg" id="batterybar"></div><div class="meta">12 V drive battery</div></div>
+   <div><div class="meter-head"><span class="eyebrow">Robot battery</span><b><span id="battery">—</span><small>%</small></b></div><div class="seg" id="batterybar"></div><div class="meta">12 V drive battery</div><div class="meta" id="batPlan">Trip planning: —</div></div>
    <div><div class="meter-head"><span class="eyebrow">Desk power</span><b><span id="ups">—</span><small>%</small></b></div><div class="seg" id="upsbar"></div><div class="meta">Charging: <span id="charging">—</span></div></div>
   </div>
   <div id="batteryWarnings" class="battery-warnings" aria-live="polite" aria-atomic="true"></div>
@@ -229,7 +261,6 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
   <details><summary>Position &amp; map</summary><div class="body"><div class="kv"><div><span class="eyebrow">X</span><b id="px">—</b></div><div><span class="eyebrow">Y</span><b id="py">—</b></div><div><span class="eyebrow">Explored</span><b id="explored">—</b></div></div></div></details>
   <details><summary>Safety &amp; dock</summary><div class="body"><div class="kv"><div><span class="eyebrow">E-stop</span><b id="estop" class="value">—</b></div><div><span class="eyebrow">Cord</span><b id="cord" class="value">—</b></div><div><span class="eyebrow">Interlock</span><b id="interlock" class="value">—</b></div></div></div></details>
   <details><summary><span><b class="simtag">SIM</b> Simulator tools</span></summary><div class="body"><p class="small" style="margin:0">These change the simulated room only. On the real desk, Summon comes to where you are.</p><div class="eyebrow">Where you are standing</div><div class="fields"><div class="field"><label for="x">X (m from left wall)</label><input id="x" type="number" step="0.1" min="0.5" value="4.0" inputmode="decimal"></div><div class="field"><label for="y">Y (m from top wall)</label><input id="y" type="number" step="0.1" min="0.5" value="3.0" inputmode="decimal"></div></div><p class="small" style="margin:0">Tapping the plan sets this too.</p><div class="actions"><button id="cordIn" class="btn subtle">Plug in cord</button><button id="cordOut" class="btn subtle">Unplug cord</button><button id="learn" class="btn subtle return">Map the room</button></div></div></details>
-  <details id="eventLogDetails"><summary>History</summary><div class="body"><div class="event-log-tools"><span class="small">Saved in this browser</span><button id="clearEventLog" class="btn subtle" type="button">Clear</button></div><div id="eventLogList" class="event-log-list" aria-live="polite"><div class="event-log-empty">No events yet.</div></div></div></details>
   <details class="settings-card" id="settings"><summary>Connection</summary><div class="body"><div class="field"><label for="token">API token (simulator default: dev-token)</label><input id="token" type="password" autocomplete="off" value="dev-token"></div><button class="btn subtle" id="saveToken">Apply token</button><p class="small" style="margin:0">On your phone, open the computer's local address, for example http://192.168.1.25:8787, on the same trusted Wi-Fi. Don't expose this service to the internet.</p></div></details>
  </section>
 </div>
@@ -252,6 +283,19 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
   <div class="lidar-wrap"><canvas id="lidarCanvas" aria-label="3D room model"></canvas><div class="lidar-legend"><span><i class="lidar-key wall"></i>Obstacle</span><span><i class="lidar-key"></i>Floor</span><span><i class="lidar-key robot"></i>Desk</span></div></div>
   <div id="lidarStatus" class="lidar-status" role="status" aria-live="polite">Waiting for the map…</div>
   <p class="small lidar-note">From <code>/v1/map</code> and <code>/v1/state</code>. A picture of the map, not an obstacle-detection system.</p>
+ </section>
+</section>
+
+<section id="tab-history" class="tab-panel" role="tabpanel" aria-label="History">
+ <section class="panel">
+  <div class="panel-head"><h2 class="eyebrow">Trips</h2><button id="clearTrips" class="btn subtle small" type="button">Clear</button></div>
+  <div class="trip-summary"><div><span class="eyebrow">Trips</span><b id="tripCount">0</b></div><div><span class="eyebrow">Distance</span><b><span id="tripDist">0</span><small style="font-size:11px;color:var(--mute)"> m</small></b></div><div><span class="eyebrow">Stops</span><b id="tripHolds">0</b></div></div>
+  <div id="tripList" class="trip-list"><div class="trip-empty">No trips yet. Each summon, return and room-mapping run shows up here with how it ended.</div></div>
+ </section>
+ <section class="panel">
+  <div class="panel-head"><h2 class="eyebrow">Events</h2><button id="clearEventLog" class="btn subtle small" type="button">Clear</button></div>
+  <div id="eventLogList" class="event-log-list" aria-live="polite"><div class="event-log-empty">No events yet.</div></div>
+  <p class="small" style="margin:10px 0 0">Saved in this browser.</p>
  </section>
 </section>
 
@@ -312,7 +356,7 @@ function segs(id,pct,known){const host=$(id);if(host.children.length!==10)host.r
 function updateTargetText(){setText('targetText','to you · '+fmt($('x').value,1)+', '+fmt($('y').value,1)+' m')}
 function render(s){observeState(s);lastState=s;if(Number.isFinite(Number(s.epoch)))currentEpoch=Number(s.epoch);const off=s.simulator_connected===false;const connected=$('connection');connected.textContent=off?'Simulator offline':'Live';connected.classList.toggle('online',!off);setText('status',s.status||'Unknown');$('status').className=s.severity==='bad'?'bad':s.severity==='warn'?'warn':'';setText('mode',off?'Open /simulator in another tab to connect':'mode: '+(s.mode||'—'));setText('active',off?'Unknown':s.active?'Moving':'Parked');$('active').classList.toggle('moving',!off&&!!s.active);
  const rb=Number(s.battery?.robot_pct),ub=Number(s.battery?.ups_pct),robotKnown=!off&&Number.isFinite(rb)&&s.battery?.robot_pct!==null&&s.battery?.robot_pct!==undefined,upsKnown=!off&&Number.isFinite(ub)&&s.battery?.ups_pct!==null&&s.battery?.ups_pct!==undefined;setText('battery',robotKnown?fmt(rb,0):'—');setText('hbatPct',robotKnown?fmt(rb,0)+'%':'—');$('hbatFill').style.width=(robotKnown?Math.max(0,Math.min(100,rb)):0)+'%';$('hbat').classList.toggle('low',robotKnown&&rb<=20);$('hbat').classList.toggle('mid',robotKnown&&rb>20&&rb<=40);segs('batterybar',rb,robotKnown);setText('ups',upsKnown?fmt(ub,0):'—');segs('upsbar',ub,upsKnown);setText('charging',typeof s.charging==='boolean'?(s.charging?'yes':'no'):'unknown');
- const warnings=[];if(off)warnings.push({kind:'warn',title:'Simulator disconnected',body:'Open /simulator and keep it running to update controls and readings.'});if(!robotKnown)warnings.push({kind:'warn',title:'Robot battery unavailable',body:'No valid robot battery reading.'});else if(rb<=20)warnings.push({kind:'danger',title:'Robot battery low',body:'At '+fmt(rb,0)+'%. Recharge before the next run.'});if(!upsKnown)warnings.push({kind:'warn',title:'Desk power unavailable',body:'No valid desk power reading.'});else if(ub<=20)warnings.push({kind:'danger',title:'Desk power low',body:'At '+fmt(ub,0)+'%. Check the power station.'});$('batteryWarnings').replaceChildren(...warnings.map(w=>{const el=document.createElement('div');el.className='battery-warning '+w.kind;const title=document.createElement('strong');title.textContent=w.title;const body=document.createElement('span');body.textContent=w.body;el.append(title,body);return el}));
+ const warnings=[];if(off)warnings.push({kind:'warn',title:'Simulator disconnected',body:'Open /simulator and keep it running to update controls and readings.'});if(!robotKnown)warnings.push({kind:'warn',title:'Robot battery unavailable',body:'No valid robot battery reading.'});else if(rb<=20)warnings.push({kind:'danger',title:'Robot battery low',body:'At '+fmt(rb,0)+'%. Recharge before the next run.'});if(!upsKnown)warnings.push({kind:'warn',title:'Desk power unavailable',body:'No valid desk power reading.'});else if(ub<=20)warnings.push({kind:'danger',title:'Desk power low',body:'At '+fmt(ub,0)+'%. Check the power station.'});const bp=s.battery_plan;if(!off&&bp&&bp.can_summon===false)warnings.push({kind:'warn',title:'Not enough battery to summon',body:'A trip to you and back needs about '+Math.ceil(bp.need_trip_pct+bp.reserve_pct)+'%. Let it charge first.'});$('batteryWarnings').replaceChildren(...warnings.map(w=>{const el=document.createElement('div');el.className='battery-warning '+w.kind;const title=document.createElement('strong');title.textContent=w.title;const body=document.createElement('span');body.textContent=w.body;el.append(title,body);return el}));
  setText('px',fmt(s.pose?.x,2)+' m');setText('py',fmt(s.pose?.y,2)+' m');setText('heading',fmt((((Number(s.pose?.theta)||0)*180/Math.PI)%360+360)%360,0)+'°');setText('estop',off?'Unknown':s.estop?'ENGAGED':'Clear');$('estop').className='value '+(off?'warn':s.estop?'danger':'good');setText('cord',s.cord?.plugged?'Plugged in':'Unplugged');$('cord').className='value '+(s.cord?.plugged?'warn':'');setText('interlock',s.cord?.interlock_on?'On':'Off');setText('explored',fmt(s.explored_pct,0)+'%');
  if(!$('x').dataset.edited){$('x').value=fmt(s.user?.x,1);$('y').value=fmt(s.user?.y,1)}updateTargetText();
  const p=posePoint(s.pose),now=performance.now();
@@ -321,7 +365,43 @@ function render(s){observeState(s);lastState=s;if(Number.isFinite(Number(s.epoch
   const last=trail[trail.length-1];if(!last||Math.hypot(p.x-last.x,p.y-last.y)>0.05){trail.push({x:p.x,y:p.y});if(trail.length>240)trail.shift()}
   const tx=Number($('x').value),ty=Number($('y').value);setText('dist',Number.isFinite(tx)&&Number.isFinite(ty)?fmt(Math.hypot(p.x-tx,p.y-ty),1):'—')}
  setText('spd',off||!p?'—':fmt(speedEMA<0.01?0:speedEMA,2));setText('lat',latencyMs===null?'—':String(latencyMs));
+ // Battery plan, robot alerts, no-go zones and the trip log all come from the robot itself.
+ if(!off&&bp&&Number.isFinite(+bp.need_home_pct)&&robotKnown){const spare=rb-bp.need_home_pct-bp.reserve_pct;setText('batPlan','Needs ~'+Math.ceil(bp.need_home_pct)+'% to get home · '+(spare>0?Math.floor(spare)+'% to spare':'heading home'))}else setText('batPlan','Trip planning: —');
+ const at=!off&&s.alert_text?String(s.alert_text):'';$('alertBanner').hidden=!at;setText('alertText',at);if(at&&at!==lastAlert)logEvent('Robot alert',at,'danger');lastAlert=at;
+ if(Array.isArray(s.zones)){const sig=JSON.stringify(s.zones);if(sig!==zonesSig){zonesSig=sig;zones=s.zones;renderZones()}}
+ if(Array.isArray(s.trips))mergeTrips(s.trips);
 }
+// ============ No-go zones: drawn on the plan, stored on the robot ============
+let zones=[],zonesSig='',zoneMode=false,zoneDrag=null,zonePending=null,lastAlert='';
+function renderZones(){const host=$('zoneList');host.replaceChildren();if(!zones.length){const e=document.createElement('span');e.className='small';e.textContent='None yet. Add one around a desk, a cable or a wall it should keep clear of.';host.appendChild(e);return}
+ for(const z of zones){const c=document.createElement('span');c.className='zone-chip';const n=document.createElement('b');n.textContent=z.name;const d=document.createElement('span');d.textContent=fmt(z.w,1)+'×'+fmt(z.h,1)+' m';const x=document.createElement('button');x.type='button';x.textContent='×';x.setAttribute('aria-label','Delete '+z.name);x.onclick=()=>saveZones(zones.filter(q=>q!==z),'Deleted zone '+z.name);c.append(n,d,x);host.appendChild(c)}}
+async function saveZones(list,msg){await command('/v1/zones',{zones:list.map(z=>({id:z.id,name:z.name,x:+(+z.x).toFixed(2),y:+(+z.y).toFixed(2),w:+(+z.w).toFixed(2),h:+(+z.h).toFixed(2)}))},msg||'Saving no-go zones')}
+function setZoneMode(on){zoneMode=on;zoneDrag=null;$('zoneAdd').classList.toggle('active-mode',on);$('zoneAdd').textContent=on?'Cancel drawing':'+ Add zone';document.querySelector('.plan-hint').innerHTML=on?'<b class="simtag" style="background:var(--zone)">ZONE</b> Drag on the plan to mark the area':'<b class="simtag">SIM</b> Tap to place yourself'}
+function planMetres(e){const r=$('map').getBoundingClientRect();return {x:Math.max(0,Math.min(mapData.width_m,(e.clientX-r.left)/r.width*mapData.width_m)),y:Math.max(0,Math.min(mapData.height_m,(e.clientY-r.top)/r.height*mapData.height_m))}}
+$('zoneAdd').addEventListener('click',()=>{zonePending=null;$('zoneForm').hidden=true;setZoneMode(!zoneMode)});
+$('map').addEventListener('pointerdown',e=>{if(!zoneMode||!mapData)return;zoneDrag={a:planMetres(e),b:planMetres(e)};try{$('map').setPointerCapture(e.pointerId)}catch(_){}});
+$('map').addEventListener('pointermove',e=>{if(zoneDrag)zoneDrag.b=planMetres(e)});
+$('map').addEventListener('pointerup',e=>{if(!zoneDrag)return;const {a,b}=zoneDrag;zoneDrag=null;const r={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(a.x-b.x),h:Math.abs(a.y-b.y)};
+ if(r.w<0.2||r.h<0.2){say('Drag a bigger area (at least 20 cm each way).','danger');return}zonePending=r;setZoneMode(false);$('zoneForm').hidden=false;$('zoneName').select();say('Name the zone, then Save.')});
+$('zoneSave').addEventListener('click',()=>{if(!zonePending)return;const z={...zonePending,id:'z'+Date.now().toString(36),name:($('zoneName').value.trim()||'Keep out').slice(0,24)};zonePending=null;$('zoneForm').hidden=true;saveZones([...zones,z],'Adding zone '+z.name)});
+$('zoneCancel').addEventListener('click',()=>{zonePending=null;$('zoneForm').hidden=true});
+// ============ Trip history (the robot keeps the last 10; this browser keeps the last 50) ============
+const TRIPS_KEY='summonDeskTripsV1';let tripItems=[];
+try{const t=JSON.parse(localStorage.getItem(TRIPS_KEY)||'[]');if(Array.isArray(t))tripItems=t.filter(x=>x&&x.id).slice(0,50)}catch(_){}
+function mergeTrips(list){let added=false;for(const t of list){if(t&&t.id&&!tripItems.some(q=>q.id===t.id)){tripItems.push(t);added=true;const lab=TRIP_KIND[t.kind]||t.kind,o=TRIP_OUT[t.outcome]||[t.outcome,''];logEvent(lab+': '+o[0],fmt(t.distance_m,1)+' m in '+fmtDur(t.duration_s),o[1]==='bad'?'danger':o[1]==='warn'?'warn':'')}}
+ if(added){tripItems.sort((a,b)=>(b.started_at||0)-(a.started_at||0));tripItems=tripItems.slice(0,50);try{localStorage.setItem(TRIPS_KEY,JSON.stringify(tripItems))}catch(_){}renderTrips()}}
+const TRIP_KIND={summon:'Summon',return:'Return to dock',tour:'Room mapping'};
+const TRIP_OUT={arrived:['Arrived','ok'],stopped:['Stopped','warn'],battery:['Turned back: battery','warn'],'e-stop':['E-stop','bad'],cord:['Cord plugged in','bad'],ended:['Ended',''],replaced:['Replaced by new trip','']};
+function fmtDur(sec){sec=Math.round(+sec||0);return sec>=60?Math.floor(sec/60)+' min '+(sec%60)+' s':sec+' s'}
+function renderTrips(){const host=$('tripList');host.replaceChildren();setText('tripCount',String(tripItems.length));setText('tripDist',fmt(tripItems.reduce((a,t)=>a+(+t.distance_m||0),0),1));setText('tripHolds',String(tripItems.reduce((a,t)=>a+(+t.safety_holds||0),0)));
+ if(!tripItems.length){const e=document.createElement('div');e.className='trip-empty';e.textContent='No trips yet. Each summon, return and room-mapping run shows up here with how it ended.';host.appendChild(e);return}
+ for(const t of tripItems){const card=document.createElement('div');card.className='trip';const top=document.createElement('div');top.className='trip-top';const name=document.createElement('strong');name.textContent=TRIP_KIND[t.kind]||t.kind;
+  const o=TRIP_OUT[t.outcome]||[t.outcome,''];const chip=document.createElement('span');chip.className='outcome '+o[1];chip.textContent=o[0];const when=document.createElement('time');when.textContent=t.started_at?new Date(t.started_at).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  const left=document.createElement('div');left.style.display='grid';left.style.gap='2px';left.append(name,when);top.append(left,chip);
+  const st=document.createElement('div');st.className='trip-stats';const add=(k,v)=>{const sp=document.createElement('span');sp.append(k+' ');const b=document.createElement('b');b.textContent=v;sp.appendChild(b);st.appendChild(sp)};
+  add('Distance',fmt(t.distance_m,1)+' m');add('Time',fmtDur(t.duration_s));add('Battery',fmt(t.battery_used_pct,1)+'%');add('Safety stops',String(t.safety_holds??0));card.append(top,st);host.appendChild(card)}}
+renderTrips();
+$('clearTrips').addEventListener('click',()=>{tripItems=[];try{localStorage.removeItem(TRIPS_KEY)}catch(_){}renderTrips()});
 
 // ============ Room plan: cached map layer + live desk, trail, LiDAR hits, you and the summon spot ============
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -337,6 +417,9 @@ function drawPlan(){
  const g=cv.getContext('2d'),m=mapData;if(!m){g.fillStyle=css('--unknown');g.fillRect(0,0,Wp,Hp);return}
  if(!mapLayer)mapLayer=buildMapLayer(Wp,Hp);g.drawImage(mapLayer,0,0);
  const sx=Wp/m.width_m,sy=Hp/m.height_m,s=lastState,p=shownPose();
+ const zc=css('--zone');for(const z of [...zones,...(zoneDrag?[{x:Math.min(zoneDrag.a.x,zoneDrag.b.x),y:Math.min(zoneDrag.a.y,zoneDrag.b.y),w:Math.abs(zoneDrag.a.x-zoneDrag.b.x),h:Math.abs(zoneDrag.a.y-zoneDrag.b.y),name:''}]:[]),...(zonePending?[{...zonePending,name:$('zoneName').value}]:[])]){
+  const x=z.x*sx,y=z.y*sy,w=z.w*sx,h=z.h*sy;g.save();g.beginPath();g.rect(x,y,w,h);g.clip();g.strokeStyle='rgba(255,107,143,.35)';g.lineWidth=1.5*dpr;g.beginPath();for(let k=-h;k<w;k+=8*dpr){g.moveTo(x+k,y+h);g.lineTo(x+k+h,y)}g.stroke();g.restore();
+  g.strokeStyle=zc;g.lineWidth=1.5*dpr;g.setLineDash([5*dpr,4*dpr]);g.strokeRect(x,y,w,h);g.setLineDash([]);if(z.name){g.fillStyle=zc;g.font=`600 ${11*dpr}px ${css('--mono')}`;g.fillText(z.name,x+4*dpr,y+13*dpr)}}
  if(trail.length>1){g.strokeStyle='rgba(47,212,176,.5)';g.lineWidth=2*dpr;g.setLineDash([4*dpr,4*dpr]);g.beginPath();trail.forEach((q,i)=>i?g.lineTo(q.x*sx,q.y*sy):g.moveTo(q.x*sx,q.y*sy));if(p)g.lineTo(p.x*sx,p.y*sy);g.stroke();g.setLineDash([])}
  if(p&&s&&Array.isArray(s.lidar)){const cyan=css('--lidar'),warn=css('--warn');for(const h of s.lidar){const a=p.th+(+h.angle)*Math.PI/180,rr=+h.range;if(!Number.isFinite(a)||!Number.isFinite(rr))continue;g.fillStyle=h.type==='person'?warn:cyan;g.fillRect((p.x+Math.cos(a)*rr)*sx-1.5*dpr,(p.y+Math.sin(a)*rr)*sy-1.5*dpr,3*dpr,3*dpr)}}
  const tx=Number($('x').value),ty=Number($('y').value);
@@ -347,7 +430,7 @@ function drawPlan(){
 }
 let planRAF=0;function planLoop(){drawPlan();planRAF=$('tab-control').classList.contains('active')&&!document.hidden?requestAnimationFrame(planLoop):0}
 function startPlanLoop(){if(!planRAF)planRAF=requestAnimationFrame(planLoop)}
-$('map').addEventListener('click',e=>{if(!mapData)return;const r=$('map').getBoundingClientRect();const x=(e.clientX-r.left)/r.width*mapData.width_m,y=(e.clientY-r.top)/r.height*mapData.height_m;$('x').value=x.toFixed(1);$('y').value=y.toFixed(1);$('x').dataset.edited='1';$('y').dataset.edited='1';updateTargetText();say('Sim: you are now at '+x.toFixed(1)+', '+y.toFixed(1)+' m. Press Summon desk.')});
+$('map').addEventListener('click',e=>{if(!mapData||zoneMode||zonePending)return;const r=$('map').getBoundingClientRect();const x=(e.clientX-r.left)/r.width*mapData.width_m,y=(e.clientY-r.top)/r.height*mapData.height_m;$('x').value=x.toFixed(1);$('y').value=y.toFixed(1);$('x').dataset.edited='1';$('y').dataset.edited='1';updateTargetText();say('Sim: you are now at '+x.toFixed(1)+', '+y.toFixed(1)+' m. Press Summon desk.')});
 window.addEventListener('resize',()=>{mapLayer=null});
 // ============ LiDAR 3D room view (Three.js) ============
 var lidarTimer=null, lidarRenderer=null, lidarScene=null, lidarCamera=null;
