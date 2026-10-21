@@ -23,8 +23,8 @@ public final class Constants {
   );
 
   public static final class ModuleConstants {
-    /** 12, 13 or 14. PLAN.md calls for the 12T (low) pinion. */
-    public static final int kDrivingMotorPinionTeeth = 12;
+    /** 12, 13 or 14: the pinion actually fitted. These modules have the 13T (medium); PLAN.md suggested 12T. */
+    public static final int kDrivingMotorPinionTeeth = 13;
 
     /**
      * Which Through Bore Encoder is on the module. MAXSwerve kits sold before 2025 have the V1

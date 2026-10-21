@@ -7,6 +7,9 @@ let browserState=null,browserStateAt=0,browserMap=null,browserMapAt=0;
 let pendingCommands=[],nextCommandId=1,browserLidar=null,browserLidarAt=0;
 // Server-side duplicate suppression: the UI guard alone is not sufficient when stale tabs or repeated events exist.
 let lastNavSignature='',lastNavAt=0,lastStopAt=0;
+// Joystick packets carry {sid (one per phone page), seq}; an older packet than the last one seen from that page is
+// refused, so a delayed "go" can never overtake the "let go" that followed it.
+const driveSeqs=new Map();
 // Command epoch: bumped when the simulator was stale and has just come back.
 // Commands may carry the client's last-seen epoch; a mismatch is rejected.
 let epoch=1,lastBrowserStateAt=0;
@@ -97,6 +100,9 @@ const server=require('http').createServer((req,res)=>{
     }else if(url==='/v1/drive'){
       const x=Number(body.x),y=Number(body.y),turn=Number(body.turn),speed=Number(body.speed);
       if(![x,y,turn,speed].every(Number.isFinite))return send(res,422,{accepted:false,status:'Drive values must be numbers'});
+      const sid=typeof body.sid==='string'?body.sid.slice(0,40):'',seq=Number(body.seq);
+      if(sid&&Number.isFinite(seq)){const last=driveSeqs.get(sid);if(last!==undefined&&seq<=last)return send(res,409,{accepted:false,status:'Older joystick packet ignored',severity:'info',stale_drive:true});
+        driveSeqs.delete(sid);driveSeqs.set(sid,seq);if(driveSeqs.size>50)driveSeqs.delete(driveSeqs.keys().next().value)}
       command={type:'drive',x:Math.max(-1,Math.min(1,x)),y:Math.max(-1,Math.min(1,y)),turn:Math.max(-1,Math.min(1,turn)),speed:Math.max(0.08,Math.min(1,speed))};
     }else if(url==='/v1/return')command={type:'return'};
     else if(url==='/v1/learn')command={type:'learn'};

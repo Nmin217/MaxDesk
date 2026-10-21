@@ -20,7 +20,7 @@ simulator bridge in `bridge/` implements it and has been tested with curl.
 | `GET /v1/map` | none | `{ width_m, height_m, cell_m, gw, gh, rows }` rows: `.` never seen, `_` free, `#` remembered obstacle, `+` busy |
 | `GET /v1/lidar` | none | `{ source, simulator_connected, max_range, frame: "robot", units: "meters", points, updated_at, epoch }` points: `[{ angle (degrees, -180..180), range, type }]` |
 | `POST /v1/summon` | `{ "x": 14.0, "y": 8.6 }` | `{ accepted, status, severity, command_id }` |
-| `POST /v1/drive` | `{ "x": 0.5, "y": 0, "turn": 0, "speed": 0.4 }` | same. Manual joystick: x, y, turn clamped to -1..1, speed to 0.08..1; only the newest packet is kept. Sets mode `manual` |
+| `POST /v1/drive` | `{ "x": 0.5, "y": 0, "turn": 0, "speed": 0.4 }` | same. Manual joystick: x, y, turn clamped to -1..1, speed to 0.08..1; only the newest packet is kept. Sets mode `manual`. Optional `sid` (one random id per phone page) and `seq` (increasing): a packet with `seq` not above the last one from that `sid` gets 409 `stale_drive`, so a delayed packet can't overtake a newer one |
 | `POST /v1/return` | `{}` | same |
 | `POST /v1/learn` | `{}` | same (drives a mapping tour, then returns to the dock) |
 | `POST /v1/stop` | `{}` | same. A SOFT stop. Always purges queued drive/summon/return/learn and clears the duplicate-navigation guard. A repeat within 250 ms while the first Stop is still queued is coalesced: `200 { accepted: true, status: "Stop already queued" }`, never 429. There is deliberately no way to release the E-stop. |

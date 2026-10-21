@@ -176,8 +176,8 @@ Sample console output (Driver Station → gear icon → View Console) for a good
 [Module FL] steer   0 deg OK (0.6 s, error 1.2 deg)
 [Module FL] steer  90 deg OK (0.7 s, error 0.9 deg)
 ...
-[Module FL] drive +10%: encoder moved +0.790 m
-[Module FL] drive -10%: encoder moved -0.805 m
+[Module FL] drive +10%: encoder moved +0.860 m
+[Module FL] drive -10%: encoder moved -0.875 m
 [Module FL] PASS
 ```
 
@@ -201,8 +201,9 @@ The three modules' lines are interleaved because they run at the same time.
 - Which physical direction the wheel rolls on `drive +10%` with the wheel at 0°. On the frame, REV's
   chassis angular offsets (FL −90°, FR 0°, RL 180°, RR 90°) assume the standard mounting. Note any
   module you mount differently.
-- Drive distance at 10 %. Unloaded, expect roughly 0.4 m/s (about 0.8 m per 2 s step) with the 12T
-  pinion, and all modules within a few percent of each other. One much slower module usually has
+- Drive distance at 10 %. Unloaded, expect roughly 0.45 m/s (about 0.9 m per 2 s step) with the 13T
+  pinion fitted now (0.4 m/s with 12T), and all modules within a few percent of each other. If you change
+  pinions, update `kDrivingMotorPinionTeeth` in `Constants.java`. One much slower module usually has
   a tight bearing or a rubbing wheel.
 - Steering settle time at 90°. It should be well under 1 s. Much slower means friction or a low gain.
 

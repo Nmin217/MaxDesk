@@ -164,6 +164,7 @@ cleanup
 BP=
 # 3b. Keep-out zones and the new state fields (headless bridge, no simulator page registered).
 bridge_zones=false
+bridge_drive_seq=false
 PORT=$((PORT-4)); BASE="http://127.0.0.1:${PORT}"
 if start_bridge; then
   zc=$(curl -s -o "$TMP/zones.json" -w '%{http_code}' -H "$AUTH" -H 'Content-Type: application/json' -X POST -d '{"zones":[{"name":"Desk","x":7,"y":3.8,"w":2,"h":1.6}]}' "$BASE/v1/zones")
@@ -175,6 +176,10 @@ import json,sys; s=json.load(open('$TMP/state_zones.json'))
 z=s.get('zones') or []; bp=s.get('battery_plan') or {}
 ok=len(z)==1 and z[0]['name']=='Desk' and abs(z[0]['x']-7)<1e-6 and isinstance(bp.get('need_home_pct'),(int,float)) and 'can_summon' in bp and isinstance(s.get('trips'),list) and 'alert_text' in s
 sys.exit(0 if ok else 1)"; then bridge_zones=true; else echo "zones: post=$zc bad=$bad state=$(head -c 400 "$TMP/state_zones.json")" >&2; fi
+  # Joystick packet ordering: an older packet from the same phone page is refused.
+  dp(){ curl -s -o /dev/null -w '%{http_code}' -H "$AUTH" -H 'Content-Type: application/json' -X POST -d "{\"x\":$1,\"y\":0,\"turn\":0,\"speed\":0.3,\"sid\":\"t1\",\"seq\":$2}" "$BASE/v1/drive"; }
+  d5=$(dp 0.5 5); d4=$(dp 0.9 4); d6=$(dp 0 6); other=$(curl -s -o /dev/null -w '%{http_code}' -H "$AUTH" -H 'Content-Type: application/json' -X POST -d '{"x":0.2,"y":0,"turn":0,"speed":0.3,"sid":"t2","seq":1}' "$BASE/v1/drive")
+  if [ "$d5" = 200 ] && [ "$d4" = 409 ] && [ "$d6" = 200 ] && [ "$other" = 200 ]; then bridge_drive_seq=true; else echo "drive seq: 5=$d5 4=$d4 6=$d6 other=$other" >&2; fi
 fi
 cleanup
 BP=
@@ -193,6 +198,7 @@ printf '{"check":"bridge_stop_resets_nav_guard","ok":%s}\n' "$bridge_stop_resets
 printf '{"check":"bridge_sim_token_loopback","ok":%s}\n' "$bridge_sim_token_loopback"
 printf '{"check":"bridge_sim_token_lan_hidden","ok":%s}\n' "$bridge_sim_token_lan_hidden"
 printf '{"check":"bridge_zones_and_battery_plan","ok":%s}\n' "$bridge_zones"
+printf '{"check":"bridge_drive_older_packet_refused","ok":%s}\n' "$bridge_drive_seq"
 
 [ "$bridge_dup_poll" = true ] &&
 [ "$bridge_restart_stale_epoch" = true ] &&
@@ -202,4 +208,5 @@ printf '{"check":"bridge_zones_and_battery_plan","ok":%s}\n' "$bridge_zones"
 [ "$bridge_sim_token_loopback" = true ] &&
 [ "$bridge_sim_token_lan_hidden" = true ] &&
 [ "$bridge_zones" = true ] &&
+[ "$bridge_drive_seq" = true ] &&
 [ "$headless_ok" = 0 ]

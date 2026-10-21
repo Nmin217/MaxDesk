@@ -61,7 +61,7 @@ bridge = """<script>
 // In-page bridge: answers the phone app's /v1 requests from this simulator, with bridge_core.js's rules.
 (()=>{
   'use strict';
-  const PX=.02,EPOCH=1;let lastNav='',lastNavAt=0;
+  const PX=.02,EPOCH=1;let lastNav='',lastNavAt=0;const driveSeqs=new Map();
   function state(){let seenCount=0,remembered=0;for(let i=0;i<GW*GH;i++){if(seen[i])seenCount++;if(smap[i]>0)remembered++}
     return {time:+time.toFixed(1),mode,status:$('st').textContent,severity:($('st').className||'info'),active,estop,
       pose:{x:+(T.x*PX).toFixed(3),y:+(T.y*PX).toFixed(3),theta:+T.th.toFixed(3)},user:{x:+(user.x*PX).toFixed(3),y:+(user.y*PX).toFixed(3)},
@@ -96,6 +96,7 @@ bridge = """<script>
       c={type:'summon',x,y}}
     else if(path==='/v1/drive'){const v=[b.x,b.y,b.turn,b.speed].map(Number);
       if(!v.every(Number.isFinite))return [422,{accepted:false,status:'Drive values must be numbers'}];
+      const sid=typeof b.sid==='string'?b.sid:'',seq=Number(b.seq);if(sid&&Number.isFinite(seq)){const last=driveSeqs.get(sid);if(last!==undefined&&seq<=last)return [409,{accepted:false,status:'Older joystick packet ignored',stale_drive:true}];driveSeqs.set(sid,seq)}
       const cl=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));c={type:'drive',x:cl(v[0],-1,1),y:cl(v[1],-1,1),turn:cl(v[2],-1,1),speed:cl(v[3],.08,1)}}
     else if(path==='/v1/return')c={type:'return'};
     else if(path==='/v1/learn')c={type:'learn'};
