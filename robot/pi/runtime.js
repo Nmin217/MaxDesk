@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const http = require('http');
 const { URL } = require('url');
@@ -50,12 +51,40 @@ function toField(vx, vy, w) {
   return { vx: fx, vy: fy, omega: fw };
 }
 
+// The sim core keeps the room map and no-go zones in localStorage. On the Pi that is a folder of
+// small files, so they survive power-off. Power can be cut at any moment, so each write goes to a
+// temp file, is flushed to disk, then renamed over the old one: a cut mid-write leaves the previous
+// version, never a half-written file. dataDir null = keep everything in memory (forgotten at exit).
+function createStorage(dataDir) {
+  const mem = new Map();
+  if (dataDir === null) {
+    return { getItem: k => mem.has(k) ? mem.get(k) : null, setItem: (k, v) => mem.set(k, String(v)), removeItem: k => mem.delete(k) };
+  }
+  fs.mkdirSync(dataDir, { recursive: true });
+  const file = k => path.join(dataDir, encodeURIComponent(k) + '.txt');
+  return {
+    getItem(k) {
+      try { return fs.readFileSync(file(k), 'utf8'); } catch (_) { return null; }
+    },
+    setItem(k, v) {
+      const f = file(k), tmp = f + '.tmp';
+      const fd = fs.openSync(tmp, 'w');
+      try { fs.writeSync(fd, String(v)); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+      fs.renameSync(tmp, f);
+    },
+    removeItem(k) {
+      try { fs.unlinkSync(file(k)); } catch (_) {}
+    }
+  };
+}
+
 function loadSim() {
   const simPath = path.join(__dirname, '..', '..', 'bridge', 'sim_core.js');
   const code = fs.readFileSync(simPath, 'utf8');
   const wrapped = code + `
     ;return {
       update: update, reset: reset, startReturn: startReturn, startTour: startTour,
+      saveMap: function () { saveMap(); },
       getExtras: function () { return extraStateJSON(); },
       setZones: function (z) { return setZonesM(z); },
       getState: function () {
@@ -112,6 +141,7 @@ function httpJson(method, urlStr, token, body) {
 
 function createRuntime({
   io, bridgeUrl, token, hz = 60,
+  dataDir = process.env.MAXDESK_DATA_DIR || path.join(os.homedir(), '.maxdesk'),   // room map + no-go zones
   nowMs = () => Date.now(),
   statePushMs = 100, pollMs = 100, staleBridgeMs = 2000   // 100 ms: a Stop reaches the wheels within ~0.1 s plus Wi-Fi
 } = {}) {
@@ -120,6 +150,7 @@ function createRuntime({
   if (!token) throw new Error('token is required');
   if (!Number.isFinite(hz) || hz <= 0) throw new Error('hz must be positive');
 
+  global.localStorage = createStorage(dataDir);
   const sim = loadSim();
   let connected = false;
   let lastStatePush = 0;
@@ -249,6 +280,7 @@ function createRuntime({
       running = false; connected = false;
       if (timer) { clearInterval(timer); timer = null; }
       io.stopAll();
+      try { sim.saveMap(); } catch (_) {}   // the sim also saves every 10 s; this catches the last few
     },
     get connected() { return connected; },
     get sim() { return sim; },
@@ -256,4 +288,4 @@ function createRuntime({
   };
 }
 
-module.exports = { createRuntime };
+module.exports = { createRuntime, createStorage };

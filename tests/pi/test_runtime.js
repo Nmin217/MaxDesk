@@ -4,7 +4,12 @@ const http = require('http');
 const assert = require('node:assert/strict');
 const { createMockIO } = require('../../robot/pi/mock_io');
 const { createNullIO } = require('../../robot/pi/null_io');
-const { createRuntime } = require('../../robot/pi/runtime');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+// Keep test runs out of ~/.maxdesk: every runtime below saves into a throwaway folder.
+process.env.MAXDESK_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'maxdesk-test-'));
+const { createRuntime, createStorage } = require('../../robot/pi/runtime');
 
 function startStubBridge() {
   const pending = [];
@@ -303,6 +308,37 @@ async function test(name, fn) {
       for (let i = 0; i < 30; i++) await runtime.tickOnce(1 / 60);
       assert.ok(io.getWrites().some(x => Math.hypot(x.vx, x.vy) > 0.01), 'manual drive should move');
     } finally { runtime.stop(); await bridge.close(); }
+  });
+
+  await test('room map and no-go zones survive a power cycle', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'maxdesk-cycle-'));
+    const opts = { bridgeUrl: 'http://127.0.0.1:1', token: 't', dataDir: dir };
+    const first = createRuntime({ io: createMockIO(), ...opts });
+    first.sim.setZones([{ name: 'Desk', x: 2, y: 2, w: 1, h: 1 }]);
+    for (let i = 0; i < 120; i++) first.sim.update(1 / 60);   // the LiDAR maps the room around the dock
+    first.stop();
+    const mapFile = path.join(dir, encodeURIComponent('summonMap:default') + '.txt');
+    const saved = fs.readFileSync(mapFile, 'utf8');
+    assert.ok(Buffer.from(saved, 'base64').some(b => b !== 0), 'saved map should hold mapped cells');
+
+    const second = createRuntime({ io: createMockIO(), ...opts });   // "power on" with the same folder
+    const zones = second.sim.getExtras().zones;
+    assert.equal(zones.length, 1); assert.equal(zones[0].name, 'Desk');
+    second.stop();
+    assert.equal(fs.readFileSync(mapFile, 'utf8'), saved, 'map loaded back unchanged');
+  });
+
+  await test('storage: a write cut off by a power loss leaves the previous version', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'maxdesk-store-'));
+    const st = createStorage(dir);
+    st.setItem('k', 'old');
+    fs.writeFileSync(path.join(dir, 'k.txt.tmp'), 'half-writ');   // died before the rename
+    assert.equal(st.getItem('k'), 'old');
+    st.setItem('k', 'new');
+    assert.equal(st.getItem('k'), 'new');
+    st.removeItem('k');
+    assert.equal(st.getItem('k'), null);
+    assert.equal(createStorage(null).getItem('k'), null);
   });
 
   console.log(`${passed} passed, ${failed} failed`);
