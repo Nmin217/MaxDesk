@@ -16,6 +16,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants.ModuleConstants;
 import frc.robot.Constants.TestLimits;
@@ -36,6 +37,8 @@ public class TestModule {
   private final SparkClosedLoopController turnController;
 
   private boolean configOk = true;
+  private double stallSince = -1;
+  private boolean stalled = false;
 
   public TestModule(String name, int driveCanId, int turnCanId) {
     this.name = name;
@@ -45,7 +48,7 @@ public class TestModule {
     SparkMaxConfig driveConfig = new SparkMaxConfig();
     double metersPerMotorRev = ModuleConstants.kWheelDiameterMeters * Math.PI
         / ModuleConstants.kDrivingMotorReduction;
-    driveConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(ModuleConstants.kDriveCurrentLimitAmps);
+    driveConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(TestLimits.kBenchDriveCurrentLimitAmps);
     driveConfig.encoder
         .positionConversionFactor(metersPerMotorRev) // meters
         .velocityConversionFactor(metersPerMotorRev / 60.0); // meters per second
@@ -131,9 +134,42 @@ public class TestModule {
     turn.set(MathUtil.clamp(percent, -0.2, 0.2));
   }
 
-  /** Open-loop drive, always clamped to {@link TestLimits#kMaxDrivePercent}. */
+  /**
+   * Open-loop drive, always clamped to {@link TestLimits#kMaxDrivePercent}. Shuts the drive off
+   * (until {@link #clearStall()}) if the wheel is jammed: see {@link TestLimits#kStallAmps}.
+   */
   public void drivePercent(double percent) {
-    drive.set(MathUtil.clamp(percent, -TestLimits.kMaxDrivePercent, TestLimits.kMaxDrivePercent));
+    double out = MathUtil.clamp(percent, -TestLimits.kMaxDrivePercent, TestLimits.kMaxDrivePercent);
+    boolean pushing = Math.abs(out) > 0.02
+        && Math.abs(driveEncoder.getVelocity()) < TestLimits.kStallSpeedMps
+        && drive.getOutputCurrent() > TestLimits.kStallAmps;
+    double now = Timer.getFPGATimestamp();
+    if (!pushing) {
+      stallSince = -1;
+    } else if (stallSince < 0) {
+      stallSince = now;
+    } else if (!stalled && now - stallSince > TestLimits.kStallSec) {
+      stalled = true;
+      System.err.printf("[Module %s] DRIVE STALLED: %.0f A with the wheel not turning. Drive shut off."
+          + " Disable, remove power and check the drive train turns freely by hand.%n",
+          name, drive.getOutputCurrent());
+    }
+    if (stalled) {
+      drive.stopMotor();
+    } else {
+      drive.set(out);
+    }
+  }
+
+  /** True once the drive has been shut off for stalling. */
+  public boolean stalled() {
+    return stalled;
+  }
+
+  /** Allow driving again (each enable). */
+  public void clearStall() {
+    stalled = false;
+    stallSince = -1;
   }
 
   /**
@@ -171,5 +207,6 @@ public class TestModule {
     SmartDashboard.putNumber(p + "BusVolts", drive.getBusVoltage());
     SmartDashboard.putBoolean(p + "DriveFault", drive.hasActiveFault());
     SmartDashboard.putBoolean(p + "TurnFault", turn.hasActiveFault());
+    SmartDashboard.putBoolean(p + "Stalled", stalled);
   }
 }

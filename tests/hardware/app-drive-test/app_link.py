@@ -111,6 +111,7 @@ class Link:
             m = {"name": name, "config_ok": nt.boolean(name + "/ConfigOK", False),
                  "drive_fault": nt.boolean(name + "/DriveFault", False),
                  "turn_fault": nt.boolean(name + "/TurnFault", False),
+                 "stalled": nt.boolean(name + "/Stalled", False),
                  "result": nt.string("Result/" + name, "")}
             for k, key in MODULE_FIELDS.items():
                 v = nt.number(name + "/" + key, None)

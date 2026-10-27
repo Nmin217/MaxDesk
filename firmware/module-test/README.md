@@ -158,56 +158,9 @@ chosen test.
 | **Joystick** | Only while **RB is held** | Left stick: all wheels point and drive the way the stick points (max 15 %). A/B/X/Y: snap to 0/90/180/270°. Let go of RB and everything stops. |
 | **Phone app** | Only while your finger is on the test page | The same as Joystick, driven from your phone through `tests/hardware/app-drive-test` (see its README). Stops if commands stop for 0.3 s. |
 
-Each module also shows `ConfigOK`, currents, temperatures and faults under its name on the
-dashboard, and its result under `Result/FL`, `Result/FR`, `Result/RL`.
-
-### Self test steps (per module)
-
-1. **Direction check**: 0.6 s of +10 % open-loop steering, which must *increase* the angle.
-   This catches a non-inverted encoder **before** closed-loop control runs, because that bug
-   makes the module spin non-stop under PID.
-2. **Steer sweep**: 0°, 90°, 180°, 270°, 0°. Each must settle within 5° in under 2 s.
-3. **Drive**: wheel at 0°, +10 % for 2 s, stop, −10 % for 2 s, stop. The drive encoder must move.
-
-Sample console output (Driver Station → gear icon → View Console) for a good module:
-
-```
-[Module FL] running
-[Module FL] direction check: +0.1 output moved 63.0 deg
-[Module FL] steer   0 deg OK (0.6 s, error 1.2 deg)
-[Module FL] steer  90 deg OK (0.7 s, error 0.9 deg)
-...
-[Module FL] drive +10%: encoder moved +0.860 m
-[Module FL] drive -10%: encoder moved -0.875 m
-[Module FL] PASS
-```
-
-The three modules' lines are interleaved because they run at the same time.
-
-### What failures mean
-
-| Message | Likely cause |
-|---|---|
-| `SPARKs did not configure` | Wrong CAN ID, CAN wire broken before that SPARK, SPARK unpowered, or firmware too old. |
-| `encoder counts backwards` | Encoder inversion isn't taking effect: check the firmware, and that the encoder is on the turn SPARK. |
-| `angle did not change` | Encoder adapter not in the turn SPARK's **data port**, encoder cable loose, turn motor phase wire loose, or the drive and turn CAN IDs are swapped (the drive motor moved instead). |
-| `steer to N deg timed out` | Mechanical bind (spin the module by hand when it's off), loose encoder magnet or shaft, or the 20 A limit is too low for a tight module. |
-| `drive encoder did not move` | Drive motor phase or encoder cable loose, or drive/turn CAN IDs swapped. |
-| One module's motor moves when another is tested | Two modules' SPARK IDs are swapped. Check the labels against the ID table. |
-| Wheel stutters or buzzes | A phase wire is loose. Check all three crimps. |
-| Readout jumps or is noisy | Wrong encoder version: set `kThroughBoreEncoderV2` in `Constants.java` to match your encoder. |
-
-## 4. What to write down for the full drivetrain
-
-- Which physical direction the wheel rolls on `drive +10%` with the wheel at 0°. On the frame, REV's
-  chassis angular offsets (FL −90°, FR 0°, RL 180°, RR 90°) assume the standard mounting. Note any
-  module you mount differently.
-- Drive distance at 10 %. Unloaded, expect roughly 0.45 m/s (about 0.9 m per 2 s step) with the 13T
-  pinion fitted now (0.4 m/s with 12T), and all modules within a few percent of each other. If you change
-  pinions, update `kDrivingMotorPinionTeeth` in `Constants.java`. One much slower module usually has
-  a tight bearing or a rubbing wheel.
-- Steering settle time at 90°. It should be well under 1 s. Much slower means friction or a low gain.
-
-When the fourth module is built, add `RR` back into `kModules` and test all four. Once every module
-passes, mount them and use REV's MAXSwerve template (same CAN IDs) or the
-`Summon_Desk_IRL_Hardware_Package/hardware/roborio` code for driving.
+**Drive stall cut-off.** On the bench the drive current limit is 20 A (`kBenchDriveCurrentLimitAmps`).
+If a wheel is told to move but stays still while drawing over 10 A for half a second, that module's
+drive shuts off, `Stalled` shows on the dashboard, and the self test fails. It resets on the next
+enable. **Before enabling again, remove power and turn the wheel by hand: it should spin freely.**
+This only protects this program. REV Hardware Client's motor test uses the SPARK's own settings,
+so keep its speed low and its current limit set when spinning a drive motor installed in a module.

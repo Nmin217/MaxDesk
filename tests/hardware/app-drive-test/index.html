@@ -122,8 +122,8 @@ function render(s){
   $('help').innerHTML=h;$('help').classList.toggle('warn',!linkOk);
   const mods=s.modules||[];
   $('mods').innerHTML=mods.length?mods.map(m=>{
-    const fault=m.drive_fault||m.turn_fault||!m.config_ok, r=m.result||'';
-    return `<div class="mod"><h3>${m.name}<span class="${fault?'bad':''}">${!m.config_ok?'CAN?':fault?'FAULT':''}</span></h3>
+    const fault=m.drive_fault||m.turn_fault||!m.config_ok||m.stalled, r=m.result||'';
+    return `<div class="mod"><h3>${m.name}<span class="${fault?'bad':''}">${!m.config_ok?'CAN?':m.stalled?'STALLED':fault?'FAULT':''}</span></h3>
       <div class="row">${dial(m.angle_deg)}<div style="font:20px var(--mono)">${f(m.angle_deg,0)}°</div></div>
       <dl><dt>Wheel</dt><dd>${f(m.drive_mps,2)} m/s</dd><dt>Amps</dt><dd>${f(m.drive_amps,0)} / ${f(m.turn_amps,0)}</dd><dt>Temp °C</dt><dd>${f(m.drive_temp_c,0)} / ${f(m.turn_temp_c,0)}</dd><dt>Battery</dt><dd>${f(m.bus_volts,1)} V</dd></dl>
       ${r?`<div class="res ${/^PASS/.test(r)?'pass':/^FAIL/.test(r)?'fail':''}">Self test: ${r.replace(/[<>&]/g,'')}</div>`:''}</div>`}).join('')

@@ -79,6 +79,7 @@ public class Robot extends TimedRobot {
   public void teleopInit() {
     mode = modeChooser.getSelected();
     stopAll();
+    for (TestModule m : modules) m.clearStall();
     System.out.println("=== Enabled: " + mode + " ===");
     if (mode == Mode.SELF_TEST) {
       for (SelfTest t : selfTests) t.start();
@@ -241,6 +242,10 @@ public class Robot extends TimedRobot {
         case DRIVE -> {
           module.steerTo(0);
           module.drivePercent(kDriveScript[index][0]);
+          if (module.stalled()) {
+            fail("drive stalled: the wheel would not turn. Check the drive train spins freely by hand");
+            return;
+          }
           if (t > kDriveScript[index][1]) {
             double moved = module.drivePositionMeters() - startDriveM;
             if (kDriveScript[index][0] != 0) {

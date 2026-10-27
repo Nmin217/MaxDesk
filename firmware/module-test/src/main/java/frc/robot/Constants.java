@@ -56,6 +56,16 @@ public final class Constants {
     public static final double kSteerTimeoutSec = 2.0;
     /** Joystick deadband. */
     public static final double kDeadband = 0.08;
+    /** Drive current limit on the bench. Plenty to spin a free wheel; half the robot's 40 A. */
+    public static final int kBenchDriveCurrentLimitAmps = 20;
+    /**
+     * Stall cut-off: if the drive is asked to move but the wheel stays below kStallSpeedMps while
+     * drawing more than kStallAmps for kStallSec, that module's drive is shut off until the next
+     * enable. A free wheel never draws that much at bench speeds; a jammed one does.
+     */
+    public static final double kStallAmps = 10.0;
+    public static final double kStallSpeedMps = 0.05;
+    public static final double kStallSec = 0.5;
     /** Phone app mode: stop if no new command has arrived for this long. */
     public static final double kAppTimeoutSec = 0.3;
   }
