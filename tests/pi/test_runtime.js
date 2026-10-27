@@ -310,6 +310,58 @@ async function test(name, fn) {
     } finally { runtime.stop(); await bridge.close(); }
   });
 
+  await test('motion guard: the slew backstop never changes a normal summon', async () => {
+    const bridge = await startStubBridge();
+    const io = createMockIO();
+    const runtime = createRuntime({ io, bridgeUrl: bridge.url, token: 't', statePushMs: 1e12, pollMs: 1e12 });
+    try {
+      await runtime.start();
+      bridge.queue({ type: 'summon', x: 4, y: 3, epoch: 1, id: 1 });
+      await runtime.pollNow();
+      let compared = 0, worst = 0;
+      for (let i = 0; i < 600; i++) {
+        const n = io.getWrites().length;
+        await runtime.tickOnce(1 / 60);
+        const w = io.getWrites();
+        if (w.length === n) continue;
+        const T = runtime.sim.getState().T, last = w[w.length - 1];
+        worst = Math.max(worst, Math.abs(last.vx - T.vx * 0.02), Math.abs(last.vy + T.vy * 0.02), Math.abs(last.omega + T.w));
+        compared++;
+      }
+      assert.ok(compared > 100, 'expected a real trip, got ' + compared + ' writes');
+      assert.ok(worst < 1e-9, 'limiter altered normal motion by ' + worst);
+    } finally { runtime.stop(); await bridge.close(); }
+  });
+
+  await test('motion guard: a jammed wheel mid-summon stops the desk, alerts and logs the trip', async () => {
+    const bridge = await startStubBridge();
+    const io = createMockIO();
+    const runtime = createRuntime({ io, bridgeUrl: bridge.url, token: 't', statePushMs: 1e12, pollMs: 1e12 });
+    try {
+      await runtime.start();
+      bridge.queue({ type: 'summon', x: 4, y: 3, epoch: 1, id: 1 });
+      await runtime.pollNow();
+      for (let i = 0; i < 90; i++) await runtime.tickOnce(1 / 60);
+      assert.ok(runtime.sim.getState().active, 'trip should be under way');
+      io.setModules([{ name: 'FL', driveCmdMps: 0.4, driveMps: 0.01, driveAmps: 32, steerErrDeg: 2, steerAmps: 1 }]);
+      for (let i = 0; i < 40; i++) await runtime.tickOnce(1 / 60);
+      const ex = runtime.sim.getExtras();
+      assert.equal(runtime.sim.getState().active, false, 'trip should be cancelled');
+      assert.match(ex.alert_text, /FL wheel can't turn/);
+      assert.equal(ex.trips[0].outcome, 'jam');
+      const writes = io.getWrites().length;
+      for (let i = 0; i < 60; i++) await runtime.tickOnce(1 / 60);
+      assert.equal(io.getWrites().length, writes, 'no wheel commands after the jam');
+      assert.ok(io.isStopped());
+
+      io.setModules(null);   // fixed: a new summon is accepted and moves
+      bridge.queue({ type: 'summon', x: 4, y: 3, epoch: 1, id: 2 });
+      await runtime.pollNow();
+      for (let i = 0; i < 60; i++) await runtime.tickOnce(1 / 60);
+      assert.ok(io.getWrites().length > writes, 'should drive again after a new summon');
+    } finally { runtime.stop(); await bridge.close(); }
+  });
+
   await test('room map and no-go zones survive a power cycle', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'maxdesk-cycle-'));
     const opts = { bridgeUrl: 'http://127.0.0.1:1', token: 't', dataDir: dir };

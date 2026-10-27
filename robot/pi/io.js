@@ -18,6 +18,10 @@
  *   not move; the runtime calls stopAll() instead of writeWheels(). If it throws, the runtime
  *   treats the cord as locked (fail closed).
  * estopEngaged(): bool. If it throws, the runtime treats the e-stop as engaged.
+ * readModules() (optional): [{ name, driveCmdMps, driveMps, driveAmps, steerErrDeg, steerAmps }],
+ *   one per swerve module: commanded and measured wheel speed, drive current, how far the steering
+ *   is from its target, steering current. The runtime uses it to stop on a jammed module
+ *   (motion_guard.js). Without it there is no jam check.
  *
  * Implementations:
  *   null_io.js   safe default: refuses all motion
@@ -32,5 +36,6 @@ module.exports = {
   readBattery()   { throw new Error('readBattery not implemented'); },
   readCord()      { throw new Error('readCord not implemented'); },
   estopEngaged()  { throw new Error('estopEngaged not implemented'); },
+  readModules()   { throw new Error('readModules not implemented'); },
   stopAll()       { throw new Error('stopAll not implemented'); }
 };

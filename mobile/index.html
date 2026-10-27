@@ -391,7 +391,7 @@ try{const t=JSON.parse(localStorage.getItem(TRIPS_KEY)||'[]');if(Array.isArray(t
 function mergeTrips(list){let added=false;for(const t of list){if(t&&t.id&&!tripItems.some(q=>q.id===t.id)){tripItems.push(t);added=true;const lab=TRIP_KIND[t.kind]||t.kind,o=TRIP_OUT[t.outcome]||[t.outcome,''];logEvent(lab+': '+o[0],fmt(t.distance_m,1)+' m in '+fmtDur(t.duration_s),o[1]==='bad'?'danger':o[1]==='warn'?'warn':'')}}
  if(added){tripItems.sort((a,b)=>(b.started_at||0)-(a.started_at||0));tripItems=tripItems.slice(0,50);try{localStorage.setItem(TRIPS_KEY,JSON.stringify(tripItems))}catch(_){}renderTrips()}}
 const TRIP_KIND={summon:'Summon',return:'Return to dock',tour:'Room mapping'};
-const TRIP_OUT={arrived:['Arrived','ok'],stopped:['Stopped','warn'],battery:['Turned back: battery','warn'],'e-stop':['E-stop','bad'],cord:['Cord plugged in','bad'],ended:['Ended',''],replaced:['Replaced by new trip','']};
+const TRIP_OUT={arrived:['Arrived','ok'],stopped:['Stopped','warn'],battery:['Turned back: battery','warn'],'e-stop':['E-stop','bad'],cord:['Cord plugged in','bad'],jam:['Wheel jammed','bad'],ended:['Ended',''],replaced:['Replaced by new trip','']};
 function fmtDur(sec){sec=Math.round(+sec||0);return sec>=60?Math.floor(sec/60)+' min '+(sec%60)+' s':sec+' s'}
 function renderTrips(){const host=$('tripList');host.replaceChildren();setText('tripCount',String(tripItems.length));setText('tripDist',fmt(tripItems.reduce((a,t)=>a+(+t.distance_m||0),0),1));setText('tripHolds',String(tripItems.reduce((a,t)=>a+(+t.safety_holds||0),0)));
  if(!tripItems.length){const e=document.createElement('div');e.className='trip-empty';e.textContent='No trips yet. Each summon, return and room-mapping run shows up here with how it ended.';host.appendChild(e);return}

@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const http = require('http');
 const { URL } = require('url');
+const { createSlewLimiter, createJamDetector } = require('./motion_guard');
 
 // Fake DOM so the simulator core runs headlessly. Mirrors bridge/bridge_sim.js.
 global.els = {};
@@ -85,6 +86,7 @@ function loadSim() {
     ;return {
       update: update, reset: reset, startReturn: startReturn, startTour: startTour,
       saveMap: function () { saveMap(); },
+      jamStop: function (text) { jamStop(text); },
       getExtras: function () { return extraStateJSON(); },
       setZones: function (z) { return setZonesM(z); },
       getState: function () {
@@ -152,6 +154,8 @@ function createRuntime({
 
   global.localStorage = createStorage(dataDir);
   const sim = loadSim();
+  const slew = createSlewLimiter();
+  const jam = createJamDetector();
   let connected = false;
   let lastStatePush = 0;
   let lastPoll = 0;
@@ -240,11 +244,22 @@ function createRuntime({
       } catch (_) { cordLocked = true; }
       sim.update(dt);
       const s = sim.getState();
-      if (estop || !fresh || cordLocked) { io.stopAll(); return; }
+      if (estop || !fresh || cordLocked) { io.stopAll(); slew.reset(); return; }
+      // Per-module readings, if the IO has them (pi_io.js will; null/mock IO may not).
+      if (typeof io.readModules === 'function') {
+        let mods = null;
+        try { mods = io.readModules(); } catch (_) {}
+        const j = jam.step(mods, dt);
+        if (j) { sim.jamStop(j.text); io.stopAll(); slew.reset(); return; }
+      }
       const moving = Math.hypot(s.T.vx, s.T.vy) > 0.01 || Math.abs(s.T.w) > 0.01;
-      if (moving || s.active) { const v = toField(s.T.vx, s.T.vy, s.T.w); io.writeWheels(v.vx, v.vy, v.omega); }
-      else io.stopAll();
+      if (moving || s.active) {
+        const v = toField(s.T.vx, s.T.vy, s.T.w);
+        const o = slew.step(v.vx, v.vy, v.omega, dt);
+        io.writeWheels(o.vx, o.vy, o.omega);
+      } else { io.stopAll(); slew.reset(); }
     } catch (_) {
+      slew.reset();
       try { io.stopAll(); } catch (_) {}   // any failure in the tick leaves the wheels stopped
     }
   }

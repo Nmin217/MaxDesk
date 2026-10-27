@@ -11,7 +11,8 @@ function createMockIO() {
     estop: false,
     cord: { plugged: false, interlock_on: true },
     battery: { robot_pct: 80, ups_pct: 70, charging: false },
-    lidar: []
+    lidar: [],
+    modules: null
   };
   const writes = [];
   const stops = [];
@@ -23,6 +24,7 @@ function createMockIO() {
     readBattery: () => ({ ...state.battery }),
     readCord: () => ({ ...state.cord }),
     estopEngaged: () => state.estop,
+    readModules: () => state.modules && state.modules.map(m => ({ ...m })),
 
     writeWheels: (vx, vy, omega) => {
       writes.push({ vx, vy, omega });
@@ -39,6 +41,7 @@ function createMockIO() {
       state.theta += state.omega * dt;
     },
     setEstop: (v) => { state.estop = !!v; },
+    setModules: (mods) => { state.modules = mods; },
     setLidar: (pts) => { state.lidar = Array.isArray(pts) ? pts.slice() : []; },
     setCord: (plugged, interlock_on = true) => {
       state.cord = { plugged: !!plugged, interlock_on: !!interlock_on };

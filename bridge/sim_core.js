@@ -11,6 +11,7 @@ const YAW_RATE_MAX=1.8, YAW_GAIN=3.2;   // swerve: yaw is independent of transla
 const HEADING_FILTER_TC=1.5, HEADING_COMMIT=0.35, HEADING_SETTLE=0.06, SPEED_DRIVE_MIN=5;
 const MOVE_THRESH=3, STAND_WAIT=5.0;
 const SLIP_A=2.5;
+const ALPHA_UP=2.0, ALPHA_STOP=3.6;   // rad/s^2: yaw acceleration caps (see the swerve integration)
 // ---------------------------------------------------------------------------
 const rects=[{x:220,y:170,w:40,h:150},{x:450,y:60,w:150,h:40},{x:520,y:300,w:120,h:70}];
 const RECTS0=rects.map(r=>({...r}));
@@ -296,13 +297,15 @@ function pxToHome(x,y){if(!homeDist)computeHomeDist();const cx=Math.max(0,Math.m
 function batteryNeedHome(x,y){return pxToHome(x,y)*BAT_PER_PX*BAT_DETOUR}
 function batteryNeedTrip(ux,uy){return 1.4*Math.hypot(ux-T.x,uy-T.y)*BAT_PER_PX*BAT_DETOUR+batteryNeedHome(ux,uy)}
 function batAlert(text){alertText=text;alertT=10}
+// Hardware reported a jammed module (robot/pi/motion_guard.js): end the trip, stop, tell the user. No auto-resume.
+function jamStop(text){if(active){active=false;path=[];endTrip('jam')}parkTh=null;T.vx=T.vy=T.w=0;manualDrive={...manualDrive,x:0,y:0,turn:0};setSt(text,'bad');batAlert(text)}
 
 // Trip log: one record per summon / return / tour, ended with how it finished. Kept small; the app keeps the history.
 let trip=null,trips=[],tripSeq=0;
 function startTrip(kind){if(trip)endTrip('replaced');trip={id:Date.now().toString(36)+'-'+(++tripSeq),kind,start:time,startedAt:Date.now(),dist:0,lx:T.x,ly:T.y,holds0:safetyHolds,bat0:bat.r}}
 function endTrip(outcome){if(!trip)return;
   // A trip that went nowhere (already at the dock, stopped at once) isn't worth a history entry, unless it ended badly.
-  if(trip.dist*M_PER_PX<0.05&&time-trip.start<2&&outcome!=='e-stop'&&outcome!=='cord'){trip=null;return}
+  if(trip.dist*M_PER_PX<0.05&&time-trip.start<2&&outcome!=='e-stop'&&outcome!=='cord'&&outcome!=='jam'){trip=null;return}
   trips.unshift({id:trip.id,kind:trip.kind,outcome,started_at:trip.startedAt,duration_s:+(time-trip.start).toFixed(1),
   distance_m:+(trip.dist*M_PER_PX).toFixed(2),safety_holds:safetyHolds-trip.holds0,battery_used_pct:+Math.max(0,trip.bat0-bat.r).toFixed(1)});trips=trips.slice(0,10);trip=null}
 // Extra state for the phone app; every state producer (simulator page, bridge, Pi runtime) adds this.
@@ -979,7 +982,11 @@ if(cordLock()){
 // Integrate swerve
 const a=(Math.hypot(cx,cy)<Math.hypot(T.vx,T.vy)?(held?EMERG_DEC:60):25)*dt,ddx=cx-T.vx,ddy=cy-T.vy,dd=Math.hypot(ddx,ddy);
 if(dd>a&&dd>1e-6){T.vx+=ddx/dd*a;T.vy+=ddy/dd*a}else{T.vx=cx;T.vy=cy}
-T.w+=(w-T.w)*Math.min(1,dt*8);
+{// Yaw follows the request with a lag, but its rate of change is capped: the desk corners are ~0.67 m from
+ // the centre, so 2 rad/s^2 spinning up puts ~1.3 m/s^2 on them and 3.6 rad/s^2 stopping a spin ~2.4 m/s^2,
+ // both under SLIP_A. Uncapped, the lag alone reached ~10 rad/s^2 (~6.7 m/s^2 at the corners).
+ const dw=(w-T.w)*Math.min(1,dt*8),slowing=Math.abs(T.w+dw)<Math.abs(T.w)&&(T.w+dw)*T.w>=0,cap=(slowing?ALPHA_STOP:ALPHA_UP)*dt;
+ T.w+=Math.max(-cap,Math.min(cap,dw))}
 {const ex=HW*Math.abs(Math.cos(T.th))+HH*Math.abs(Math.sin(T.th)),ey=HW*Math.abs(Math.sin(T.th))+HH*Math.abs(Math.cos(T.th));
  T.x=Math.max(ex,Math.min(W-ex,T.x+T.vx*dt));
  T.y=Math.max(ey,Math.min(H-ey,T.y+T.vy*dt));}
