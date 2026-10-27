@@ -61,6 +61,7 @@ fi
 node tests/pi/test_runtime.js > /tmp/pi.log 2>&1 && ok "pi runtime: units, cord lock, exceptions, e-stop, timeouts" || { no "pi runtime"; tail -8 /tmp/pi.log; }
 node tests/pi/test_swerve.js > /tmp/sw.log 2>&1 && ok "swerve maths: module angles/speeds, desaturate, 90° flip, odometry" || { no "swerve maths"; grep FAIL /tmp/sw.log | head -6; }
 python3 -B -m unittest discover -s tests/pi_python > /tmp/pipy.log 2>&1 && ok "pi lidar safety monitor (python): metres, stale, blind, heartbeat, NT4" || { no "pi lidar python"; tail -8 /tmp/pipy.log; }
+python3 -B tests/hardware/app-drive-test/test_app_link.py > /tmp/adt.log 2>&1 && ok "bench drive test link: deadman seq, stop beats late drive, key" || { no "bench drive test link"; tail -8 /tmp/adt.log; }
 if bash tests/bridge/run.sh > /tmp/br.log 2>&1; then
   ok "bridge: dup poll, restart epoch handling"
 else

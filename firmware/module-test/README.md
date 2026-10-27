@@ -156,6 +156,7 @@ chosen test.
 | **Readout** (default) | No | Turn each wheel by hand. `FL/AngleDeg`, `FR/AngleDeg`, `RL/AngleDeg` should change smoothly, 0→360, increasing when the wheel turns counter-clockwise seen from above. With the calibration tool fitted, each should read ≈0. |
 | **Self test** | Yes, slow | Runs on all modules at once and reports PASS/FAIL per module (see below). |
 | **Joystick** | Only while **RB is held** | Left stick: all wheels point and drive the way the stick points (max 15 %). A/B/X/Y: snap to 0/90/180/270°. Let go of RB and everything stops. |
+| **Phone app** | Only while your finger is on the test page | The same as Joystick, driven from your phone through `tests/hardware/app-drive-test` (see its README). Stops if commands stop for 0.3 s. |
 
 Each module also shows `ConfigOK`, currents, temperatures and faults under its name on the
 dashboard, and its result under `Result/FL`, `Result/FR`, `Result/RL`.

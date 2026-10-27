@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#06131a">
+<title>Module Drive Test</title>
+<style>
+:root{--bg:#06131a;--panel:#0b1d26;--raise:#112a35;--sunk:#08171f;--line:#173341;--line2:#21465a;--ink:#e4f2f4;--mute:#86a5ad;--faint:#557680;--accent:#2fd4b0;--accent2:#2f8fe0;--accent-grad:linear-gradient(120deg,#2fd4b0,#2f8fe0);--go:#5ee08a;--warn:#ffa24c;--stop:#ff4d4d;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+main{max-width:520px;margin:0 auto;padding:12px 16px 96px;display:grid;gap:12px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+h1{margin:0;font-size:17px;letter-spacing:.04em;text-transform:uppercase}
+h1 small{display:block;font-size:11px;color:var(--mute);letter-spacing:.08em}
+.pill{font:12px var(--mono);padding:4px 10px;border-radius:99px;border:1px solid var(--line2);color:var(--mute);white-space:nowrap}
+.pill.ok{color:var(--go);border-color:var(--go)}.pill.bad{color:var(--stop);border-color:var(--stop)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.hint{font-size:13px;color:var(--mute);margin:0}.hint b{color:var(--ink)}.hint.warn{color:var(--warn)}
+#pad{position:relative;aspect-ratio:1;width:100%;max-width:340px;margin:0 auto;border-radius:50%;background:radial-gradient(circle,var(--raise),var(--sunk) 70%);border:1px solid var(--line2);touch-action:none}
+#pad::before,#pad::after{content:"";position:absolute;background:var(--line);left:50%;top:8%;bottom:8%;width:1px}
+#pad::after{top:50%;left:8%;right:8%;width:auto;height:1px;bottom:auto}
+#knob{position:absolute;z-index:1;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:var(--accent-grad);box-shadow:0 0 0 4px rgba(47,212,176,.15);pointer-events:none;transition:transform .08s}
+#pad.on #knob{transition:none}
+.lbl{position:absolute;font:11px var(--mono);color:var(--faint)}
+.row{display:flex;gap:8px;align-items:center}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+button{font:inherit;color:var(--ink);background:var(--raise);border:1px solid var(--line2);border-radius:10px;padding:10px 4px;touch-action:none}
+button.on{border-color:var(--accent);color:var(--accent)}
+input[type=range]{flex:1;accent-color:var(--accent)}
+.val{font:13px var(--mono);color:var(--accent);min-width:110px;white-space:nowrap;text-align:right}
+.mods{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.mod{background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:6px}
+.mod h3{margin:0;font-size:14px;display:flex;justify-content:space-between}
+.mod dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font:12px var(--mono)}
+.mod dt{color:var(--faint)}.mod dd{margin:0;text-align:right}
+.mod .res{font-size:12px;color:var(--mute);word-break:break-word}
+.mod .res.pass{color:var(--go)}.mod .res.fail,.bad{color:var(--stop)}
+#stopbar{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 30%)}
+#stop{display:block;width:100%;max-width:520px;margin:0 auto;padding:16px;border:0;border-radius:14px;background:var(--stop);color:#fff;font-weight:700;letter-spacing:.08em;font-size:17px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Module drive test<small>Bench only · wheels off the ground</small></h1>
+    <span id="link" class="pill">Connecting…</span>
+  </header>
+  <p id="help" class="card hint">Starting…</p>
+
+  <section class="card">
+    <div id="pad" aria-label="Drive pad: hold and drag"><span class="lbl" style="top:3%;left:50%;transform:translateX(-50%)">FORWARD</span><span class="lbl" style="left:4%;top:50%;transform:translateY(-50%)">LEFT</span><div id="knob"></div></div>
+    <p class="hint" style="text-align:center;margin-top:8px">Hold and drag. Lift your finger and everything stops.</p>
+  </section>
+
+  <section class="card" style="display:grid;gap:10px">
+    <div class="row"><span class="hint">Speed</span><input id="speed" type="range" min="10" max="100" step="10" value="50"><span id="speedv" class="val"></span></div>
+    <div><p class="hint" style="margin-bottom:6px">Hold to point the wheels (no driving)</p>
+      <div class="seg"><button data-deg="0">0° fwd</button><button data-deg="90">90° left</button><button data-deg="180">180° back</button><button data-deg="270">270° right</button></div></div>
+  </section>
+
+  <section class="card"><div id="mods" class="mods"><p class="hint">No modules yet.</p></div></section>
+</main>
+<div id="stopbar"><button id="stop">STOP</button></div>
+<script>
+const $=id=>document.getElementById(id);
+const KEY=new URLSearchParams(location.search).get('k')||'';
+const SID=Math.random().toString(36).slice(2);
+const CAP_MPS=4.46*0.15; // free speed with the 13T pinion × the robot program's 15% cap
+let seq=0, cmd=null, inFlight=false, linkOk=false, mode='';
+
+async function call(path,body){
+  const r=await fetch(path,{method:body?'POST':'GET',headers:{'X-Key':KEY,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,cache:'no-store'});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401)throw new Error(d.status||'wrong key');
+  return d;
+}
+function speed(){return +$('speed').value/100}
+$('speed').oninput=()=>{$('speedv').textContent=`${(CAP_MPS*speed()).toFixed(2)} m/s max`};$('speed').oninput();
+
+// While cmd is set, send it every 50 ms (one request at a time). The robot stops 0.3 s after they stop.
+setInterval(async()=>{
+  if(!cmd||inFlight)return;
+  inFlight=true;
+  try{await call('/drive',{...cmd,sid:SID,seq:++seq})}catch(e){}
+  inFlight=false;
+},50);
+function release(){if(cmd){cmd=null;call('/stop',{sid:SID,seq:++seq}).catch(()=>{})}knob(0,0);$('pad').classList.remove('on');document.querySelectorAll('.seg button').forEach(b=>b.classList.remove('on'))}
+
+const pad=$('pad');
+function knob(dx,dy){$('knob').style.transform=`translate(${dx}px,${dy}px)`}
+function padMove(e){
+  const r=pad.getBoundingClientRect(),R=r.width/2;
+  let dx=e.clientX-r.left-R,dy=e.clientY-r.top-R;const m=Math.hypot(dx,dy),lim=R-32;
+  if(m>lim){dx*=lim/m;dy*=lim/m}
+  knob(dx,dy);
+  const s=speed();cmd={x:-dy/lim*s,y:-dx/lim*s,point:null}; // x forward (up), y left
+}
+pad.addEventListener('pointerdown',e=>{pad.setPointerCapture(e.pointerId);pad.classList.add('on');padMove(e)});
+pad.addEventListener('pointermove',e=>{if(pad.classList.contains('on'))padMove(e)});
+for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(ev,release);
+document.querySelectorAll('.seg button').forEach(b=>{
+  b.addEventListener('pointerdown',e=>{b.setPointerCapture(e.pointerId);b.classList.add('on');cmd={x:0,y:0,point:+b.dataset.deg}});
+  for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,release);
+});
+$('stop').addEventListener('pointerdown',()=>{cmd=cmd||{};release()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)release()});
+window.addEventListener('blur',release);
+
+const f=(v,d=1)=>v==null?'–':(+v).toFixed(d);
+function dial(deg){ // 0° = forward (up), counter-clockwise positive, as the encoder reads from above
+  return `<svg viewBox="-20 -20 40 40" width="44" height="44"><circle r="18" fill="none" stroke="#21465a"/><g transform="rotate(${-(deg||0)})"><line y1="6" y2="-15" stroke="#2fd4b0" stroke-width="3" stroke-linecap="round"/></g></svg>`;
+}
+function render(s){
+  linkOk=!!s.connected;mode=s.mode||'';
+  $('link').textContent=linkOk?(mode||'roboRIO'):'No roboRIO';$('link').className='pill '+(linkOk?'ok':'bad');
+  let h;
+  if(!linkOk)h='The laptop can\'t reach the roboRIO. Check the USB cable or radio, and that the robot program is deployed.';
+  else if(mode==='APP')h='<b>Ready.</b> Drag on the pad to drive, or hold a direction button to point the wheels.';
+  else if(mode==='DISABLED')h='In the dashboard set <b>Test Mode → Phone app (test link)</b>, then <b>Enable TeleOp</b> in the Driver Station.';
+  else h=`The robot is running <b>${mode}</b>. Disable, set Test Mode to <b>Phone app (test link)</b>, then enable again.`;
+  $('help').innerHTML=h;$('help').classList.toggle('warn',!linkOk);
+  const mods=s.modules||[];
+  $('mods').innerHTML=mods.length?mods.map(m=>{
+    const fault=m.drive_fault||m.turn_fault||!m.config_ok, r=m.result||'';
+    return `<div class="mod"><h3>${m.name}<span class="${fault?'bad':''}">${!m.config_ok?'CAN?':fault?'FAULT':''}</span></h3>
+      <div class="row">${dial(m.angle_deg)}<div style="font:20px var(--mono)">${f(m.angle_deg,0)}°</div></div>
+      <dl><dt>Wheel</dt><dd>${f(m.drive_mps,2)} m/s</dd><dt>Amps</dt><dd>${f(m.drive_amps,0)} / ${f(m.turn_amps,0)}</dd><dt>Temp °C</dt><dd>${f(m.drive_temp_c,0)} / ${f(m.turn_temp_c,0)}</dd><dt>Battery</dt><dd>${f(m.bus_volts,1)} V</dd></dl>
+      ${r?`<div class="res ${/^PASS/.test(r)?'pass':/^FAIL/.test(r)?'fail':''}">Self test: ${r.replace(/[<>&]/g,'')}</div>`:''}</div>`}).join('')
+    :'<p class="hint">No modules reported yet.</p>';
+}
+async function poll(){
+  try{render(await call('/state'))}
+  catch(e){$('link').textContent='No link';$('link').className='pill bad';$('help').textContent=/key/.test(e.message)?e.message:'Can\'t reach the laptop. Is app_link.py running, and is the phone on the same Wi-Fi?';$('help').classList.add('warn')}
+  setTimeout(poll,200);
+}
+poll();
+</script>
+</body>
+</html>

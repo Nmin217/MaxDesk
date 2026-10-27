@@ -2,6 +2,8 @@ package frc.robot;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.networktables.DoubleArraySubscriber;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
@@ -26,10 +28,13 @@ import java.util.List;
  *       failed module stops.
  *   <li><b>Joystick</b>: hold RIGHT BUMPER (deadman) and use the left stick; every module
  *       follows the stick. A/B/X/Y point all wheels at 0/90/180/270 deg without driving.
+ *   <li><b>Phone app</b>: the same as Joystick, but driven from the test page in
+ *       tests/hardware/app-drive-test through its laptop link. The page only sends while a finger
+ *       is on it; if commands stop arriving for {@link TestLimits#kAppTimeoutSec}, everything stops.
  * </ul>
  */
 public class Robot extends TimedRobot {
-  private enum Mode { READOUT, SELF_TEST, JOYSTICK }
+  private enum Mode { READOUT, SELF_TEST, JOYSTICK, APP }
 
   private final List<TestModule> modules = Constants.kModules.stream()
       .map(id -> new TestModule(id.name(), id.driveCanId(), id.turnCanId()))
@@ -37,6 +42,11 @@ public class Robot extends TimedRobot {
   private final List<SelfTest> selfTests = modules.stream().map(SelfTest::new).toList();
 
   private final XboxController controller = new XboxController(OI.kControllerPort);
+  /** [seq, x, y, pointDeg] from the app link; x forward, y left, -1..1; pointDeg < 0 = none. */
+  private final DoubleArraySubscriber appCommand = NetworkTableInstance.getDefault()
+      .getDoubleArrayTopic("/AppDrive/cmd").subscribe(new double[0]);
+  private double appLastSeq = Double.NaN;
+  private double appFreshSince = Double.NEGATIVE_INFINITY;
   private final SendableChooser<Mode> modeChooser = new SendableChooser<>();
   private Mode mode = Mode.READOUT;
   private Rotation2d joystickAngle = Rotation2d.kZero;
@@ -45,6 +55,7 @@ public class Robot extends TimedRobot {
     modeChooser.setDefaultOption("Readout (no motion)", Mode.READOUT);
     modeChooser.addOption("Self test (scripted)", Mode.SELF_TEST);
     modeChooser.addOption("Joystick (hold RB)", Mode.JOYSTICK);
+    modeChooser.addOption("Phone app (test link)", Mode.APP);
     SmartDashboard.putData("Test Mode", modeChooser);
     for (TestModule m : modules) {
       if (!m.configOk()) {
@@ -73,6 +84,10 @@ public class Robot extends TimedRobot {
       for (SelfTest t : selfTests) t.start();
     }
     joystickAngle = Rotation2d.kZero;
+    // Ignore whatever command was left over from before this enable.
+    double[] cmd = appCommand.get();
+    appLastSeq = cmd.length == 4 ? cmd[0] : Double.NaN;
+    appFreshSince = Double.NEGATIVE_INFINITY;
   }
 
   @Override
@@ -83,6 +98,7 @@ public class Robot extends TimedRobot {
         for (SelfTest t : selfTests) t.run();
       }
       case JOYSTICK -> joystick();
+      case APP -> app();
     }
   }
 
@@ -96,14 +112,32 @@ public class Robot extends TimedRobot {
       stopAll();
       return;
     }
-    if (controller.getAButton()) joystickAngle = Rotation2d.fromDegrees(0);
-    if (controller.getBButton()) joystickAngle = Rotation2d.fromDegrees(90);
-    if (controller.getXButton()) joystickAngle = Rotation2d.fromDegrees(180);
-    if (controller.getYButton()) joystickAngle = Rotation2d.fromDegrees(270);
-
+    double pointDeg = -1;
+    if (controller.getAButton()) pointDeg = 0;
+    if (controller.getBButton()) pointDeg = 90;
+    if (controller.getXButton()) pointDeg = 180;
+    if (controller.getYButton()) pointDeg = 270;
     // Robot convention: +x forward (stick up), +y left (stick left). Sticks read up/left as -.
-    double x = -controller.getLeftY();
-    double y = -controller.getLeftX();
+    driveAll(-controller.getLeftY(), -controller.getLeftX(), pointDeg);
+  }
+
+  private void app() {
+    double[] cmd = appCommand.get();
+    double now = Timer.getFPGATimestamp();
+    if (cmd.length == 4 && cmd[0] != appLastSeq) {
+      appLastSeq = cmd[0];
+      appFreshSince = now;
+    }
+    if (cmd.length != 4 || now - appFreshSince > TestLimits.kAppTimeoutSec) {
+      stopAll();
+      return;
+    }
+    driveAll(cmd[1], cmd[2], cmd[3]);
+  }
+
+  /** Every module follows one stick: x forward, y left (-1..1); pointDeg >= 0 sets the angle. */
+  private void driveAll(double x, double y, double pointDeg) {
+    if (pointDeg >= 0) joystickAngle = Rotation2d.fromDegrees(pointDeg);
     double magnitude = MathUtil.applyDeadband(Math.min(1.0, Math.hypot(x, y)), TestLimits.kDeadband);
     if (magnitude > 0) joystickAngle = new Rotation2d(x, y);
     double percent = magnitude * TestLimits.kMaxDrivePercent;

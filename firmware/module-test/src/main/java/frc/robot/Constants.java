@@ -56,6 +56,8 @@ public final class Constants {
     public static final double kSteerTimeoutSec = 2.0;
     /** Joystick deadband. */
     public static final double kDeadband = 0.08;
+    /** Phone app mode: stop if no new command has arrived for this long. */
+    public static final double kAppTimeoutSec = 0.3;
   }
 
   public static final class OI {

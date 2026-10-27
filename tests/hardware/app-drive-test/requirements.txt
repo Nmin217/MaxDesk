@@ -1,0 +1,2 @@
+# Laptop side of the bench drive test. Same NT4 client as the Pi safety monitor.
+pyntcore==2026.2.2
