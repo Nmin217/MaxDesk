@@ -401,14 +401,14 @@ function locStep(dt){
   locSuspect=contradiction(pts,T.x,T.y,T.th)>.15;   // pause map updates until this is sorted out
   // Every candidate pays for how far it moves the belief. Along a bare wall, sliding sideways scores almost the
   // same, and without this cost the search wanders to the edge of its window every time (the corridor problem).
-  let costK=1;
+  let costK=locSuspect?.02:1;   // just shoved: the jump is real, the cost only breaks ties
   const N=pts.length,cost=(dx,dy,dth)=>costK*N*.04*((dx*dx+dy*dy)/16+(dth*180/Math.PI)**2/4);
   const here=scanScore(pts,T.x,T.y,T.th);
   let best=here,bestE=here[0],bx=T.x,by=T.y,bt=T.th;
   const search=(cx,cy,ct,r,st,ra,sa)=>{for(let dt2=-ra;dt2<=ra+1e-9;dt2+=sa)for(let dx=-r;dx<=r+1e-9;dx+=st)for(let dy=-r;dy<=r+1e-9;dy+=st){
     const x=cx+dx,y=cy+dy,th=ct+dt2,sc=scanScore(pts,x,y,th),e=sc[0]-cost(x-T.x,y-T.y,th-T.th);
     if(e>bestE){best=sc;bestE=e;bx=x;by=y;bt=th}}};
-  search(T.x,T.y,T.th,8,2,4*Math.PI/180,Math.PI/180);
+  search(T.x,T.y,T.th,8,2,4*Math.PI/180,Math.PI/180);costK=1;
   let wide=false;
   if(best[1]/N<.5||locSuspect){   // lost the match (a bump, a hard slip, a big heading error): search much wider, more cheaply
     wide=true;costK=locSuspect?.02:.25;search(T.x,T.y,T.th,30,4,12*Math.PI/180,2*Math.PI/180);costK=1}   // after a shove the cost only breaks ties: the jump is real
