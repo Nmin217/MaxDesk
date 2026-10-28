@@ -30,7 +30,7 @@ const since=new Float32Array(GW*GH).fill(-99),ESX=-14,HMIN=.63,LIFT=.05;
 const smap=new Float32Array(GW*GH); let clrRays=[];
 // Long-term memory. smap = static obstacles (kept until a lidar ray passes through the cell). seen = cells the lidar has
 // ever covered. traffic = where people tend to be. All three persist between trips and, in this browser, between visits.
-const seen=new Uint8Array(GW*GH), traffic=new Float32Array(GW*GH), mapBorn=new Float32Array(GW*GH).fill(-1e9);   // mapBorn: when a cell became an obstacle
+const seen=new Uint8Array(GW*GH), traffic=new Float32Array(GW*GH), mapBorn=new Float32Array(GW*GH).fill(-1e9),seenAt=new Float32Array(GW*GH).fill(-1e9);   // when a cell became an obstacle / was first seen
 let sceneKey='default',mapChanged=false,lastSaveT=0,mapCalls=0,stuckCalls=0,tourI=0,tourT=0,readyPending=false,wasCharging=false,cordIn=false,breakaways=0,alertT=0;
 const RISK=new Float32Array(GW*GH), UNK_PEN=.15, TRAF_K=.015, TRAF_MAX=.4;
 // Cells where the desk has recently been stuck get a growing planning cost, so A* prefers
@@ -46,7 +46,7 @@ function dest(){
   return user;
 }
 function mapKey(){return 'summonMap:'+sceneKey}
-function clearMapArrays(){smap.fill(0);seen.fill(0);traffic.fill(0);mapBorn.fill(-1e9);mapChanged=false}
+function clearMapArrays(){smap.fill(0);seen.fill(0);traffic.fill(0);mapBorn.fill(-1e9);seenAt.fill(-1e9);lfAt=-99;mapChanged=false}   // lfAt: rebuild the matching field from the new map
 function forgetMap(){clearMapArrays();try{localStorage.removeItem(mapKey())}catch(e){}}
 function saveMap(){
   try{
@@ -61,7 +61,7 @@ function loadMap(){
     const raw=localStorage.getItem(mapKey());if(!raw)return false;
     const s=atob(raw),n=GW*GH;if(s.length!==3*n)return false;
     for(let i=0;i<n;i++){smap[i]=s.charCodeAt(i)?.001:0;seen[i]=s.charCodeAt(n+i);traffic[i]=s.charCodeAt(2*n+i)/6}
-    return true;
+    lfAt=-99;return true;
   }catch(e){return false}
 }
 let warp=1,peakA=0,deskH=1.05,userH=1.05,estop=false,T,people,path=[],goal=null,hits=[],time=0,active=false,contacts=0,inC=false,minGap=1e9,rp=0,drag=false,parkTh=null,parkT=0,mode='user',didArrive=false,arT=0,bat={r:80,a:70},charging=false,lowT=0,prevDeskH=1.05,trail=[],retreats=0,waitT=0,retreatD=0,noPathT=0,lowSpeedT=0,patientUntil=0,lastRecEnd=-99;
@@ -96,7 +96,7 @@ function reset(){
   manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35};
   rects.length=0;for(const r of RECTS0)rects.push({...r});   // Reset scene also restores the normal room
   selectedBlock=null;blockDrag=null;placeBlocks=false;if($('placeMode'))$('placeMode').textContent='Place blocks: off';
-  T={x:HOME.x,y:HOME.y,th:0,vx:0,vy:0,w:0};G=T;   // starts docked on the charging pad (G: see syncTruth)
+  T={x:HOME.x,y:HOME.y,th:0,vx:0,vy:0,w:0};G=T;locLost=false;locSuspect=false;locState='off';locCand=null;locCandN=0;jolt=false;lfAt=-99;   // starts docked on the charging pad (G: see syncTruth)
   people=[
     // Two people seated at the two "desks" (rects). Stationary, already routable.
     mkSitter(285, 220),
@@ -159,15 +159,18 @@ function spanRect(ox,oy,c,s,r){
   return t0>t1?null:[t0,t1];
 }
 function mapUpdate(){
+  if(locLost||locSuspect)return;   // lost, or the scan disagrees with the map: anything drawn now would land in the wrong place
   for(const[ox,oy,c,s,d0,d1]of clrRays)for(let d=d0;d<d1;d+=5){
     const gx=(ox+c*d)/CS|0,gy=(oy+s*d)/CS|0;
-    if(gx>=0&&gx<GW&&gy>=0&&gy<GH){const k=gy*GW+gx;if(smap[k]){smap[k]=0;mapChanged=true}if(!seen[k]){seen[k]=1;mapChanged=true}}
+    if(gx>=0&&gx<GW&&gy>=0&&gy<GH){const k=gy*GW+gx;
+      if(smap[k]){smap[k]=0;seenAt[k]=time;mapChanged=true}   // a just-cleared cell isn't long-known floor
+      if(!seen[k]){seen[k]=1;seenAt[k]=time;mapChanged=true}}
   }
   for(const q of hits){
     const gx=q.x/CS|0,gy=q.y/CS|0;
     if(!(gx>=0&&gx<GW&&gy>=0&&gy<GH))continue;
     const k=gy*GW+gx;
-    if(!seen[k]){seen[k]=1;mapChanged=true}
+    if(!seen[k]){seen[k]=1;seenAt[k]=time;mapChanged=true}
     if(q.type==='person'){traffic[k]=Math.min(40,traffic[k]+.01);continue}   // people are tracked separately, never stored as furniture
     if(q.type==='user')continue;
     if(time-since[k]>=1){if(!smap[k]){mapChanged=true;mapBorn[k]=time}smap[k]=time}
@@ -179,7 +182,7 @@ function mapUpdate(){
 // T is where the desk BELIEVES it is (wheel odometry + gyro): planning, safety and the app all use it.
 // G is where it REALLY is: collisions, the dock contacts, the cord, people and the LiDAR rays use it.
 // With drift off, G is T (the same object), so the sim behaves exactly as before.
-let G=null;
+let G=null,jolt=false;   // jolt: the desk's IMU felt a shove (sim: set by Bump the desk)
 const DRIFT={   // odometry error: scale/lat/rot as fractions of distance or turn, bias = gyro drift in rad/s, noise = random part
   real:{scale:.015,lat:.005,rot:.01,bias:1.2e-4,noise:.02},   // good floor, with a gyro
   bad:{scale:.05,lat:.02,rot:.04,bias:9e-4,noise:.05}};       // slippery floor, wheels-only heading
@@ -206,7 +209,13 @@ function driftStep(dx,dy,dth,th0,dt){
 }
 // Sim tool: a bump or a push moves the real desk without the wheels knowing.
 function kickDesk(){if(driftMode()==='off')$('drift').value='real';syncTruth();
-  const sg=()=>Math.random()<.5?-1:1;G.x+=sg()*(10+Math.random()*8);G.y+=sg()*(10+Math.random()*8);G.th+=sg()*(.08+Math.random()*.06)}
+  const sg=()=>Math.random()<.5?-1:1;
+  for(let i=0;i<20;i++){   // a shove can't push the desk into furniture or through a wall
+    const q={x:G.x+sg()*(10+Math.random()*8),y:G.y+sg()*(10+Math.random()*8),th:G.th+sg()*(.08+Math.random()*.06)};
+    const ex=HW*Math.abs(Math.cos(q.th))+HH*Math.abs(Math.sin(q.th)),ey=HW*Math.abs(Math.sin(q.th))+HH*Math.abs(Math.cos(q.th));
+    if(q.x<ex||q.y<ey||q.x>W-ex||q.y>H-ey||footprintHit(q))continue;
+    G.x=q.x;G.y=q.y;G.th=q.th;jolt=true;return true}
+  return false}
 // Obstacle heights in metres (z0 = bottom, z1 = top). Built-in furniture is a 76 cm desk; walls and people are tall.
 const BLOCK_Z={full:{z0:0,z1:1.2},low:{z0:0,z1:.12},shelf:{z0:.8,z1:.9}};
 function objZ0(o){return o.z0||0}
@@ -220,7 +229,7 @@ function lidarSees(z0,z1){if(lidar3D())return z1>=.03&&z0<=deskH+.05;const h=lid
 // drew from that same (drifted) scan. Search: +-8 px / +-4 deg in coarse steps, then fine; the best pose
 // pulls the belief halfway there, 5 times a second.
 const LF=2,LFW=W/LF,LFH=H/LF,lfield=new Float32Array(LFW*LFH),LOC_SIG=6,LOC_MAP_AGE=8;
-let lfAt=-99,locT=0,locState='off',locInliers=0;
+let lfAt=-99,locT=0,locState='off',locInliers=0,locLost=false,locSuspect=false,locGlobalT=0,locLostT=0,locCand=null,locCandN=0;
 function buildField(){
   const BIG=1e6,a=LF,b=LF*Math.SQRT2;
   for(let j=0;j<LFH;j++)for(let i=0;i<LFW;i++){
@@ -234,18 +243,69 @@ function buildField(){
     lfield[j*LFW+i]=v}
   lfAt=time;
 }
-function scanScore(pts,px,py,pth){const c=Math.cos(pth),s=Math.sin(pth);let sc=0,inl=0;
+function scanScore(pts,px,py,pth,sig=LOC_SIG){const c=Math.cos(pth),s=Math.sin(pth);let sc=0,inl=0;
   for(const p of pts){const x=px+c*p[0]-s*p[1],y=py+s*p[0]+c*p[1],i=x/LF|0,j=y/LF|0;
-    if(i<0||j<0||i>=LFW||j>=LFH)continue;const d=lfield[j*LFW+i];if(d<LOC_SIG){sc+=1-(d/LOC_SIG)**2;inl++}}
+    if(i<0||j<0||i>=LFW||j>=LFH)continue;const d=lfield[j*LFW+i];if(d<sig){sc+=1-(d/sig)**2;if(d<LOC_SIG)inl++}}
   return [sc,inl]}
+// Fraction of scan points that can't be right: beyond the room's walls, or on floor the map has known to be open
+// for a while, away from any obstacle.
+function contradiction(pts,px,py,pth){const c=Math.cos(pth),s=Math.sin(pth);let n=0;
+  for(const p of pts){const x=px+c*p[0]-s*p[1],y=py+s*p[0]+c*p[1],gx=x/CS|0,gy=y/CS|0;
+    if(x<-LOC_SIG||y<-LOC_SIG||x>W+LOC_SIG||y>H+LOC_SIG){n++;continue}
+    if(gx<0||gy<0||gx>=GW||gy>=GH)continue;const k=gy*GW+gx;
+    if(seen[k]&&!smap[k]&&time-seenAt[k]>=LOC_MAP_AGE&&lfield[(y/LF|0)*LFW+(x/LF|0)]>3*LOC_SIG)n++}
+  return n/pts.length}
+// Lost: try every open, mapped spot in the room at 36 headings with a light scan, refine the 20 best with the full
+// scan, and accept only a clear winner (a different spot scoring nearly as well = not sure yet, keep looking).
+function globalSearch(pts){
+  const step=Math.max(1,Math.ceil(pts.length/48)),P=pts.filter((_,i)=>i%step===0),NT=36,K=20,top=[];
+  for(let gy=0;gy<GH;gy++)for(let gx=0;gx<GW;gx++){const k=gy*GW+gx;if(!seen[k]||smap[k])continue;
+    const x=(gx+.5)*CS,y=(gy+.5)*CS;if(lfield[(y/LF|0)*LFW+(x/LF|0)]<14)continue;   // the desk's centre can't be that close to a wall
+    for(let t=0;t<NT;t++){const th=t*2*Math.PI/NT,sc=scanScore(P,x,y,th,15)[0];   // loose score: the grid is 20 cm, 10 deg
+      if(top.length<K||sc>top[top.length-1].sc){top.push({x,y,th,sc});top.sort((a,b)=>b.sc-a.sc);if(top.length>K)top.pop()}}}
+  const refine=q=>{let b={...q,sc:scanScore(pts,q.x,q.y,q.th)};
+    const pass=(r,st,ra,sa)=>{const c0=b;for(let a=-ra;a<=ra+1e-9;a+=sa)for(let dx=-r;dx<=r+1e-9;dx+=st)for(let dy=-r;dy<=r+1e-9;dy+=st){
+      const sc=scanScore(pts,c0.x+dx,c0.y+dy,c0.th+a);if(sc[0]>b.sc[0])b={x:c0.x+dx,y:c0.y+dy,th:c0.th+a,sc}}};
+    pass(8,2,6*Math.PI/180,2*Math.PI/180);pass(1.5,.5,.75*Math.PI/180,.25*Math.PI/180);return b};
+  // Mid-room the 5 m LiDAR sees only part of the map, so look-alike spots happen. Prefer ones near where it
+  // last believed it was (a bump moves it a metre or two, not across the room).
+  // Look-alike spots along the same wall score alike, but at the wrong ones part of the scan lands on floor the
+  // map knows is open, or beyond a wall: that counts heavily against them.
+  const N=pts.length,done=top.map(refine);
+  for(const q of done){q.contra=contradiction(pts,q.x,q.y,q.th);q.rank=q.sc[0]-N*q.contra-N*.1*Math.hypot(q.x-T.x,q.y-T.y)/100}
+  done.sort((a,b)=>b.rank-a.rank);
+  if(!done.length)return null;
+  const b=done[0],rival=done.find(q=>Math.hypot(q.x-b.x,q.y-b.y)>30||Math.abs(ang(q.th,b.th))>.35);
+  return {...b,inl:b.sc[1]/N,unique:!rival||rival.rank<.8*b.rank};
+}
 function locStep(dt){
-  if(G===T||!locOn()){locState='off';return false}
+  if(G===T||!locOn()){locState='off';locLost=false;locSuspect=false;return false}
+  if(jolt){jolt=false;locSuspect=true;locT=.2}   // felt a shove: stop mapping and check the position right now
   if((locT+=dt)<.2)return false;locT=0;
   if(time-lfAt>1)buildField();
+  if(locLost){
+    locLostT+=.2;
+    if(locLostT>=10&&locLostT<10.2)batAlert('Lost: I can\'t work out where I am. Push me back near the dock, or Forget map and Learn the room.');
+    if((locGlobalT+=.2)<1)return false;locGlobalT=0;
+    const c=Math.cos(T.th),s=Math.sin(T.th),pts=[];
+    for(const h of hits){if(h.type==='person'||h.type==='user')continue;const dx=h.x-T.x,dy=h.y-T.y;pts.push([c*dx+s*dy,-s*dx+c*dy])}
+    if(pts.length<20)return false;
+    const g=globalSearch(pts);
+    if(!g||g.inl<.6||g.contra>.2){locCandN=0;return false}
+    // A clear winner, or the same very clean winner three searches running. Otherwise stay lost: stopped and
+    // asking for help is safe, a confident wrong answer is not.
+    locCandN=locCand&&Math.hypot(g.x-locCand.x,g.y-locCand.y)<10&&Math.abs(ang(g.th,locCand.th))<.15?locCandN+1:1;locCand=g;
+    if(!((g.unique&&g.inl>=.65)||(locCandN>=3&&g.inl>=.7&&g.contra<=.1)))return false;
+    T.x=g.x;T.y=g.y;T.th=g.th;locLost=false;locSuspect=false;locState='locked';locCandN=0;
+    setSt(active?'Found my position again: carrying on':'Found my position again','ok');
+    return true;
+  }
   const c=Math.cos(T.th),s=Math.sin(T.th),all=[];
-  for(const h of hits){const dx=h.x-T.x,dy=h.y-T.y;all.push([c*dx+s*dy,-s*dx+c*dy])}   // scan in the desk's own frame
+  for(const h of hits){if(h.type==='person'||h.type==='user')continue;   // people are tracked separately, not matched to the map
+    const dx=h.x-T.x,dy=h.y-T.y;all.push([c*dx+s*dy,-s*dx+c*dy])}   // scan in the desk's own frame
   const step=Math.max(1,Math.ceil(all.length/120)),pts=all.filter((_,i)=>i%step===0);
   if(pts.length<20){locState='weak';return false}
+  locSuspect=contradiction(pts,T.x,T.y,T.th)>.15;   // pause map updates until this is sorted out
   // Every candidate pays for how far it moves the belief. Along a bare wall, sliding sideways scores almost the
   // same, and without this cost the search wanders to the edge of its window every time (the corridor problem).
   let costK=1;
@@ -257,11 +317,18 @@ function locStep(dt){
     if(e>bestE){best=sc;bestE=e;bx=x;by=y;bt=th}}};
   search(T.x,T.y,T.th,8,2,4*Math.PI/180,Math.PI/180);
   let wide=false;
-  if(best[1]/N<.5){   // lost the match (a bump, a hard slip, a big heading error): search much wider, more cheaply
-    wide=true;costK=.25;search(T.x,T.y,T.th,30,4,12*Math.PI/180,2*Math.PI/180);costK=1}
+  if(best[1]/N<.5||locSuspect){   // lost the match (a bump, a hard slip, a big heading error): search much wider, more cheaply
+    wide=true;costK=locSuspect?.02:.25;search(T.x,T.y,T.th,30,4,12*Math.PI/180,2*Math.PI/180);costK=1}   // after a shove the cost only breaks ties: the jump is real
   search(bx,by,bt,1.5,.5,.75*Math.PI/180,.25*Math.PI/180);
   locInliers=best[1]/N;
-  if(locInliers<(wide?.6:.5)){locState='weak';return false}   // too little of the scan matches the map: don't trust a correction
+  const contraBest=contradiction(pts,bx,by,bt);
+  if(locInliers<(wide?.6:.5)||contraBest>.3){
+    // Weak can mean "this part of the room isn't mapped yet" (fine, keep exploring) or "the scan disagrees
+    // with the map" (it's lost). Lost = many points land where the map has long known there is open floor.
+    locState='weak';
+    if(contraBest>.15){locLost=true;locState='lost';locGlobalT=1;locLostT=0;locCandN=0;
+      setSt('Lost: the LiDAR no longer matches the map. Stopped, searching the whole room','bad')}
+    return false}
   locState=locInliers>=.7?'locked':'weak';
   if(bestE-here[0]<N*.01)return false;              // not clearly better than where it thinks it is
   T.x+=.5*(bx-T.x);T.y+=.5*(by-T.y);T.th+=.5*(bt-T.th);
@@ -411,7 +478,7 @@ function endTrip(outcome){if(!trip)return;
 // Extra state for the phone app; every state producer (simulator page, bridge, Pi runtime) adds this.
 function extraStateJSON(){const need=batteryNeedHome(T.x,T.y),tripNeed=batteryNeedTrip(user.x,user.y);
   return {zones:zonesJSON(),battery_plan:{need_home_pct:+need.toFixed(1),need_trip_pct:+tripNeed.toFixed(1),reserve_pct:BAT_RESERVE,can_summon:bat.r>=tripNeed+BAT_RESERVE},
-    alert_text:alertT>0?alertText:'',localization:{drift:driftMode(),lidar:lidar3D()?'3d':'2d',lidar_height_m:lidar3D()?null:lidarH(),state:G===T?'exact':locState,sim_error_m:+(posErr().d*M_PER_PX).toFixed(3)},trips:trips.slice(0,10),trip:trip?{id:trip.id,kind:trip.kind,distance_m:+(trip.dist*M_PER_PX).toFixed(2),duration_s:+(time-trip.start).toFixed(1)}:null}}
+    alert_text:alertT>0?alertText:'',localization:{drift:driftMode(),lidar:lidar3D()?'3d':'2d',lidar_height_m:lidar3D()?null:lidarH(),state:G===T?'exact':locState,lost:locLost,sim_error_m:+(posErr().d*M_PER_PX).toFixed(3)},trips:trips.slice(0,10),trip:trip?{id:trip.id,kind:trip.kind,distance_m:+(trip.dist*M_PER_PX).toFixed(2),duration_s:+(time-trip.start).toFixed(1)}:null}}
 
 function buildOccupancy(){
   const occ=new Uint8Array(GW*GH);
@@ -601,10 +668,10 @@ function satOverlap(A,B){for(const P of[A,B])for(let i=0;i<P.length;i++){const a
 function deskTouchesCircle(cx,cy,r,P=T){const c=Math.cos(-P.th),s=Math.sin(-P.th),dx=cx-P.x,dy=cy-P.y,lx=c*dx-s*dy,ly=s*dx+c*dy;
   return Math.hypot(lx-Math.max(-HW,Math.min(HW,lx)),ly-Math.max(-HH,Math.min(HH,ly)))<r}
 // Real contact: the real desk (G) against everything at a height the desk occupies (floor up to its top).
-function footprintHit(){const d=deskPoly(G),hits=o=>objZ0(o)<deskH;
+function footprintHit(P=G){const d=deskPoly(P),hits=o=>objZ0(o)<deskH;
   for(const r of rects)if(hits(r)&&satOverlap(d,[[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h]]))return true;
-  for(const c of circs)if(hits(c)&&deskTouchesCircle(c.x,c.y,c.r,G))return true;
-  for(const p of people)if(deskTouchesCircle(p.x,p.y,p.r,G))return true;
+  for(const c of circs)if(hits(c)&&deskTouchesCircle(c.x,c.y,c.r,P))return true;
+  for(const p of people)if(deskTouchesCircle(p.x,p.y,p.r,P))return true;
   return false}
 
 // ---- Safety supervisor: last stage before the wheels. Uses only what the lidar can see. ----
@@ -1075,6 +1142,8 @@ if(held&&active&&!estop&&!recovery&&low&&du>(mode==='user'?80:10))setSt('Safety 
 
 // Charging-cord lock: while plugged in (interlock on) the wheels get NO command, every frame, whatever else asked for motion.
 // A trip that is under way when the cord goes in is cancelled and the desk brakes hard (the cord is attached).
+// Lost (LiDAR doesn't match the map): don't move until it has found itself again. The trip stays and carries on.
+if(locLost){cx=0;cy=0;w=0;stuckTime=0;recovery=null}
 if(cordLock()){
   cx=0;cy=0;w=0;held=true;parkTh=null;
   if(active){active=false;path=[];endTrip('cord');setSt('Cord plugged in: drive disabled, trip cancelled','bad');alertText='Cord plugged in: the trip was cancelled.';alertT=4}
@@ -1119,7 +1188,7 @@ $('gp').textContent=minGap>1e8?'–':Math.round(minGap*2)+' cm';
 $('hg').textContent=(Math.round((headTarget*180/Math.PI+360)%360)+'°'+(headState==='SETTLED'?' ✓':' →'));
 $('pp').textContent = peopleInPathCount>0 ? peopleInPathCount+' (waiting)' : '0';
 {const e=posErr();$('perr').textContent=G===T?'0 cm (drift off)':Math.round(e.d*2)+' cm, '+(e.th*180/Math.PI).toFixed(1)+'°';$('perr').className=e.d*2>15?'bad':e.d*2>6?'warn':'ok';
- $('lstate').textContent=G===T?'not needed':locState==='off'?'correction off':locState==='locked'?'locked on':'weak, searching';$('lstate').className=G===T||locState==='locked'?'ok':'warn'}
+ $('lstate').textContent=G===T?'not needed':locState==='off'?'correction off':locState==='locked'?'locked on':locState==='lost'?'LOST: searching the whole room':'weak, searching';$('lstate').className=G===T||locState==='locked'?'ok':'warn'}
 }
 
 function draw(){
@@ -1274,7 +1343,7 @@ cv.addEventListener('pointermove',e=>{const p=pos(e);if(blockDrag){const b=block
 function finishCanvasDrag(){drag=false;blockDrag=null}
 cv.addEventListener('pointerup',finishCanvasDrag);cv.addEventListener('pointercancel',finishCanvasDrag);
 
-$('go').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(!estop){const need=batteryNeedTrip(user.x,user.y)+BAT_RESERVE;if(bat.r<need){batAlert('Not enough battery to reach you and get back to the charger: needs '+Math.ceil(need)+'%, has '+Math.floor(bat.r)+'%.');
+$('go').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(locLost){batAlert('Lost: finding my position first. Try again in a moment.');setSt('Lost: finding my position first','bad');return}if(!estop){const need=batteryNeedTrip(user.x,user.y)+BAT_RESERVE;if(bat.r<need){batAlert('Not enough battery to reach you and get back to the charger: needs '+Math.ceil(need)+'%, has '+Math.floor(bat.r)+'%.');
   if(charging||dockedNow()){setSt('Charging - needs '+Math.ceil(need)+'% for that trip','warn')}else{startReturn();setSt('Battery too low for that trip - returning to the charger','warn')}return}}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}startTrip('summon');active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
 $('back').onclick=startReturn;
 $('stop').onclick=()=>{endTrip('stopped');manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;didArrive=false;arT=0;active=false;path=[];recovery=null;stuckTime=0;setSt('Stopped','warn')};

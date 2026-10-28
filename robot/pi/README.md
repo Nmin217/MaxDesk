@@ -32,3 +32,31 @@ Two checks sit between the planner and `io.writeWheels`:
   shows "FL wheel can't turn: jammed or pushing against something" and the History tab logs the
   trip as "Wheel jammed". Nothing resumes on its own; a new summon tries again. `pi_io.js` must
   provide `readModules()` for this to work (see `io.js`).
+
+## Position: drift, LiDAR correction and getting lost (prototyped in the simulator)
+
+The simulator's "Sensors & drift" panel models what the real desk will face: wheel odometry and the
+gyro drift, so the desk's *believed* position slowly walks away from the *real* one. The fix is in
+the simulator core (`robot/simulator/summon_table_sim.html`, search for "LiDAR position correction"),
+so `runtime.js` already carries it; on the robot it will run against `pi_io.js`'s real scans.
+
+1. **Tracking**, 5 times a second: slide the scan around the believed pose (±16 cm, ±4°) to line it
+   up with the learned map and the walls; small corrections win ties, so it doesn't slide along a
+   bare wall.
+2. **Suspect**: when the scan disagrees with the map (points on long-known open floor, or beyond a
+   wall), or the IMU feels a shove, map updates pause and a wider search (±60 cm, ±12°) runs.
+3. **Lost**: if that fails, the desk stops, refuses summons, and searches the whole room every
+   second. It only accepts a clear, unique winner (or the same clean winner three times running);
+   otherwise it stays stopped and after 10 s asks to be pushed near the dock or for the room to be
+   relearned. Being stopped is safe; being confidently wrong is not.
+
+People are tracked separately and left out of the matching. Learn the room first: with a learned map
+the error stayed within 6 cm (good floor, gyro) / 15 cm (slippery floor, no gyro) over three round
+trips; without correction it reached 68 cm and missed the dock every time. Repeated shoves of up to
+~2 m: 97 of 100 random cases found themselves (all but one within 5 s), 2 stayed safely stopped, and 1
+on the slippery no-gyro floor ended 66 cm off while showing "weak" (not "locked") after a small
+bump: on that floor, long stretches without a good match still drift (`tests/sim/scenarios/drift.js`
+runs 12 of the bump cases).
+
+What the real desk needs for this: a LiDAR range of at least ~5 m, a gyro/IMU (also used to feel
+shoves), and the room learned once with "Learn the room".
