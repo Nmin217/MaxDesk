@@ -35,11 +35,22 @@ ol{margin:0;padding-left:18px}li{margin-bottom:3px}
 <label>Room appearance<select id="roomStyle"><option value="office">Office floor</option><option value="wood">Wood floor</option><option value="tile">Light tile</option><option value="warehouse">Workshop / concrete</option><option value="dark">Dark lab</option></select></label>
 <label>Block width (px)<input id="blockW" type="number" min="10" max="300" value="60"></label>
 <label>Block height (px)<input id="blockH" type="number" min="10" max="300" value="40"></label>
+<label>Block type<select id="blockKind"><option value="full">Furniture (full height)</option><option value="low">Low box (12 cm)</option><option value="shelf">Overhang (80–90 cm)</option></select></label>
 <label>Slot gap (px)<input id="slotGap" type="number" min="56" max="160" value="70"></label>
 <label>Slot orientation<select id="slotDirection"><option value="horizontal">Horizontal wall (desk crosses up/down)</option><option value="vertical">Vertical wall (desk crosses left/right)</option></select></label>
 </div>
 <div class="btns" style="margin-top:10px"><button id="placeMode">Place blocks: off</button><button id="deleteBlock">Remove selected block</button><button id="clearBlocks">Clear added blocks</button><button id="runSlot">Build slot test</button></div>
 <p class="hint" id="editHint">Choose “Place blocks” then click the room to add a block. Select and drag an added block to reposition it. Added blocks affect the simulator's collision and route planning. These edits are for simulation only.</p>
+</div>
+<div class="card sense"><h2>Sensors &amp; drift</h2>
+<label style="display:block;margin:0 0 6px">Wheel drift <select id="drift"><option value="off" selected>Off (perfect position)</option><option value="real">Realistic (good floor, gyro)</option><option value="bad">Bad (slippery floor, no gyro)</option></select></label>
+<label style="display:flex;gap:8px;align-items:center;margin:0 0 8px;font-size:14px"><input type="checkbox" id="locOff"> Turn off LiDAR position correction</label>
+<label style="display:block;margin:0 0 6px">LiDAR <select id="lidarType"><option value="2d" selected>2D: one flat sweep</option><option value="3d">3D: floor to desk top</option></select></label>
+<label style="display:block;margin:0 0 8px">2D LiDAR height: <b id="lhv">25</b> cm<input type="range" id="lidarH" min="5" max="100" value="25" style="width:100%"></label>
+<div class="btns"><button id="kick">Bump the desk</button><button id="lidarTest">LiDAR test room</button></div>
+<div style="margin-top:8px">Position error: <b id="perr">–</b> <small style="color:var(--mut)">(real vs believed)</small></div>
+<div>Position lock: <b id="lstate">–</b></div>
+<p class="hint" style="font-size:13px;color:var(--mut)">With drift on, the solid desk is where it really is and the dashed outline is where it thinks it is. The LiDAR lines its scan up with the map to pull the two back together. If it got lost with correction off, it also drew the map in the wrong place: press Forget map (or Learn the room) before turning correction back on.</p>
 </div>
 <div class="card phone"><h2>Your phone</h2>
 <button class="go" id="go">Come to me</button>
@@ -112,7 +123,7 @@ const since=new Float32Array(GW*GH).fill(-99),ESX=-14,HMIN=.63,LIFT=.05;
 const smap=new Float32Array(GW*GH); let clrRays=[];
 // Long-term memory. smap = static obstacles (kept until a lidar ray passes through the cell). seen = cells the lidar has
 // ever covered. traffic = where people tend to be. All three persist between trips and, in this browser, between visits.
-const seen=new Uint8Array(GW*GH), traffic=new Float32Array(GW*GH);
+const seen=new Uint8Array(GW*GH), traffic=new Float32Array(GW*GH), mapBorn=new Float32Array(GW*GH).fill(-1e9);   // mapBorn: when a cell became an obstacle
 let sceneKey='default',mapChanged=false,lastSaveT=0,mapCalls=0,stuckCalls=0,tourI=0,tourT=0,readyPending=false,wasCharging=false,cordIn=false,breakaways=0,alertT=0;
 const RISK=new Float32Array(GW*GH), UNK_PEN=.15, TRAF_K=.015, TRAF_MAX=.4;
 // Cells where the desk has recently been stuck get a growing planning cost, so A* prefers
@@ -128,7 +139,7 @@ function dest(){
   return user;
 }
 function mapKey(){return 'summonMap:'+sceneKey}
-function clearMapArrays(){smap.fill(0);seen.fill(0);traffic.fill(0);mapChanged=false}
+function clearMapArrays(){smap.fill(0);seen.fill(0);traffic.fill(0);mapBorn.fill(-1e9);mapChanged=false}
 function forgetMap(){clearMapArrays();try{localStorage.removeItem(mapKey())}catch(e){}}
 function saveMap(){
   try{
@@ -178,7 +189,7 @@ function reset(){
   manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35};
   rects.length=0;for(const r of RECTS0)rects.push({...r});   // Reset scene also restores the normal room
   selectedBlock=null;blockDrag=null;placeBlocks=false;if($('placeMode'))$('placeMode').textContent='Place blocks: off';
-  T={x:HOME.x,y:HOME.y,th:0,vx:0,vy:0,w:0};   // starts docked on the charging pad
+  T={x:HOME.x,y:HOME.y,th:0,vx:0,vy:0,w:0};G=T;   // starts docked on the charging pad (G: see syncTruth)
   people=[
     // Two people seated at the two "desks" (rects). Stationary, already routable.
     mkSitter(285, 220),
@@ -252,38 +263,138 @@ function mapUpdate(){
     if(!seen[k]){seen[k]=1;mapChanged=true}
     if(q.type==='person'){traffic[k]=Math.min(40,traffic[k]+.01);continue}   // people are tracked separately, never stored as furniture
     if(q.type==='user')continue;
-    if(time-since[k]>=1){if(!smap[k])mapChanged=true;smap[k]=time}
+    if(time-since[k]>=1){if(!smap[k]){mapChanged=true;mapBorn[k]=time}smap[k]=time}
   }
   if((++mapCalls)%60===0)for(let i=0;i<GW*GH;i++)if(traffic[i]>0)traffic[i]*=.9982;   // busy spots fade slowly (~9 min)
   if(time-lastSaveT>10){lastSaveT=time;if(mapChanged){saveMap();mapChanged=false}}
 }
+// ---- Sensing realism (sim only): wheel drift, 2D vs 3D LiDAR, LiDAR position correction ----
+// T is where the desk BELIEVES it is (wheel odometry + gyro): planning, safety and the app all use it.
+// G is where it REALLY is: collisions, the dock contacts, the cord, people and the LiDAR rays use it.
+// With drift off, G is T (the same object), so the sim behaves exactly as before.
+let G=null;
+const DRIFT={   // odometry error: scale/lat/rot as fractions of distance or turn, bias = gyro drift in rad/s, noise = random part
+  real:{scale:.015,lat:.005,rot:.01,bias:1.2e-4,noise:.02},   // good floor, with a gyro
+  bad:{scale:.05,lat:.02,rot:.04,bias:9e-4,noise:.05}};       // slippery floor, wheels-only heading
+let driftSign=[1,1,1,1];   // which way this run's systematic errors lean
+function driftMode(){const v=$('drift').value;return DRIFT[v]?v:'off'}
+function lidar3D(){return $('lidarType').value==='3d'}
+function lidarH(){const v=+$('lidarH').value;return v>=5&&v<=120?v/100:0.25}   // 2D LiDAR mount height, m
+function locOn(){return !$('locOff').checked}
+function syncTruth(){
+  if(driftMode()==='off'){if(G!==T){T.x=G.x;T.y=G.y;T.th=G.th;G=T}return}
+  if(G===T){G={x:T.x,y:T.y,th:T.th};driftSign=[0,1,2,3].map(()=>Math.random()<.5?-1:1)}
+}
+const gauss=()=>{let u=0;for(let i=0;i<6;i++)u+=Math.random();return (u-3)*1.414};
+// The belief moved (dx,dy,dth) this step from heading th0. The real desk moves by that plus the odometry's errors.
+function driftStep(dx,dy,dth,th0,dt){
+  const P=DRIFT[driftMode()];if(!P||G===T)return;
+  const c=Math.cos(th0),s=Math.sin(th0),fx=c*dx+s*dy,fy=-s*dx+c*dy,d=Math.hypot(fx,fy);
+  const mx=fx*(1+driftSign[0]*P.scale)+gauss()*P.noise*d,my=fy*(1+driftSign[0]*P.scale)+driftSign[1]*P.lat*d+gauss()*P.noise*d;
+  const mth=dth*(1+driftSign[2]*P.rot)+driftSign[3]*P.bias*dt+gauss()*P.noise*Math.abs(dth);
+  const gc=Math.cos(G.th),gs=Math.sin(G.th);
+  G.x+=gc*mx-gs*my;G.y+=gs*mx+gc*my;G.th+=mth;
+  const ex=HW*Math.abs(Math.cos(G.th))+HH*Math.abs(Math.sin(G.th)),ey=HW*Math.abs(Math.sin(G.th))+HH*Math.abs(Math.cos(G.th));
+  G.x=Math.max(ex,Math.min(W-ex,G.x));G.y=Math.max(ey,Math.min(H-ey,G.y));   // the real desk can't leave the room
+}
+// Sim tool: a bump or a push moves the real desk without the wheels knowing.
+function kickDesk(){if(driftMode()==='off')$('drift').value='real';syncTruth();
+  const sg=()=>Math.random()<.5?-1:1;G.x+=sg()*(10+Math.random()*8);G.y+=sg()*(10+Math.random()*8);G.th+=sg()*(.08+Math.random()*.06)}
+// Obstacle heights in metres (z0 = bottom, z1 = top). Built-in furniture is a 76 cm desk; walls and people are tall.
+const BLOCK_Z={full:{z0:0,z1:1.2},low:{z0:0,z1:.12},shelf:{z0:.8,z1:.9}};
+function objZ0(o){return o.z0||0}
+function objZ1(o){return o.z1!=null?o.z1:.76}
+// 2D: one flat sweep at its mount height, so it only sees what crosses that height. 3D: sees from just above the
+// floor to just above the desk top (higher things can't hit the desk, so they're ignored like a real 3D filter would).
+function lidarSees(z0,z1){if(lidar3D())return z1>=.03&&z0<=deskH+.05;const h=lidarH();return z0<=h&&h<=z1}
+// ---- LiDAR position correction: slide the live scan around until it lines up with the map ----
+// Likelihood field: for every 2 px square, the distance to the nearest established map obstacle or room wall.
+// "Established" = an obstacle for LOC_MAP_AGE s, so the desk doesn't line the scan up with what it just
+// drew from that same (drifted) scan. Search: +-8 px / +-4 deg in coarse steps, then fine; the best pose
+// pulls the belief halfway there, 5 times a second.
+const LF=2,LFW=W/LF,LFH=H/LF,lfield=new Float32Array(LFW*LFH),LOC_SIG=6,LOC_MAP_AGE=8;
+let lfAt=-99,locT=0,locState='off',locInliers=0;
+function buildField(){
+  const BIG=1e6,a=LF,b=LF*Math.SQRT2;
+  for(let j=0;j<LFH;j++)for(let i=0;i<LFW;i++){
+    const k=((j*LF)/CS|0)*GW+((i*LF)/CS|0);
+    lfield[j*LFW+i]=(i===0||j===0||i===LFW-1||j===LFH-1||(smap[k]>0&&time-mapBorn[k]>=LOC_MAP_AGE))?0:BIG}
+  for(let j=0;j<LFH;j++)for(let i=0;i<LFW;i++){let v=lfield[j*LFW+i];if(!v)continue;   // two-pass chamfer distance
+    if(i>0)v=Math.min(v,lfield[j*LFW+i-1]+a);if(j>0){v=Math.min(v,lfield[(j-1)*LFW+i]+a);if(i>0)v=Math.min(v,lfield[(j-1)*LFW+i-1]+b);if(i<LFW-1)v=Math.min(v,lfield[(j-1)*LFW+i+1]+b)}
+    lfield[j*LFW+i]=v}
+  for(let j=LFH-1;j>=0;j--)for(let i=LFW-1;i>=0;i--){let v=lfield[j*LFW+i];if(!v)continue;
+    if(i<LFW-1)v=Math.min(v,lfield[j*LFW+i+1]+a);if(j<LFH-1){v=Math.min(v,lfield[(j+1)*LFW+i]+a);if(i<LFW-1)v=Math.min(v,lfield[(j+1)*LFW+i+1]+b);if(i>0)v=Math.min(v,lfield[(j+1)*LFW+i-1]+b)}
+    lfield[j*LFW+i]=v}
+  lfAt=time;
+}
+function scanScore(pts,px,py,pth){const c=Math.cos(pth),s=Math.sin(pth);let sc=0,inl=0;
+  for(const p of pts){const x=px+c*p[0]-s*p[1],y=py+s*p[0]+c*p[1],i=x/LF|0,j=y/LF|0;
+    if(i<0||j<0||i>=LFW||j>=LFH)continue;const d=lfield[j*LFW+i];if(d<LOC_SIG){sc+=1-(d/LOC_SIG)**2;inl++}}
+  return [sc,inl]}
+function locStep(dt){
+  if(G===T||!locOn()){locState='off';return false}
+  if((locT+=dt)<.2)return false;locT=0;
+  if(time-lfAt>1)buildField();
+  const c=Math.cos(T.th),s=Math.sin(T.th),all=[];
+  for(const h of hits){const dx=h.x-T.x,dy=h.y-T.y;all.push([c*dx+s*dy,-s*dx+c*dy])}   // scan in the desk's own frame
+  const step=Math.max(1,Math.ceil(all.length/120)),pts=all.filter((_,i)=>i%step===0);
+  if(pts.length<20){locState='weak';return false}
+  // Every candidate pays for how far it moves the belief. Along a bare wall, sliding sideways scores almost the
+  // same, and without this cost the search wanders to the edge of its window every time (the corridor problem).
+  let costK=1;
+  const N=pts.length,cost=(dx,dy,dth)=>costK*N*.04*((dx*dx+dy*dy)/16+(dth*180/Math.PI)**2/4);
+  const here=scanScore(pts,T.x,T.y,T.th);
+  let best=here,bestE=here[0],bx=T.x,by=T.y,bt=T.th;
+  const search=(cx,cy,ct,r,st,ra,sa)=>{for(let dt2=-ra;dt2<=ra+1e-9;dt2+=sa)for(let dx=-r;dx<=r+1e-9;dx+=st)for(let dy=-r;dy<=r+1e-9;dy+=st){
+    const x=cx+dx,y=cy+dy,th=ct+dt2,sc=scanScore(pts,x,y,th),e=sc[0]-cost(x-T.x,y-T.y,th-T.th);
+    if(e>bestE){best=sc;bestE=e;bx=x;by=y;bt=th}}};
+  search(T.x,T.y,T.th,8,2,4*Math.PI/180,Math.PI/180);
+  let wide=false;
+  if(best[1]/N<.5){   // lost the match (a bump, a hard slip, a big heading error): search much wider, more cheaply
+    wide=true;costK=.25;search(T.x,T.y,T.th,30,4,12*Math.PI/180,2*Math.PI/180);costK=1}
+  search(bx,by,bt,1.5,.5,.75*Math.PI/180,.25*Math.PI/180);
+  locInliers=best[1]/N;
+  if(locInliers<(wide?.6:.5)){locState='weak';return false}   // too little of the scan matches the map: don't trust a correction
+  locState=locInliers>=.7?'locked':'weak';
+  if(bestE-here[0]<N*.01)return false;              // not clearly better than where it thinks it is
+  T.x+=.5*(bx-T.x);T.y+=.5*(by-T.y);T.th+=.5*(bt-T.th);
+  return true;
+}
+function posErr(){return G&&G!==T?{d:Math.hypot(G.x-T.x,G.y-T.y),th:Math.abs(ang(G.th,T.th))}:{d:0,th:0}}
+
 function scan(){
   hits=[]; peopleInPathCount=0; clrRays=[];
   const R=260;
-  const c0=Math.cos(T.th), s0=Math.sin(T.th);
+  // Rays leave the REAL desk (G) and hit the real room; the points are then placed relative to where the desk
+  // BELIEVES it is (T), which is all a real robot can do. With drift off G is T and nothing is converted.
+  const c0=Math.cos(G.th), s0=Math.sin(G.th), conv=G!==T, rth=T.th-G.th, cr=Math.cos(rth), sr=Math.sin(rth);
+  const toB=(x,y)=>{const dx=x-G.x,dy=y-G.y;return[T.x+cr*dx-sr*dy,T.y+sr*dx+cr*dy]};
+  const seesP=lidarSees(0,1.7);
   for(const L of LIDARS){
-    const oxw=T.x+c0*L[0]-s0*L[1];
-    const oyw=T.y+s0*L[0]+c0*L[1];
+    const oxw=G.x+c0*L[0]-s0*L[1];
+    const oyw=G.y+s0*L[0]+c0*L[1];
     for(let i=0;i<LIDAR_RAYS;i++){
-      const aw=T.th+i/LIDAR_RAYS*6.2832;
+      const aw=G.th+i/LIDAR_RAYS*6.2832;
       const c=Math.cos(aw), s=Math.sin(aw);
-      const al=aw-T.th;
+      const al=aw-G.th;
       const tExit=rayExitBox(L[0],L[1],Math.cos(al),Math.sin(al),HW,HH);
       const d0=Math.max(tExit+2,3);          // rays start outside the desk's own body
       let best=1e9,info=null;
       const consider=(sp,inf)=>{ if(!sp||sp[1]<d0)return; const t=Math.max(sp[0],d0); if(t<best){best=t;info=inf} };
-      for(const r of rects)consider(spanRect(oxw,oyw,c,s,r),{type:'rect'});
-      for(const q of circs)consider(spanCircle(oxw,oyw,c,s,q.x,q.y,q.r),{type:'circ'});
-      for(const p of people)consider(spanCircle(oxw,oyw,c,s,p.x,p.y,p.r),{type:'person',person:p});
-      consider(spanCircle(oxw,oyw,c,s,user.x,user.y,user.r),{type:'user'});
+      for(const r of rects)if(lidarSees(objZ0(r),objZ1(r)))consider(spanRect(oxw,oyw,c,s,r),{type:'rect'});
+      for(const q of circs)if(lidarSees(objZ0(q),objZ1(q)))consider(spanCircle(oxw,oyw,c,s,q.x,q.y,q.r),{type:'circ'});
+      if(seesP){for(const p of people)consider(spanCircle(oxw,oyw,c,s,p.x,p.y,p.r),{type:'person',person:p});
+      consider(spanCircle(oxw,oyw,c,s,user.x,user.y,user.r),{type:'user'})}
       const tw=rayExitBox(oxw,oyw,c,s,W,H,0,0);   // map border
       if(tw>=d0&&tw<best){best=tw+0.5;info={type:'wall'}}
-      clrRays.push([oxw,oyw,c,s,d0,(info&&best<R)?best-12:R]);   // free space up to just before the hit
+      let ob=oxw,oyb=oyw,cb=c,sb=s,ab=aw;
+      if(conv){[ob,oyb]=toB(oxw,oyw);cb=c*cr-s*sr;sb=c*sr+s*cr;ab=aw+rth}
+      clrRays.push([ob,oyb,cb,sb,d0,(info&&best<R)?best-12:R]);   // free space up to just before the hit
       if(!info||best>=R)continue;
-      const d=best,x=oxw+c*d,y=oyw+s*d;
+      const d=conv?Math.max(d0,best+gauss()*.5):best,x=ob+cb*d,y=oyb+sb*d;   // ~1 cm range noise with sensor realism on
       const isPerson=info.type==='person';
       const settled=isPerson&&info.person.settled;
-      hits.push({a:aw,d,hit:true,x,y,ox:oxw,oy:oyw,dyn:isPerson&&!settled,settledPerson:settled,type:info.type});
+      hits.push({a:ab,d,hit:true,x,y,ox:ob,oy:oyb,dyn:isPerson&&!settled,settledPerson:settled,type:info.type});
       const gx=x/CS|0, gy=y/CS|0;
       if(gx>=0&&gx<GW&&gy>=0&&gy<GH){
         const k=gy*GW+gx;
@@ -393,7 +504,7 @@ function endTrip(outcome){if(!trip)return;
 // Extra state for the phone app; every state producer (simulator page, bridge, Pi runtime) adds this.
 function extraStateJSON(){const need=batteryNeedHome(T.x,T.y),tripNeed=batteryNeedTrip(user.x,user.y);
   return {zones:zonesJSON(),battery_plan:{need_home_pct:+need.toFixed(1),need_trip_pct:+tripNeed.toFixed(1),reserve_pct:BAT_RESERVE,can_summon:bat.r>=tripNeed+BAT_RESERVE},
-    alert_text:alertT>0?alertText:'',trips:trips.slice(0,10),trip:trip?{id:trip.id,kind:trip.kind,distance_m:+(trip.dist*M_PER_PX).toFixed(2),duration_s:+(time-trip.start).toFixed(1)}:null}}
+    alert_text:alertT>0?alertText:'',localization:{drift:driftMode(),lidar:lidar3D()?'3d':'2d',lidar_height_m:lidar3D()?null:lidarH(),state:G===T?'exact':locState,sim_error_m:+(posErr().d*M_PER_PX).toFixed(3)},trips:trips.slice(0,10),trip:trip?{id:trip.id,kind:trip.kind,distance_m:+(trip.dist*M_PER_PX).toFixed(2),duration_s:+(time-trip.start).toFixed(1)}:null}}
 
 function buildOccupancy(){
   const occ=new Uint8Array(GW*GH);
@@ -576,16 +687,17 @@ function pushFromDesk(p){
 }
 
 // ---- true-footprint helpers (desk is a 2*HW x 2*HH rectangle, not a circle) ----
-function deskPoly(){const c=Math.cos(T.th),s=Math.sin(T.th);return[[-HW,-HH],[HW,-HH],[HW,HH],[-HW,HH]].map(([x,y])=>[T.x+c*x-s*y,T.y+s*x+c*y])}
+function deskPoly(P=T){const c=Math.cos(P.th),s=Math.sin(P.th);return[[-HW,-HH],[HW,-HH],[HW,HH],[-HW,HH]].map(([x,y])=>[P.x+c*x-s*y,P.y+s*x+c*y])}
 function satOverlap(A,B){for(const P of[A,B])for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],nx=-(b[1]-a[1]),ny=b[0]-a[0];
   let a0=1e9,a1=-1e9,b0=1e9,b1=-1e9;for(const p of A){const d=p[0]*nx+p[1]*ny;a0=Math.min(a0,d);a1=Math.max(a1,d)}
   for(const p of B){const d=p[0]*nx+p[1]*ny;b0=Math.min(b0,d);b1=Math.max(b1,d)}if(a1<b0||b1<a0)return false}return true}
-function deskTouchesCircle(cx,cy,r){const c=Math.cos(-T.th),s=Math.sin(-T.th),dx=cx-T.x,dy=cy-T.y,lx=c*dx-s*dy,ly=s*dx+c*dy;
+function deskTouchesCircle(cx,cy,r,P=T){const c=Math.cos(-P.th),s=Math.sin(-P.th),dx=cx-P.x,dy=cy-P.y,lx=c*dx-s*dy,ly=s*dx+c*dy;
   return Math.hypot(lx-Math.max(-HW,Math.min(HW,lx)),ly-Math.max(-HH,Math.min(HH,ly)))<r}
-function footprintHit(){const d=deskPoly();
-  for(const r of rects)if(satOverlap(d,[[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h]]))return true;
-  for(const c of circs)if(deskTouchesCircle(c.x,c.y,c.r))return true;
-  for(const p of people)if(deskTouchesCircle(p.x,p.y,p.r))return true;
+// Real contact: the real desk (G) against everything at a height the desk occupies (floor up to its top).
+function footprintHit(){const d=deskPoly(G),hits=o=>objZ0(o)<deskH;
+  for(const r of rects)if(hits(r)&&satOverlap(d,[[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h]]))return true;
+  for(const c of circs)if(hits(c)&&deskTouchesCircle(c.x,c.y,c.r,G))return true;
+  for(const p of people)if(deskTouchesCircle(p.x,p.y,p.r,G))return true;
   return false}
 
 // ---- Safety supervisor: last stage before the wheels. Uses only what the lidar can see. ----
@@ -653,13 +765,13 @@ function cordBlocks(){
   return false;
 }
 function dockedNow(){
-  return Math.hypot(T.x-HOME.x,T.y-HOME.y)<=4&&!active&&parkTh===null&&Math.hypot(T.vx,T.vy)<2&&Math.abs(ang(0,T.th))<.25;
+  return Math.hypot(G.x-HOME.x,G.y-HOME.y)<=4&&!active&&parkTh===null&&Math.hypot(T.vx,T.vy)<2&&Math.abs(ang(0,G.th))<.25;   // the real desk on the real pad
 }
 function batStep(dt){
   const sp=Math.hypot(T.vx,T.vy),lifting=Math.abs(deskH-prevDeskH)>1e-7;prevDeskH=deskH;
   charging=manualDock()?cordIn:dockedNow();   // with a manual cord, plugged in IS charging (the cord only reaches the dock)
   if(alertT>0)alertT-=dt;
-  if(cordIn&&Math.hypot(T.x-HOME.x,T.y-HOME.y)>45){cordIn=false;breakaways++;setSt('Cord pulled out: the breakaway connector released safely','warn')}
+  if(cordIn&&Math.hypot(G.x-HOME.x,G.y-HOME.y)>45){cordIn=false;breakaways++;setSt('Cord pulled out: the breakaway connector released safely','warn')}
   if(charging&&!wasCharging&&!active&&!readyPending&&$('st').textContent.startsWith('Ready - back'))setSt('Ready - docked and charging, desk at '+Math.round(deskH*100)+' cm','ok');
   wasCharging=charging;
   if(charging){bat.r+=.9*dt;bat.a+=.6*dt}
@@ -690,7 +802,7 @@ function startParking(){
   const t=Math.abs(ang(thP,thH))<=.65?thH:thP;
   parkTh=t+Math.round((T.th-t)/(2*Math.PI))*2*Math.PI;parkT=8;   // mod 2*PI here: which SIDE faces you matters
 }
-function update(dt){time+=dt;
+function update(dt){time+=dt;syncTruth();
 
 // ============ PEOPLE ============
 for(const p of people){
@@ -726,7 +838,7 @@ for(const p of people){
   let vx=dx/d*p.sp, vy=dy/d*p.sp;
   // Flee from the bot — only for walkers
   if(p.type==='walker'){
-    const tx=p.x-T.x, ty=p.y-T.y, td=Math.hypot(tx,ty)||1;
+    const tx=p.x-G.x, ty=p.y-G.y, td=Math.hypot(tx,ty)||1;
     if(td<80){vx+=tx/td*35; vy+=ty/td*35}
   }
   p.x += vx*dt;
@@ -748,7 +860,7 @@ for(const p of people){
   p.lastX = p.x; p.lastY = p.y;
 }
 
-scan();mapUpdate();
+scan();if(locStep(dt))scan();mapUpdate();   // a position correction moves T: re-place this frame's points before mapping
 rp-=dt; if(active&&rp<=0){const t0=performance.now();plan();const pd=(performance.now()-t0)/1000;rp=path.length?Math.min(.5,Math.max(.2,10*pd)):.7}
 
 let cx=0,cy=0,w=0;
@@ -1069,13 +1181,15 @@ if(dd>a&&dd>1e-6){T.vx+=ddx/dd*a;T.vy+=ddy/dd*a}else{T.vx=cx;T.vy=cy}
  // both under SLIP_A. Uncapped, the lag alone reached ~10 rad/s^2 (~6.7 m/s^2 at the corners).
  const dw=(w-T.w)*Math.min(1,dt*8),slowing=Math.abs(T.w+dw)<Math.abs(T.w)&&(T.w+dw)*T.w>=0,cap=(slowing?ALPHA_STOP:ALPHA_UP)*dt;
  T.w+=Math.max(-cap,Math.min(cap,dw))}
+const bx0=T.x,by0=T.y,bth0=T.th;
 {const ex=HW*Math.abs(Math.cos(T.th))+HH*Math.abs(Math.sin(T.th)),ey=HW*Math.abs(Math.sin(T.th))+HH*Math.abs(Math.cos(T.th));
  T.x=Math.max(ex,Math.min(W-ex,T.x+T.vx*dt));
  T.y=Math.max(ey,Math.min(H-ey,T.y+T.vy*dt));}
 T.th+=T.w*dt;
+if(G!==T)driftStep(T.x-bx0,T.y-by0,T.th-bth0,bth0,dt);
 {const ax=Math.hypot(T.vx-(T._px||0),T.vy-(T._py||0))/Math.max(dt,1e-3)/50;T._px=T.vx;T._py=T.vy;if(ax>peakA&&ax<20)peakA=ax}
 
-const gap=clearance(T.x,T.y)-TR;
+const gap=clearance(G.x,G.y)-TR;
 if(gap<minGap)minGap=gap;
 const fh=footprintHit();
 if(fh&&!inC){contacts++;inC=true}else if(!fh)inC=false;   // real rectangle, not the old 34 px circle
@@ -1097,6 +1211,8 @@ $('dk').textContent=needPlug?'docked: PLUG ME IN':charging?((bat.r>=99.5&&bat.a>
 $('gp').textContent=minGap>1e8?'–':Math.round(minGap*2)+' cm';
 $('hg').textContent=(Math.round((headTarget*180/Math.PI+360)%360)+'°'+(headState==='SETTLED'?' ✓':' →'));
 $('pp').textContent = peopleInPathCount>0 ? peopleInPathCount+' (waiting)' : '0';
+{const e=posErr();$('perr').textContent=G===T?'0 cm (drift off)':Math.round(e.d*2)+' cm, '+(e.th*180/Math.PI).toFixed(1)+'°';$('perr').className=e.d*2>15?'bad':e.d*2>6?'warn':'ok';
+ $('lstate').textContent=G===T?'not needed':locState==='off'?'correction off':locState==='locked'?'locked on':'weak, searching';$('lstate').className=G===T||locState==='locked'?'ok':'warn'}
 }
 
 function draw(){
@@ -1115,7 +1231,10 @@ function draw(){
   ctx.strokeStyle=roomStyle==='dark'?'#707985':'rgba(70,70,70,.45)';ctx.lineWidth=5;ctx.strokeRect(2.5,2.5,W-5,H-5);
   // Obstacles. Custom blocks are visually distinct and selectable in editor mode.
   for(const z of zones){ctx.save();ctx.fillStyle='rgba(220,60,90,.14)';ctx.fillRect(z.x,z.y,z.w,z.h);ctx.strokeStyle='rgba(220,60,90,.8)';ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.strokeRect(z.x+.5,z.y+.5,z.w-1,z.h-1);ctx.setLineDash([]);ctx.fillStyle='rgba(180,30,60,.95)';ctx.font='600 11px system-ui';ctx.fillText(z.name,z.x+4,z.y+13);ctx.restore()}
-  for(const r of rects){ctx.fillStyle=r._custom?(r===selectedBlock?'#f59e0b':'#d97706'):obs;ctx.fillRect(r.x,r.y,r.w,r.h);if(r._custom){ctx.strokeStyle=r===selectedBlock?'#7c2d12':'rgba(70,35,0,.8)';ctx.lineWidth=1.5;ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1)}}
+  for(const r of rects){const low=objZ1(r)<.3,over=objZ0(r)>=.3;ctx.save();if(low)ctx.globalAlpha=.45;
+    if(over){ctx.setLineDash([5,3]);ctx.strokeStyle=r._custom?'#d97706':obs;ctx.lineWidth=2;ctx.strokeRect(r.x+1,r.y+1,r.w-2,r.h-2);ctx.globalAlpha=.18}
+    ctx.fillStyle=r._custom?(r===selectedBlock?'#f59e0b':'#d97706'):obs;ctx.fillRect(r.x,r.y,r.w,r.h);ctx.restore();
+    if(low||over){ctx.save();ctx.fillStyle=fg;ctx.font='10px system-ui';ctx.textAlign='center';ctx.fillText(low?Math.round(objZ1(r)*100)+' cm':Math.round(objZ0(r)*100)+'–'+Math.round(objZ1(r)*100)+' cm',r.x+r.w/2,r.y+r.h/2+3);ctx.restore()}if(r._custom){ctx.strokeStyle=r===selectedBlock?'#7c2d12':'rgba(70,35,0,.8)';ctx.lineWidth=1.5;ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1)}}
   for(const c of circs){ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,7);ctx.fill()}
   // Costmap
   if($('cost').checked){   // what it knows: grey = never seen, orange = busy (people), purple = remembered obstacle, red = lidar right now
@@ -1175,12 +1294,12 @@ function draw(){
   if(manualDock()){
     ctx.save();ctx.fillStyle=fg;ctx.globalAlpha=.7;ctx.fillRect(0,58,7,26);ctx.restore();
     if(cordIn){
-      const dxc=T.x-6,dyc=T.y-71,dc=Math.hypot(dxc,dyc),sag=Math.max(0,28-dc*.5);
+      const dxc=G.x-6,dyc=G.y-71,dc=Math.hypot(dxc,dyc),sag=Math.max(0,28-dc*.5);
       ctx.save();ctx.strokeStyle=dc>38?'#d64545':'#222';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(7,71);
-      ctx.quadraticCurveTo((7+T.x)/2,(71+T.y)/2+sag,T.x,T.y);ctx.stroke();ctx.restore();
+      ctx.quadraticCurveTo((7+G.x)/2,(71+G.y)/2+sag,G.x,G.y);ctx.stroke();ctx.restore();
     }
   }
-  if(alertT>0){ctx.save();ctx.strokeStyle='#f0a000';ctx.lineWidth=4;ctx.globalAlpha=.4+.5*Math.abs(Math.sin(time*8));ctx.beginPath();ctx.arc(T.x,T.y,HW+14,0,7);ctx.stroke();ctx.restore()}
+  if(alertT>0){ctx.save();ctx.strokeStyle='#f0a000';ctx.lineWidth=4;ctx.globalAlpha=.4+.5*Math.abs(Math.sin(time*8));ctx.beginPath();ctx.arc(G.x,G.y,HW+14,0,7);ctx.stroke();ctx.restore()}
   // start spot: dashed desk outline with the forward arrow (monitor back)
   ctx.save();ctx.translate(HOME.x,HOME.y);ctx.globalAlpha=.5;ctx.strokeStyle=fg;ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
   ctx.beginPath();ctx.roundRect(-HW,-HH,2*HW,2*HH,5);ctx.stroke();ctx.setLineDash([]);
@@ -1196,8 +1315,12 @@ function draw(){
    ctx.restore()}
   ctx.fillStyle='#f28c28';ctx.beginPath();ctx.arc(user.x,user.y,user.r,0,7);ctx.fill();
   ctx.fillStyle=fg;ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText('you',user.x,user.y-19);
-  // Robot
-  ctx.save();ctx.translate(T.x,T.y);ctx.rotate(T.th);
+  // Robot: drawn where it REALLY is (D). With drift on, a dashed outline shows where it thinks it is (T).
+  const D=G===T?T:{x:G.x,y:G.y,th:G.th};
+  if(D!==T){ctx.save();ctx.translate(T.x,T.y);ctx.rotate(T.th);ctx.strokeStyle=acc;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.globalAlpha=.85;
+    ctx.beginPath();ctx.roundRect(-HW,-HH,2*HW,2*HH,5);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(0,-HH+1.5);ctx.lineTo(-4,-HH+7);ctx.lineTo(4,-HH+7);ctx.closePath();ctx.stroke();ctx.restore();
+    ctx.save();ctx.fillStyle=acc;ctx.font='10px system-ui';ctx.textAlign='center';ctx.fillText('thinks it is here',T.x,T.y-HH-6);ctx.restore()}
+  ctx.save();ctx.translate(D.x,D.y);ctx.rotate(D.th);
   ctx.fillStyle=recovery?g('--warn')||'#b07800':tbl;
   ctx.strokeStyle=fg;ctx.lineWidth=1.5;
   ctx.beginPath();ctx.roundRect(-HW,-HH,2*HW,2*HH,5);ctx.fill();ctx.stroke();
@@ -1211,9 +1334,9 @@ function draw(){
   ctx.fillStyle='#30d0ff';for(const L of LIDARS){ctx.beginPath();ctx.arc(L[0],L[1],3.2,0,7);ctx.fill()}
   ctx.restore();
   // Swerve modules
-  const co=Math.cos(T.th),si=Math.sin(T.th);let k=0;
+  const co=Math.cos(D.th),si=Math.sin(D.th);let k=0;
   for(const[lx,ly]of[[22,13],[22,-13],[-22,13],[-22,-13]]){
-    const rx=co*lx-si*ly,ry=si*lx+co*ly,mx=T.x+rx,my=T.y+ry;
+    const rx=co*lx-si*ly,ry=si*lx+co*ly,mx=D.x+rx,my=D.y+ry;
     const vx=T.vx-T.w*ry,vy=T.vy+T.w*rx,sp=Math.hypot(vx,vy);
     if(sp>3)modAng[k]=Math.atan2(vy,vx);
     ctx.save();ctx.translate(mx,my);ctx.rotate(modAng[k]);
@@ -1223,7 +1346,7 @@ function draw(){
     ctx.restore();k++;
   }
   ctx.fillStyle=fg;ctx.font='11px system-ui';ctx.textAlign='center';
-  ctx.fillText(Math.round(deskH*100)+' cm',T.x,T.y+TR+14);
+  ctx.fillText(Math.round(deskH*100)+' cm',D.x,D.y+TR+14);
 }
 
 let lt=performance.now();
@@ -1233,9 +1356,9 @@ cv.addEventListener('pointerdown',e=>{
   const p=pos(e);
   if(placeBlocks){
     const w=Math.max(10,Math.min(300,Number($('blockW').value)||60)),h=Math.max(10,Math.min(300,Number($('blockH').value)||40));
-    const b={x:Math.max(0,Math.min(W-w,p.x-w/2)),y:Math.max(0,Math.min(H-h,p.y-h/2)),w,h,_custom:true};rects.push(b);selectedBlock=b;cv.setPointerCapture(e.pointerId);$('editHint').textContent='Block added. Click Place blocks to stop adding, or add more blocks.';return;
+    const b={x:Math.max(0,Math.min(W-w,p.x-w/2)),y:Math.max(0,Math.min(H-h,p.y-h/2)),w,h,_custom:true,...BLOCK_Z[$('blockKind').value]||BLOCK_Z.full};rects.push(b);selectedBlock=b;cv.setPointerCapture(e.pointerId);$('editHint').textContent='Block added. Click Place blocks to stop adding, or add more blocks.';return;
   }
-  if(Math.hypot(p.x-T.x-Math.cos(T.th)*ESX,p.y-T.y-Math.sin(T.th)*ESX)<13){toggleEstop();return}
+  if(Math.hypot(p.x-G.x-Math.cos(G.th)*ESX,p.y-G.y-Math.sin(G.th)*ESX)<13){toggleEstop();return}
   const b=[...rects].reverse().find(r=>r._custom&&p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h);
   if(b){selectedBlock=b;blockDrag={b,dx:p.x-b.x,dy:p.y-b.y};cv.setPointerCapture(e.pointerId);return}
   if(Math.hypot(p.x-user.x,p.y-user.y)<32){drag=true;cv.setPointerCapture(e.pointerId)}
@@ -1251,7 +1374,7 @@ $('stop').onclick=()=>{endTrip('stopped');manualDrive.enabled=false;manualDrive.
 $('rst').onclick=()=>{forgetMap();sceneKey='default';reset();clearMapArrays();loadMap()};
 $('learn').onclick=startTour;
 $('cord').onclick=()=>{
-  if(!cordIn){if(Math.hypot(T.x-HOME.x,T.y-HOME.y)>45){setSt('The cord only reaches the dock: bring the desk home first','warn');return}cordIn=true;setSt('Cord plugged in','ok')}
+  if(!cordIn){if(Math.hypot(G.x-HOME.x,G.y-HOME.y)>45){setSt('The cord only reaches the dock: bring the desk home first','warn');return}cordIn=true;setSt('Cord plugged in','ok')}
   else{cordIn=false;setSt('Cord unplugged','ok')}
 };
 $('forget').onclick=()=>{forgetMap();setSt('Map forgotten: it will plan through unknown space again until it relearns','')};
@@ -1260,10 +1383,21 @@ $('forget').onclick=()=>{forgetMap();setSt('Map forgotten: it will plan through 
 function buildSlotTest(){
   const gap=Math.max(56,Math.min(160,Number($('slotGap').value)||70)),dir=$('slotDirection').value;
   reset();sceneKey='slot';clearMapArrays();loadMap();rects.length=0;
-  if(dir==='horizontal'){const gx=(W-gap)/2;rects.push({x:0,y:240,w:gx,h:20},{x:gx+gap,y:240,w:W-gx-gap,h:20});T.x=400;T.y=90;user.x=700;user.y=430;}
-  else{const gy=(H-gap)/2;rects.push({x:380,y:0,w:20,h:gy},{x:380,y:gy+gap,w:20,h:H-gy-gap});T.x=100;T.y=250;user.x=700;user.y=250;}
+  if(dir==='horizontal'){const gx=(W-gap)/2;rects.push({x:0,y:240,w:gx,h:20,z1:2},{x:gx+gap,y:240,w:W-gx-gap,h:20,z1:2});T.x=400;T.y=90;user.x=700;user.y=430;}
+  else{const gy=(H-gap)/2;rects.push({x:380,y:0,w:20,h:gy,z1:2},{x:380,y:gy+gap,w:20,h:H-gy-gap,z1:2});T.x=100;T.y=250;user.x=700;user.y=250;}
   circs.length=0;people=[];setSt('Slot test ('+gap+' px, '+dir+'): press Come to me. Watch the desk orientation as it crosses the gap.','');
 }
+// LiDAR test room: a 12 cm box and an 80-90 cm overhang on the straight route. A 2D LiDAR at the usual
+// height sees neither; 3D sees both. Lower the desk under 80 cm and it fits under the overhang.
+function buildLidarTest(){
+  reset();sceneKey='lidar';clearMapArrays();loadMap();rects.length=0;circs.length=0;people=[];
+  rects.push({x:290,y:215,w:44,h:70,...BLOCK_Z.low},{x:490,y:185,w:44,h:130,...BLOCK_Z.shelf});
+  T.x=100;T.y=250;user.x=700;user.y=250;
+  setSt('LiDAR test room: a 12 cm box and an 80-90 cm shelf are on the straight route. Pick 2D or 3D, then Come to me.','');
+}
+$('lidarTest').onclick=buildLidarTest;
+$('kick').onclick=()=>{kickDesk();setSt('Bumped: the real desk moved, the wheels did not notice','warn')};
+$('lidarH').oninput=()=>{$('lhv').textContent=$('lidarH').value};
 $('slot').onclick=buildSlotTest;$('runSlot').onclick=buildSlotTest;
 $('roomStyle').onchange=()=>{roomStyle=$('roomStyle').value};
 $('placeMode').onclick=()=>{placeBlocks=!placeBlocks;blockDrag=null;$('placeMode').textContent='Place blocks: '+(placeBlocks?'on':'off');$('editHint').textContent=placeBlocks?'Click anywhere in the room to add a block using the width and height above.':'Click and drag an orange block to reposition it. Added blocks affect route planning and collision checks.'};
@@ -1280,13 +1414,13 @@ $('hs').oninput=()=>{userH=$('hs').value/100;$('hv').textContent=$('hs').value};
 $('add').onclick=()=>{
   for(let i=0;i<50;i++){
     const x=40+Math.random()*(W-80),y=40+Math.random()*(H-80);
-    if(!hitTest(x,y)&&Math.hypot(x-T.x,y-T.y)>120){people.push(mkWalker(x,y));break}
+    if(!hitTest(x,y)&&Math.hypot(x-G.x,y-G.y)>120){people.push(mkWalker(x,y));break}
   }
 };
 $('obs').onclick=()=>{
   for(const dd of[130,110,150,170]){
     const q=ahead(dd);
-    if(q.x>50&&q.x<W-50&&q.y>50&&q.y<H-50&&clearance(q.x,q.y)>20){circs.push({x:q.x,y:q.y,r:16});return}
+    if(q.x>50&&q.x<W-50&&q.y>50&&q.y<H-50&&clearance(q.x,q.y)>20){circs.push({x:q.x,y:q.y,r:16,z1:.5});return}
   }
 };
 $('walk').onclick=()=>{

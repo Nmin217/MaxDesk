@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One command to check what can be checked here.   ./scripts/verify.sh          quick (about 1-2 minutes)
-#                                                  ./scripts/verify.sh --full   adds slots, parking, round trips, batteries
+#                                                  ./scripts/verify.sh --full   adds slots, parking, round trips, batteries, drift
 cd "$(dirname "$0")/.." || exit 1
 FULL=0; [ "${1:-}" = "--full" ] && FULL=1
 pass=0; fail=0
@@ -58,6 +58,11 @@ if node tests/sim/run.js zones > /tmp/zn.log 2>&1 && grep -q "ZONES PASS" /tmp/z
 else
   no "no-go zones"; grep '"ok":false' /tmp/zn.log | head -6
 fi
+if node tests/sim/run.js lidar > /tmp/ld.log 2>&1 && grep -q "LIDAR PASS" /tmp/ld.log; then
+  ok "2D vs 3D lidar: 2D misses low box/overhang, 3D goes around, desk fits under when lowered"
+else
+  no "2D vs 3D lidar"; grep '"ok":false' /tmp/ld.log | head -6
+fi
 node tests/pi/test_runtime.js > /tmp/pi.log 2>&1 && ok "pi runtime: units, cord lock, exceptions, e-stop, timeouts, saved map/zones" || { no "pi runtime"; tail -8 /tmp/pi.log; }
 node tests/pi/test_motion_guard.js > /tmp/mg.log 2>&1 && ok "motion guard: slew backstop, jam stop (drive + steering)" || { no "motion guard"; grep FAIL /tmp/mg.log | head -6; }
 node tests/pi/test_swerve.js > /tmp/sw.log 2>&1 && ok "swerve maths: module angles/speeds, desaturate, 90° flip, odometry" || { no "swerve maths"; grep FAIL /tmp/sw.log | head -6; }
@@ -72,6 +77,7 @@ if [ $FULL -eq 1 ]; then
   for s in slots parking roundtrip battery; do
     node tests/sim/run.js $s > /tmp/$s.log 2>&1 && ! grep -q '"collisions":[1-9]' /tmp/$s.log && ! grep -Eq 'collisions[^0-9]*[1-9]' /tmp/$s.log && ! grep -q 'did not' /tmp/$s.log && ok "$s ran with no collisions" || { no "$s"; tail -4 /tmp/$s.log; }
   done
+  node tests/sim/run.js drift > /tmp/dr.log 2>&1 && grep -q "DRIFT PASS" /tmp/dr.log && ok "wheel drift: lost without lidar correction; corrected stays close and docks; recovers from a bump" || { no "wheel drift"; grep '"ok":false' /tmp/dr.log | head -6; }
   node tests/sim/run.js navdiag > /tmp/nav.log 2>&1 && grep -q "NAVDIAG PASS" /tmp/nav.log && ok "navigation: every trip arrives, no route flip-flops, no twitching, no recoveries in open room" || { no "navigation diagnostics"; grep -E "^NAVDIAG|problem" /tmp/nav.log | head -8; }
 fi
 echo; echo "$pass passed, $fail failed"; [ $fail -eq 0 ]
