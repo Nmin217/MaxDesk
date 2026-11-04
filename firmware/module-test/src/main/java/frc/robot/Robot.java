@@ -188,6 +188,11 @@ public class Robot extends TimedRobot {
         case DIRECTION -> {
           // Small open-loop push. With the encoder inverted correctly, + output => + angle.
           module.steerPercent(0.1);
+          if (module.turnStalled()) {
+            fail("steering stalled: high current, module not turning. Check the NEO 550 phase"
+                + " wires (red/black/white) and that the module turns freely");
+            return;
+          }
           if (t > 0.6) {
             module.stop();
             double movedDeg =
@@ -214,6 +219,11 @@ public class Robot extends TimedRobot {
         case STEER -> {
           double target = Math.toRadians(kSteerTargetsDeg[index]);
           module.steerTo(target);
+          if (module.turnStalled()) {
+            fail("steering stalled: high current, module not turning. Check the NEO 550 phase"
+                + " wires and that the module turns freely");
+            return;
+          }
           module.drivePercent(0);
           double err = Math.abs(module.angleErrorDeg(target));
           if (err < TestLimits.kSteerToleranceDeg) {

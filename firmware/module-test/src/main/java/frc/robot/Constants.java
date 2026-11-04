@@ -66,6 +66,9 @@ public final class Constants {
     public static final double kStallAmps = 10.0;
     public static final double kStallSpeedMps = 0.05;
     public static final double kStallSec = 0.5;
+    /** Steering stall: NEO 550 over this current with the module turning slower than this. */
+    public static final double kTurnStallAmps = 12.0;
+    public static final double kTurnStallRadPerSec = 0.5;
     /** Phone app mode: stop if no new command has arrived for this long. */
     public static final double kAppTimeoutSec = 0.3;
   }

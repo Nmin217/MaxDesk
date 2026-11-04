@@ -162,5 +162,8 @@ chosen test.
 If a wheel is told to move but stays still while drawing over 10 A for half a second, that module's
 drive shuts off, `Stalled` shows on the dashboard, and the self test fails. It resets on the next
 enable. **Before enabling again, remove power and turn the wheel by hand: it should spin freely.**
-This only protects this program. REV Hardware Client's motor test uses the SPARK's own settings,
+The steering has the same guard: if the NEO 550 draws over 12 A while the module barely turns for
+half a second, the turn motor shuts off and the self test fails with "steering stalled". Two swapped
+phase wires on a motor (red/black/white) look exactly like this: it buzzes instead of turning and
+heats up within seconds. This only protects this program. REV Hardware Client's motor test uses the SPARK's own settings,
 so keep its speed low and its current limit set when spinning a drive motor installed in a module.

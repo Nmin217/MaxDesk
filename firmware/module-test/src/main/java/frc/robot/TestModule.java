@@ -39,6 +39,8 @@ public class TestModule {
   private boolean configOk = true;
   private double stallSince = -1;
   private boolean stalled = false;
+  private double turnStallSince = -1;
+  private boolean turnStalled = false;
 
   public TestModule(String name, int driveCanId, int turnCanId) {
     this.name = name;
@@ -125,12 +127,14 @@ public class TestModule {
 
   /** Closed-loop steer to an angle (radians, any range). Drive is left as is. */
   public void steerTo(double targetRad) {
+    if (turnGuard()) return;
     turnController.setSetpoint(MathUtil.inputModulus(targetRad, 0, 2 * Math.PI),
         ControlType.kPosition);
   }
 
   /** Open-loop steer. Only for the direction check. */
   public void steerPercent(double percent) {
+    if (turnGuard()) return;
     turn.set(MathUtil.clamp(percent, -0.2, 0.2));
   }
 
@@ -161,6 +165,36 @@ public class TestModule {
     }
   }
 
+  /**
+   * Steering stall cut-off: the turn motor is driven but the module barely turns while the NEO 550
+   * draws more than {@link TestLimits#kTurnStallAmps} for {@link TestLimits#kStallSec}. That is a
+   * jammed module, or a turn motor with two phase wires swapped (it buzzes instead of turning and
+   * cooks within seconds). Returns true, with the turn motor stopped, once it has tripped.
+   */
+  private boolean turnGuard() {
+    boolean pushing = Math.abs(turn.getAppliedOutput()) > 0.05
+        && Math.abs(turnEncoder.getVelocity()) < TestLimits.kTurnStallRadPerSec
+        && turn.getOutputCurrent() > TestLimits.kTurnStallAmps;
+    double now = Timer.getFPGATimestamp();
+    if (!pushing) {
+      turnStallSince = -1;
+    } else if (turnStallSince < 0) {
+      turnStallSince = now;
+    } else if (!turnStalled && now - turnStallSince > TestLimits.kStallSec) {
+      turnStalled = true;
+      System.err.printf("[Module %s] STEERING STALLED: %.0f A with the module not turning. Turn motor"
+          + " shut off. Check the NEO 550's three phase wires match colour for colour, and that"
+          + " the module turns freely by hand.%n", name, turn.getOutputCurrent());
+    }
+    if (turnStalled) turn.stopMotor();
+    return turnStalled;
+  }
+
+  /** True once the steering has been shut off for stalling. */
+  public boolean turnStalled() {
+    return turnStalled;
+  }
+
   /** True once the drive has been shut off for stalling. */
   public boolean stalled() {
     return stalled;
@@ -170,6 +204,8 @@ public class TestModule {
   public void clearStall() {
     stalled = false;
     stallSince = -1;
+    turnStalled = false;
+    turnStallSince = -1;
   }
 
   /**
@@ -207,6 +243,7 @@ public class TestModule {
     SmartDashboard.putNumber(p + "BusVolts", drive.getBusVoltage());
     SmartDashboard.putBoolean(p + "DriveFault", drive.hasActiveFault());
     SmartDashboard.putBoolean(p + "TurnFault", turn.hasActiveFault());
-    SmartDashboard.putBoolean(p + "Stalled", stalled);
+    SmartDashboard.putBoolean(p + "Stalled", stalled || turnStalled);
+    SmartDashboard.putBoolean(p + "TurnStalled", turnStalled);
   }
 }
