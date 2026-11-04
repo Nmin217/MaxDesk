@@ -6,7 +6,7 @@ Station, open the printed address on your phone, pick "Phone app (test link)" as
 enable TELEOP. See README.md in this folder.
 
 The phone posts drive commands while a finger is on the pad. Each one is published to the roboRIO
-as /AppDrive/cmd = [seq, x, y, pointDeg] with a new seq; the robot program stops everything when
+as /AppDrive/cmd = [seq, x, y, pointDeg, turn] with a new seq; the robot program stops everything when
 seq stops changing (finger lifted, phone asleep, Wi-Fi dropped, this script killed).
 """
 import argparse
@@ -85,14 +85,16 @@ class Link:
         x, y = clamp_stick(body.get("x"), body.get("y"))
         point = body.get("point")
         point = float(point) % 360 if isinstance(point, (int, float)) and math.isfinite(point) else -1.0
+        turn = body.get("turn")
+        turn = max(-1.0, min(1.0, float(turn))) if isinstance(turn, (int, float)) and math.isfinite(turn) else 0.0
         with self.lock:
             if isinstance(pseq, int) and pseq <= self.phone_seq.get(sid, -1):
                 return 409, {"ok": False, "status": "older command ignored"}
             if isinstance(pseq, int):
                 self.phone_seq[sid] = pseq
             self.seq += 1
-            self.nt.send([float(self.seq), x, y, point])
-        return 200, {"ok": True, "x": x, "y": y, "point": point}
+            self.nt.send([float(self.seq), x, y, point, turn])
+        return 200, {"ok": True, "x": x, "y": y, "point": point, "turn": turn}
 
     def stop(self, body=None):
         body = body or {}
@@ -101,7 +103,7 @@ class Link:
             if isinstance(pseq, int):  # a drive from before this stop that arrives late is refused
                 self.phone_seq[sid] = max(pseq, self.phone_seq.get(sid, -1))
             self.seq += 1
-            self.nt.send([float(self.seq), 0.0, 0.0, -1.0])
+            self.nt.send([float(self.seq), 0.0, 0.0, -1.0, 0.0])
         return 200, {"ok": True, "status": "stopped"}
 
     def state(self):

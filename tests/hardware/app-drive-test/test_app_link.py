@@ -42,14 +42,20 @@ class LinkTests(unittest.TestCase):
         self.link.drive({"x": 0.5, "y": 0, "sid": "a", "seq": 1})
         self.link.drive({"x": 0.5, "y": 0, "sid": "a", "seq": 2})
         self.assertEqual([c[0] for c in self.nt.sent], [1.0, 2.0])
-        self.assertEqual(self.nt.sent[-1][1:], [0.5, 0.0, -1.0])
+        self.assertEqual(self.nt.sent[-1][1:], [0.5, 0.0, -1.0, 0.0])
 
     def test_stick_clamped_and_junk_zeroed(self):
         self.link.drive({"x": 3, "y": 4})
         self.assertAlmostEqual(self.nt.sent[-1][1], 0.6)
         self.assertAlmostEqual(self.nt.sent[-1][2], 0.8)
-        self.link.drive({"x": float("nan"), "y": "fast", "point": float("inf")})
-        self.assertEqual(self.nt.sent[-1][1:], [0.0, 0.0, -1.0])
+        self.link.drive({"x": float("nan"), "y": "fast", "point": float("inf"), "turn": float("nan")})
+        self.assertEqual(self.nt.sent[-1][1:], [0.0, 0.0, -1.0, 0.0])
+
+    def test_turn_clamped(self):
+        self.link.drive({"x": 0, "y": 0, "turn": 3})
+        self.assertEqual(self.nt.sent[-1][4], 1.0)
+        self.link.drive({"x": 0, "y": 0, "turn": -0.4})
+        self.assertEqual(self.nt.sent[-1][4], -0.4)
 
     def test_point_wraps(self):
         self.link.drive({"x": 0, "y": 0, "point": 450})
@@ -66,7 +72,7 @@ class LinkTests(unittest.TestCase):
         self.link.stop({"sid": "a", "seq": 3})
         code, _ = self.link.drive({"x": 0.5, "sid": "a", "seq": 2})  # was in flight when Stop was pressed
         self.assertEqual(code, 409)
-        self.assertEqual(self.nt.sent[-1][1:], [0.0, 0.0, -1.0])
+        self.assertEqual(self.nt.sent[-1][1:], [0.0, 0.0, -1.0, 0.0])
 
     def test_state(self):
         _, s = self.link.state()
@@ -111,12 +117,12 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(self.req("/drive", {"x": 0.3, "y": 0})[0], 200)
         self.assertEqual(self.nt.sent[-1][1], 0.3)
         self.assertEqual(self.req("/stop", {})[0], 200)
-        self.assertEqual(self.nt.sent[-1][1:], [0.0, 0.0, -1.0])
+        self.assertEqual(self.nt.sent[-1][1:], [0.0, 0.0, -1.0, 0.0])
 
     def test_bad_body_stops(self):
         self.req("/drive", {"x": 0.3})
         self.assertEqual(self.req("/drive", b"not json")[0], 400)
-        self.assertEqual(self.nt.sent[-1][1:], [0.0, 0.0, -1.0])
+        self.assertEqual(self.nt.sent[-1][1:], [0.0, 0.0, -1.0, 0.0])
 
 
 if __name__ == "__main__":

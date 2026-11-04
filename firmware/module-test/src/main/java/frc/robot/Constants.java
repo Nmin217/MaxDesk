@@ -11,16 +11,26 @@ import java.util.List;
 public final class Constants {
   private Constants() {}
 
-  /** One module: dashboard name, drive SPARK CAN ID, turn SPARK CAN ID. */
-  public record ModuleId(String name, int driveCanId, int turnCanId) {}
+  /**
+   * One module: dashboard name, drive SPARK CAN ID, turn SPARK CAN ID, and where its centre (the
+   * steering axis) sits on the cart or frame: xMeters forward of the centre, yMeters to the left.
+   * Only the Cart modes use the position.
+   */
+  public record ModuleId(String name, int driveCanId, int turnCanId, double xMeters, double yMeters) {}
 
   /** The modules on the bench. Comment out any that aren't wired; add RR when you build it. */
   public static final List<ModuleId> kModules = List.of(
-      new ModuleId("FL", 11, 10),
-      new ModuleId("FR", 15, 14),
-      new ModuleId("RL", 13, 12)
-      // , new ModuleId("RR", 17, 16)
+      // PLACEHOLDER positions for a three-wheel triangle cart: two at the front, one at the back
+      // middle. MEASURE yours (centre of each module from the centre of the cart) and set
+      // kCartPositionsMeasured = true. Wrong numbers make the wheels fight each other when it turns.
+      new ModuleId("FL", 11, 10, 0.20, 0.20),
+      new ModuleId("FR", 15, 14, 0.20, -0.20),
+      new ModuleId("RL", 13, 12, -0.20, 0.0)
+      // , new ModuleId("RR", 17, 16, -0.20, -0.20)   // on the four-wheel frame: all four corners
   );
+
+  /** Set true once the positions above are measured. Until then the Cart modes print a warning. */
+  public static final boolean kCartPositionsMeasured = false;
 
   public static final class ModuleConstants {
     /** 12, 13 or 14: the pinion actually fitted. These modules have the 13T (medium); PLAN.md suggested 12T. */
@@ -69,6 +79,8 @@ public final class Constants {
     /** Steering stall: NEO 550 over this current with the module turning slower than this. */
     public static final double kTurnStallAmps = 12.0;
     public static final double kTurnStallRadPerSec = 0.5;
+    /** Cart modes: full stick = this fraction of the top speed as a turning rate (spin in place). */
+    public static final double kCartTurnScale = 1.0;
     /** Phone app mode: stop if no new command has arrived for this long. */
     public static final double kAppTimeoutSec = 0.3;
   }

@@ -158,7 +158,26 @@ chosen test.
 | **Joystick** | Only while **RB is held** | Left stick: all wheels point and drive the way the stick points (max 15 %). A/B/X/Y: snap to 0/90/180/270°. Let go of RB and everything stops. |
 | **Phone app** | Only while your finger is on the test page | The same as Joystick, driven from your phone through `tests/hardware/app-drive-test` (see its README). Stops if commands stop for 0.3 s. |
 
-**Drive stall cut-off.** On the bench the drive current limit is 20 A (`kBenchDriveCurrentLimitAmps`).
+| **Cart: joystick** / **Cart: phone app** | Only while RB / a finger is held | Real swerve for modules **bolted to a cart or frame**. Left stick (or the pad) drives any direction, right stick (or Turn left/right) rotates, both at once. Each wheel gets its own angle and speed from WPILib's `SwerveDriveKinematics`. |
+
+**Cart mode setup.** The cart modes need the modules fixed to something, and need to know where
+each one is:
+
+1. Bolt the modules to a board. Three wheels: a triangle (two at the front, one centred at the
+   back), not three corners of a square. No desk on top: three wheels tip easily.
+2. Measure each module's centre (its steering axis, the middle of the wheel seen from above) from the
+   centre of the cart: **x = metres forward** (+) or back (−), **y = metres left** (+) or right (−).
+3. Put the numbers in `Constants.kModules` (the last two values of each line) and set
+   `kCartPositionsMeasured = true`.
+4. Redo every module's zero offset **on the cart**, with each wheel pointing at the cart's front.
+   Then 0° means "forward" for every module, whichever way round it's bolted on.
+5. Check in Readout: all read ≈0° with the wheels pointing forward. Then Cart mode on blocks first,
+   then on the floor at a low speed setting.
+
+Driving is robot-relative (no gyro yet): "forward" is always the cart's front, even after it turns.
+With wrong positions, driving straight still works but turning makes the wheels fight each other.
+
+ On the bench the drive current limit is 20 A (`kBenchDriveCurrentLimitAmps`).
 If a wheel is told to move but stays still while drawing over 10 A for half a second, that module's
 drive shuts off, `Stalled` shows on the dashboard, and the self test fails. It resets on the next
 enable. **Before enabling again, remove power and turn the wheel by hand: it should spin freely.**

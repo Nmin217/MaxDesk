@@ -57,6 +57,8 @@ input[type=range]{flex:1;accent-color:var(--accent)}
     <div class="row"><span class="hint">Speed</span><input id="speed" type="range" min="10" max="100" step="10" value="50"><span id="speedv" class="val"></span></div>
     <div><p class="hint" style="margin-bottom:6px">Hold to point the wheels (no driving)</p>
       <div class="seg"><button data-deg="0">0° fwd</button><button data-deg="90">90° left</button><button data-deg="180">180° back</button><button data-deg="270">270° right</button></div></div>
+    <div><p class="hint" style="margin-bottom:6px">Hold to turn (Cart mode only; works while dragging the pad)</p>
+      <div class="seg" style="grid-template-columns:1fr 1fr"><button data-turn="1">⟲ Turn left</button><button data-turn="-1">Turn right ⟳</button></div></div>
   </section>
 
   <section class="card"><div id="mods" class="mods"><p class="hint">No modules yet.</p></div></section>
@@ -67,7 +69,10 @@ const $=id=>document.getElementById(id);
 const KEY=new URLSearchParams(location.search).get('k')||'';
 const SID=Math.random().toString(36).slice(2);
 const CAP_MPS=4.46*0.15; // free speed with the 13T pinion × the robot program's 15% cap
-let seq=0, cmd=null, inFlight=false, linkOk=false, mode='';
+let seq=0, inFlight=false, linkOk=false, mode='';
+// Each control holds its own part; a command is sent while any of them is held.
+let padV=null, turnV=0, pointV=null;
+const cmdNow=()=>padV||turnV||pointV!==null?{x:padV?padV.x:0,y:padV?padV.y:0,point:pointV,turn:turnV}:null;
 
 async function call(path,body){
   const r=await fetch(path,{method:body?'POST':'GET',headers:{'X-Key':KEY,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,cache:'no-store'});
@@ -80,12 +85,14 @@ $('speed').oninput=()=>{$('speedv').textContent=`${(CAP_MPS*speed()).toFixed(2)}
 
 // While cmd is set, send it every 50 ms (one request at a time). The robot stops 0.3 s after they stop.
 setInterval(async()=>{
-  if(!cmd||inFlight)return;
+  const cmd=cmdNow();if(!cmd||inFlight)return;
   inFlight=true;
   try{await call('/drive',{...cmd,sid:SID,seq:++seq})}catch(e){}
   inFlight=false;
 },50);
-function release(){if(cmd){cmd=null;call('/stop',{sid:SID,seq:++seq}).catch(()=>{})}knob(0,0);$('pad').classList.remove('on');document.querySelectorAll('.seg button').forEach(b=>b.classList.remove('on'))}
+function sendStop(){call('/stop',{sid:SID,seq:++seq}).catch(()=>{})}
+function release(){padV=null;turnV=0;pointV=null;sendStop();knob(0,0);$('pad').classList.remove('on');document.querySelectorAll('.seg button').forEach(b=>b.classList.remove('on'))}
+function let_go(part){part();if(!cmdNow())sendStop()}   // one control released: stop only if nothing else is held
 
 const pad=$('pad');
 function knob(dx,dy){$('knob').style.transform=`translate(${dx}px,${dy}px)`}
@@ -94,16 +101,20 @@ function padMove(e){
   let dx=e.clientX-r.left-R,dy=e.clientY-r.top-R;const m=Math.hypot(dx,dy),lim=R-32;
   if(m>lim){dx*=lim/m;dy*=lim/m}
   knob(dx,dy);
-  const s=speed();cmd={x:-dy/lim*s,y:-dx/lim*s,point:null}; // x forward (up), y left
+  const s=speed();padV={x:-dy/lim*s,y:-dx/lim*s};pointV=null; // x forward (up), y left
 }
 pad.addEventListener('pointerdown',e=>{pad.setPointerCapture(e.pointerId);pad.classList.add('on');padMove(e)});
 pad.addEventListener('pointermove',e=>{if(pad.classList.contains('on'))padMove(e)});
-for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(ev,release);
-document.querySelectorAll('.seg button').forEach(b=>{
-  b.addEventListener('pointerdown',e=>{b.setPointerCapture(e.pointerId);b.classList.add('on');cmd={x:0,y:0,point:+b.dataset.deg}});
-  for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,release);
+for(const ev of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(ev,()=>let_go(()=>{padV=null;knob(0,0);pad.classList.remove('on')}));
+document.querySelectorAll('.seg button[data-deg]').forEach(b=>{
+  b.addEventListener('pointerdown',e=>{b.setPointerCapture(e.pointerId);b.classList.add('on');pointV=+b.dataset.deg});
+  for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>let_go(()=>{pointV=null;b.classList.remove('on')}));
 });
-$('stop').addEventListener('pointerdown',()=>{cmd=cmd||{};release()});
+document.querySelectorAll('.seg button[data-turn]').forEach(b=>{
+  b.addEventListener('pointerdown',e=>{b.setPointerCapture(e.pointerId);b.classList.add('on');turnV=+b.dataset.turn*speed()});
+  for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>let_go(()=>{turnV=0;b.classList.remove('on')}));
+});
+$('stop').addEventListener('pointerdown',release);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)release()});
 window.addEventListener('blur',release);
 
@@ -117,8 +128,9 @@ function render(s){
   let h;
   if(!linkOk)h='The laptop can\'t reach the roboRIO. Check the USB cable or radio, and that the robot program is deployed.';
   else if(mode==='APP')h='<b>Ready.</b> Drag on the pad to drive, or hold a direction button to point the wheels.';
-  else if(mode==='DISABLED')h='In the dashboard set <b>Test Mode → Phone app (test link)</b>, then <b>Enable TeleOp</b> in the Driver Station.';
-  else h=`The robot is running <b>${mode}</b>. Disable, set Test Mode to <b>Phone app (test link)</b>, then enable again.`;
+  else if(mode==='CART_APP')h='<b>Cart ready.</b> Drag to drive, hold Turn left/right to rotate (both at once works). Wheels each take their own angle.';
+  else if(mode==='DISABLED')h='In the dashboard set <b>Test Mode → Phone app (test link)</b> (loose modules) or <b>Cart: phone app</b> (bolted to a cart), then <b>Enable TeleOp</b> in the Driver Station.';
+  else h=`The robot is running <b>${mode}</b>. Disable, set Test Mode to <b>Phone app (test link)</b> or <b>Cart: phone app</b>, then enable again.`;
   $('help').innerHTML=h;$('help').classList.toggle('warn',!linkOk);
   const mods=s.modules||[];
   $('mods').innerHTML=mods.length?mods.map(m=>{

@@ -2,6 +2,10 @@ package frc.robot;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.networktables.DoubleArraySubscriber;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.TimedRobot;
@@ -9,6 +13,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.Constants.ModuleConstants;
 import frc.robot.Constants.OI;
 import frc.robot.Constants.TestLimits;
 import java.util.List;
@@ -31,10 +36,15 @@ import java.util.List;
  *   <li><b>Phone app</b>: the same as Joystick, but driven from the test page in
  *       tests/hardware/app-drive-test through its laptop link. The page only sends while a finger
  *       is on it; if commands stop arriving for {@link TestLimits#kAppTimeoutSec}, everything stops.
+ *   <li><b>Cart</b> (joystick or phone): MODULES BOLTED TO A CART OR FRAME. Real swerve: each wheel
+ *       gets its own angle and speed from WPILib's SwerveDriveKinematics, using the module positions
+ *       in {@link Constants#kModules}, so the cart can drive any direction and turn at the same
+ *       time. Joystick: hold RB, left stick drives, right stick left/right turns. Robot-relative
+ *       (no gyro yet): "forward" is the cart's front.
  * </ul>
  */
 public class Robot extends TimedRobot {
-  private enum Mode { READOUT, SELF_TEST, JOYSTICK, APP }
+  private enum Mode { READOUT, SELF_TEST, JOYSTICK, APP, CART_JOYSTICK, CART_APP }
 
   private final List<TestModule> modules = Constants.kModules.stream()
       .map(id -> new TestModule(id.name(), id.driveCanId(), id.turnCanId()))
@@ -47,6 +57,12 @@ public class Robot extends TimedRobot {
       .getDoubleArrayTopic("/AppDrive/cmd").subscribe(new double[0]);
   private double appLastSeq = Double.NaN;
   private double appFreshSince = Double.NEGATIVE_INFINITY;
+  /** Null if the module positions can't make a swerve (fewer than 2 modules): the Cart modes refuse. */
+  private final SwerveDriveKinematics kinematics = makeKinematics();
+  private final double cartMaxSpeedMps =
+      TestLimits.kMaxDrivePercent * ModuleConstants.kDriveWheelFreeSpeedMps;
+  private final double cartMaxOmega = cartMaxSpeedMps / Math.max(0.05, Constants.kModules.stream()
+      .mapToDouble(id -> Math.hypot(id.xMeters(), id.yMeters())).max().orElse(0.05));
   private final SendableChooser<Mode> modeChooser = new SendableChooser<>();
   private Mode mode = Mode.READOUT;
   private Rotation2d joystickAngle = Rotation2d.kZero;
@@ -56,6 +72,8 @@ public class Robot extends TimedRobot {
     modeChooser.addOption("Self test (scripted)", Mode.SELF_TEST);
     modeChooser.addOption("Joystick (hold RB)", Mode.JOYSTICK);
     modeChooser.addOption("Phone app (test link)", Mode.APP);
+    modeChooser.addOption("Cart: joystick (RB, right stick turns)", Mode.CART_JOYSTICK);
+    modeChooser.addOption("Cart: phone app", Mode.CART_APP);
     SmartDashboard.putData("Test Mode", modeChooser);
     for (TestModule m : modules) {
       if (!m.configOk()) {
@@ -84,10 +102,16 @@ public class Robot extends TimedRobot {
     if (mode == Mode.SELF_TEST) {
       for (SelfTest t : selfTests) t.start();
     }
+    if ((mode == Mode.CART_JOYSTICK || mode == Mode.CART_APP) && kinematics == null) {
+      System.err.println("Cart mode needs at least 2 modules in Constants.kModules. Not driving.");
+    } else if ((mode == Mode.CART_JOYSTICK || mode == Mode.CART_APP) && !Constants.kCartPositionsMeasured) {
+      System.err.println("WARNING: cart module positions are placeholders. Measure them (Constants.kModules)"
+          + " or turning will make the wheels fight. Driving straight still works.");
+    }
     joystickAngle = Rotation2d.kZero;
     // Ignore whatever command was left over from before this enable.
     double[] cmd = appCommand.get();
-    appLastSeq = cmd.length == 4 ? cmd[0] : Double.NaN;
+    appLastSeq = cmd.length >= 4 ? cmd[0] : Double.NaN;
     appFreshSince = Double.NEGATIVE_INFINITY;
   }
 
@@ -100,6 +124,8 @@ public class Robot extends TimedRobot {
       }
       case JOYSTICK -> joystick();
       case APP -> app();
+      case CART_JOYSTICK -> cartJoystick();
+      case CART_APP -> cartApp();
     }
   }
 
@@ -123,17 +149,75 @@ public class Robot extends TimedRobot {
   }
 
   private void app() {
-    double[] cmd = appCommand.get();
-    double now = Timer.getFPGATimestamp();
-    if (cmd.length == 4 && cmd[0] != appLastSeq) {
-      appLastSeq = cmd[0];
-      appFreshSince = now;
-    }
-    if (cmd.length != 4 || now - appFreshSince > TestLimits.kAppTimeoutSec) {
+    double[] cmd = freshAppCommand();
+    if (cmd == null) {
       stopAll();
       return;
     }
     driveAll(cmd[1], cmd[2], cmd[3]);
+  }
+
+  /**
+   * The phone's latest [seq, x, y, pointDeg, turn] (turn is optional), or null if it has stopped
+   * sending (finger lifted, phone asleep, link closed): the caller must stop.
+   */
+  private double[] freshAppCommand() {
+    double[] cmd = appCommand.get();
+    double now = Timer.getFPGATimestamp();
+    if (cmd.length >= 4 && cmd[0] != appLastSeq) {
+      appLastSeq = cmd[0];
+      appFreshSince = now;
+    }
+    if (cmd.length < 4 || now - appFreshSince > TestLimits.kAppTimeoutSec) return null;
+    return cmd;
+  }
+
+  private void cartJoystick() {
+    if (!controller.getRightBumperButton()) {
+      stopAll();
+      return;
+    }
+    // Sticks read up/left as -. Right stick left = turn left (counter-clockwise, +omega).
+    cartDrive(-controller.getLeftY(), -controller.getLeftX(), -controller.getRightX());
+  }
+
+  private void cartApp() {
+    double[] cmd = freshAppCommand();
+    if (cmd == null) {
+      stopAll();
+      return;
+    }
+    cartDrive(cmd[1], cmd[2], cmd.length >= 5 ? cmd[4] : 0);
+  }
+
+  /**
+   * Real swerve: x forward, y left, turn counter-clockwise, each -1..1 of the bench top speed.
+   * WPILib works out every wheel's angle and speed from the module positions; when one wheel would
+   * have to go faster than the cap, all of them are scaled down together so the motion keeps its shape.
+   */
+  private void cartDrive(double x, double y, double turn) {
+    if (kinematics == null) {
+      stopAll();
+      return;
+    }
+    double mag = MathUtil.applyDeadband(Math.min(1.0, Math.hypot(x, y)), TestLimits.kDeadband);
+    double scale = mag > 0 ? mag / Math.hypot(x, y) : 0;
+    double w = MathUtil.applyDeadband(MathUtil.clamp(turn, -1, 1), TestLimits.kDeadband);
+    ChassisSpeeds speeds = new ChassisSpeeds(x * scale * cartMaxSpeedMps, y * scale * cartMaxSpeedMps,
+        w * TestLimits.kCartTurnScale * cartMaxOmega);
+    // With zero speeds WPILib keeps each wheel's last angle, so they don't snap back to 0 on release.
+    SwerveModuleState[] states = kinematics.toSwerveModuleStates(speeds);
+    SwerveDriveKinematics.desaturateWheelSpeeds(states, cartMaxSpeedMps);
+    for (int i = 0; i < modules.size(); i++) {
+      modules.get(i).setState(states[i].speedMetersPerSecond / ModuleConstants.kDriveWheelFreeSpeedMps,
+          states[i].angle);
+    }
+  }
+
+  private static SwerveDriveKinematics makeKinematics() {
+    if (Constants.kModules.size() < 2) return null;
+    return new SwerveDriveKinematics(Constants.kModules.stream()
+        .map(id -> new Translation2d(id.xMeters(), id.yMeters())).toArray(Translation2d[]::new));
   }
 
   /** Every module follows one stick: x forward, y left (-1..1); pointDeg >= 0 sets the angle. */
