@@ -1,7 +1,8 @@
 // Stuck detection and recovery regressions:
 //   1. Turning in place in open space, or turn-and-go along a zig-zag, is never treated as stuck.
 //   2. Driving into a wall IS treated as stuck, and recovery starts.
-//   3. Being stuck over and over never cancels the trip (no "giving up").
+//   3. Being stuck over and over keeps retrying recovery; only after BOXED_T s with no progress does the trip end,
+//      as 'blocked' with an alert (never silently, never before several recoveries were tried).
 //   4. Stop and E-stop override a recovery that is in progress.
 {
   const checks = [];
@@ -82,13 +83,13 @@
       { ms: stopT === null ? null : Math.round(stopT * 1000) });
   }
 
-  // 3. Keep feeding the same blocked path for 60 s: many stalls, trip must stay active.
+  // 3. Keep feeding the same blocked path: many stalls, recovery keeps trying, then the boxed-in watchdog ends it.
   {
     startAt(300, 430);
-    rects.push({ x: T.x + HW + 6, y: T.y - 40, w: 30, h: 80 });
-    const x = T.x, y = T.y;
-    let recoveries = 0, prev = null, inactive = false, gaveUp = false, cycleResets = 0;
-    for (let t = 0; t < 60; t += dt) {
+    const wall = { x: T.x + HW + 6, y: T.y - 40, w: 30, h: 80 };
+    rects.push(wall);
+    let recoveries = 0, prev = null, endedAt = null, cycleResets = 0;
+    for (let t = 0; t < 60 && endedAt === null; t += dt) {
       if (!recovery && !path.length) {
         const p = []; for (let i = 0; i <= 12; i++) p.push(wp(T.x + i * 10, T.y, 0));
         forcePath(p);
@@ -97,15 +98,18 @@
       if (!recovery && path.length) rp = 1e9;
       if (recovery && recovery !== prev) recoveries++;
       prev = recovery;
-      if (!active) inactive = true;
-      const st = $('st').textContent;
-      if (/giving up/i.test(st)) gaveUp = true;
-      if (/Recovery cycle reset/.test(st)) cycleResets++;
+      if (!active) endedAt = t;
+      if (/Recovery cycle reset/.test($('st').textContent)) cycleResets++;
     }
-    record('repeated_stalls_never_cancel', recoveries >= 4 && !inactive && !gaveUp,
-      { recoveries, cycleResets: cycleResets > 0 });
+    const out = trips[0] && trips[0].outcome;
+    record('repeated_stalls_retry_then_report_boxed_in', recoveries >= 3 && endedAt !== null && endedAt >= BOXED_T
+      && out === 'blocked' && /boxed in/i.test(extraStateJSON().alert_text),
+      { recoveries, endedSec: endedAt === null ? null : Math.round(endedAt), outcome: out, cycleResets: cycleResets > 0 });
 
-    // 4b. E-stop during recovery: wheels stop at once and the trip ends.
+    // 4b. E-stop during recovery (fresh trip into the same wall): wheels stop at once and the trip ends.
+    startAt(300, 430); rects.push(wall);
+    const p = []; for (let i = 0; i <= 12; i++) p.push(wp(T.x + i * 10, T.y, 0));
+    forcePath(p);
     for (let t = 0; t < 10 && !recovery; t += dt) update(dt);
     const hadRecovery = !!recovery;
     toggleEstop();

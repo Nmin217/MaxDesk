@@ -161,7 +161,11 @@ let warp=1,peakA=0,deskH=1.05,userH=1.05,estop=false,T,people,path=[],goal=null,
 let stuckTime=0,recovery=null,recoveryT=0;
 // Progress along the current path. It only moves forward: picking the nearest waypoint every frame let a waypoint from
 // BEFORE an in-place turn win right after the turn, so the yaw target flipped back and forth and the wheels twitched.
-let pathI=0,planDest=null,pathStrict=true,heldT=0,closeFollowUntil=-99;   // heldT: how long the supervisor has been refusing the current command
+let pathI=0,planDest=null,pathStrict=true,heldT=0,closeFollowUntil=-99;
+// Boxed-in watchdog: a trip that makes no progress (hasn't moved 30 cm or got 30 cm closer) for BOXED_T seconds gives up and says so,
+// instead of waiting forever. Blocked all round, something on/under the desk, a wheel the LiDAR can't explain.
+const BOXED_T=15;let progT=0,progX=0,progY=0,progDu=1e9;
+function progReset(){progT=0;progX=T.x;progY=T.y;progDu=1e9}   // heldT: how long the supervisor has been refusing the current command
 const PATH_SEARCH=15;   // waypoints (10 px each) ahead of pathI that may be the closest one
 function nearestAhead(){let bi=Math.min(pathI,path.length-1),bd=1e9;
   for(let i=bi;i<Math.min(path.length,pathI+PATH_SEARCH);i++){const d=Math.hypot(path[i].x-T.x,path[i].y-T.y);if(d<bd){bd=d;bi=i}}
@@ -562,7 +566,7 @@ function jamStop(text){if(active){active=false;path=[];endTrip('jam')}parkTh=nul
 
 // Trip log: one record per summon / return / tour, ended with how it finished. Kept small; the app keeps the history.
 let trip=null,trips=[],tripSeq=0;
-function startTrip(kind){if(trip)endTrip('replaced');trip={id:Date.now().toString(36)+'-'+(++tripSeq),kind,start:time,startedAt:Date.now(),dist:0,lx:T.x,ly:T.y,holds0:safetyHolds,bat0:bat.r}}
+function startTrip(kind){if(trip)endTrip('replaced');progReset();trip={id:Date.now().toString(36)+'-'+(++tripSeq),kind,start:time,startedAt:Date.now(),dist:0,lx:T.x,ly:T.y,holds0:safetyHolds,bat0:bat.r}}
 function endTrip(outcome){if(!trip)return;
   // A trip that went nowhere (already at the dock, stopped at once) isn't worth a history entry, unless it ended badly.
   if(trip.dist*M_PER_PX<0.05&&time-trip.start<2&&outcome!=='e-stop'&&outcome!=='cord'&&outcome!=='jam'){trip=null;return}
@@ -1232,6 +1236,11 @@ if(time < safetyHoldUntil){cx=0;cy=0;w=0;held=true;}
 heldT=held&&active?heldT+dt:0;
 if(held&&active)closeFollowUntil=time+1.5;
 if(held&&active&&!estop&&!recovery&&low&&du>(mode==='user'?80:10))setSt('Safety hold - something in the swept path','warn');
+if(active&&!estop&&!locLost&&!cordLock()){
+  if(Math.hypot(T.x-progX,T.y-progY)>15||du<progDu-15){progX=T.x;progY=T.y;progDu=Math.min(progDu,du);progT=0}else progT+=dt;
+  if(progT>BOXED_T){const msg="I'm boxed in - clear the space around me, then call me again";
+    active=false;path=[];recovery=null;stuckTime=0;endTrip('blocked');cx=cy=w=0;setSt(msg,'bad');batAlert(msg);progReset()}
+}else progReset();
 
 // Charging-cord lock: while plugged in (interlock on) the wheels get NO command, every frame, whatever else asked for motion.
 // A trip that is under way when the cord goes in is cancelled and the desk brakes hard (the cord is attached).

@@ -32,6 +32,12 @@ Two checks sit between the planner and `io.writeWheels`:
   shows "FL wheel can't turn: jammed or pushing against something" and the History tab logs the
   trip as "Wheel jammed". Nothing resumes on its own; a new summon tries again. `pi_io.js` must
   provide `readModules()` for this to work (see `io.js`).
+- **Boxed in** (in the simulator core, so the Pi gets it too). If a trip has neither moved 30 cm
+  nor got 30 cm closer for 15 s, for example because it's blocked all round or something is
+  sitting on or under the desk where the LiDAR can't see it, the trip ends, the app shows
+  "I'm boxed in - clear the space around me, then call me again", and History logs "Boxed in".
+  While the desk is lost, E-stopped or cord-locked this timer doesn't run, since those have their
+  own messages. Test: `tests/sim/scenarios/boxed.js`.
 
 ## Position: drift, LiDAR correction and getting lost (prototyped in the simulator)
 

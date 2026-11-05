@@ -43,7 +43,7 @@ else
   no "stop priority"; tail -6 /tmp/sp.log
 fi
 if node tests/sim/run.js recovery > /tmp/rec.log 2>&1 && grep -q "RECOVERY PASS" /tmp/rec.log; then
-  ok "recovery: turning is not stuck, wall stall recovers, never gives up, Stop/E-stop win"
+  ok "recovery: turning is not stuck, wall stall recovers, keeps retrying then reports boxed in, Stop/E-stop win"
 else
   no "recovery"; grep '"ok":false' /tmp/rec.log | head -6
 fi
@@ -66,6 +66,11 @@ fi
 node tests/pi/test_runtime.js > /tmp/pi.log 2>&1 && ok "pi runtime: units, cord lock, exceptions, e-stop, timeouts, saved map/zones" || { no "pi runtime"; tail -8 /tmp/pi.log; }
 node tests/pi/test_motion_guard.js > /tmp/mg.log 2>&1 && ok "motion guard: slew backstop, jam stop (drive + steering)" || { no "motion guard"; grep FAIL /tmp/mg.log | head -6; }
 node tests/pi/test_swerve.js > /tmp/sw.log 2>&1 && ok "swerve maths: module angles/speeds, desaturate, 90° flip, odometry" || { no "swerve maths"; grep FAIL /tmp/sw.log | head -6; }
+if node tests/sim/run.js boxed > /tmp/bx.log 2>&1 && grep -q "BOXED PASS" /tmp/bx.log; then
+  ok "boxed in: gives up after 15 s with an alert (block on/under the desk); a short blocker doesn't trigger it"
+else
+  no "boxed in"; grep '"ok":false' /tmp/bx.log | head -6
+fi
 python3 -B -m unittest discover -s tests/pi_python > /tmp/pipy.log 2>&1 && ok "pi lidar safety monitor (python): metres, stale, blind, heartbeat, NT4" || { no "pi lidar python"; tail -8 /tmp/pipy.log; }
 python3 -B tests/hardware/app-drive-test/test_app_link.py > /tmp/adt.log 2>&1 && ok "bench drive test link: deadman seq, stop beats late drive, key" || { no "bench drive test link"; tail -8 /tmp/adt.log; }
 if bash tests/bridge/run.sh > /tmp/br.log 2>&1; then
