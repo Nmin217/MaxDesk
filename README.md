@@ -50,7 +50,13 @@ Needs: a JDK (17 or newer), Node 18+, Python 3, curl. No other dependencies.
 
 ## Quick start for each part
 
-- **Simulator:** open `robot/simulator/summon_table_sim.html` in a browser.
+- **Simulator:** open `robot/simulator/summon_table_sim.html` in a browser. Pick the room with **Room**: the 16 x 10 m test room
+  (the one every older test uses), or the **Office floor**, 32 x 20 m, with four offices and a meeting room off a corridor,
+  open-plan desk pods, a kitchen, a break area and a lounge. `?room=office` in the address does the same. In the office,
+  **Learn the room** uses frontier exploration: with nothing typed in, the desk drives to the edge of what it has seen until no
+  edge is left, so the walls tell it the room's size and shape. It stays within 40 m of the dock. If the battery runs low,
+  it charges, then carries on with what it has already learned. Node runs (tests, bridge, Pi) pick the room with
+  `MAXDESK_ROOM=office`.
 - **Java core:** `cd robot/java-core && java tools/Build.java && java -cp out frc.robot.summon.core.CoreTests`.
   To use it in a WPILib project, copy `src/main/java/frc/robot/summon/core/` and read `robot/java-core/README.md`.
 - **Phone controller (Android or iPhone):** run `Start Summon Desk.vbs` on Windows, or run `node bridge/bridge_sim.js` from the project root. On the phone, connected to the same trusted Wi-Fi, open `http://COMPUTER-IP:8787` in Chrome/Safari. On Android, use the browser menu → **Add to Home screen** for an app-like launcher. `dev-token` is a local development token only.

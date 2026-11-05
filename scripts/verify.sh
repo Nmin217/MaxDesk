@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One command to check what can be checked here.   ./scripts/verify.sh          quick (about 1-2 minutes)
-#                                                  ./scripts/verify.sh --full   adds slots, parking, round trips, batteries, drift
+#                                                  ./scripts/verify.sh --full   adds slots, parking, round trips, batteries, drift, office exploration
 cd "$(dirname "$0")/.." || exit 1
 FULL=0; [ "${1:-}" = "--full" ] && FULL=1
 pass=0; fail=0
@@ -66,6 +66,11 @@ fi
 node tests/pi/test_runtime.js > /tmp/pi.log 2>&1 && ok "pi runtime: units, cord lock, exceptions, e-stop, timeouts, saved map/zones" || { no "pi runtime"; tail -8 /tmp/pi.log; }
 node tests/pi/test_motion_guard.js > /tmp/mg.log 2>&1 && ok "motion guard: slew backstop, jam stop (drive + steering)" || { no "motion guard"; grep FAIL /tmp/mg.log | head -6; }
 node tests/pi/test_swerve.js > /tmp/sw.log 2>&1 && ok "swerve maths: module angles/speeds, desaturate, 90° flip, odometry" || { no "swerve maths"; grep FAIL /tmp/sw.log | head -6; }
+if MAXDESK_ROOM=office node tests/sim/run.js office > /tmp/of.log 2>&1 && grep -q "OFFICE PASS" /tmp/of.log; then
+  ok "office floor (32 x 20 m): summons into offices, kitchen, lounge, meeting room arrive with no contact"
+else
+  no "office floor"; grep '"ok":false' /tmp/of.log | head -6
+fi
 if node tests/sim/run.js boxed > /tmp/bx.log 2>&1 && grep -q "BOXED PASS" /tmp/bx.log; then
   ok "boxed in: gives up after 15 s with an alert (block on/under the desk); a short blocker doesn't trigger it"
 else
@@ -82,6 +87,7 @@ if [ $FULL -eq 1 ]; then
   for s in slots parking roundtrip battery; do
     node tests/sim/run.js $s > /tmp/$s.log 2>&1 && ! grep -q '"collisions":[1-9]' /tmp/$s.log && ! grep -Eq 'collisions[^0-9]*[1-9]' /tmp/$s.log && ! grep -q 'did not' /tmp/$s.log && ok "$s ran with no collisions" || { no "$s"; tail -4 /tmp/$s.log; }
   done
+  MAXDESK_ROOM=office node tests/sim/run.js explore > /tmp/exp.log 2>&1 && grep -q "EXPLORE PASS" /tmp/exp.log && ok "office exploration: maps the whole floor by itself, no contact, recharges and resumes" || { no "office exploration"; grep '"ok":false' /tmp/exp.log | head -6; }
   node tests/sim/run.js drift > /tmp/dr.log 2>&1 && grep -q "DRIFT PASS" /tmp/dr.log && ok "wheel drift: lost without lidar correction; corrected stays close and docks; recovers from a bump" || { no "wheel drift"; grep '"ok":false' /tmp/dr.log | head -6; }
   node tests/sim/run.js navdiag > /tmp/nav.log 2>&1 && grep -q "NAVDIAG PASS" /tmp/nav.log && ok "navigation: every trip arrives, no route flip-flops, no twitching, no recoveries in open room" || { no "navigation diagnostics"; grep -E "^NAVDIAG|problem" /tmp/nav.log | head -8; }
 fi

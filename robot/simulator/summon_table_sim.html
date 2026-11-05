@@ -65,6 +65,7 @@ ol{margin:0;padding-left:18px}li{margin-bottom:3px}
 <label>Sim speed <select id="wp"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option><option value="4">4x</option></select></label>
 <label>Desk height: <b id="hv">105</b> cm<input type="range" id="hs" min="63" max="128" value="105" style="width:100%"></label>
 <div>Status: <span id="st">Idle</span></div>
+<label style="display:flex;gap:8px;align-items:center;margin:8px 0 0;font-size:14px">Room <select id="roomPick"><option value="home">Test room (16 x 10 m)</option><option value="office">Office floor (32 x 20 m)</option></select></label>
 <div class="btns" style="margin-top:8px"><button id="stop">Stop</button><button id="rst">Reset scene</button><button id="slot">Slot test</button></div>
 <div class="btns" style="margin-top:8px"><button id="add">+ Walker</button><button id="walk">Walker crosses path</button><button id="sit">Walker stops in path</button><button id="talk">Add talking pair</button><button id="obs">Drop a box</button></div></div>
 <div class="card stats"><h2>Safety log</h2>
@@ -93,7 +94,12 @@ ol{margin:0;padding-left:18px}li{margin-bottom:3px}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
-const W=800,H=500,CS=10,GW=80,GH=50,TR=34,INF=56,HW=28,HH=18;
+// Room: 'home' (16 x 10 m, the original test room) or 'office' (32 x 20 m office floor). Chosen at load time:
+// ?room=office in the browser, MAXDESK_ROOM=office for node (tests, bridge, Pi). Every grid is sized from it.
+const ROOM=(()=>{let k='';try{k=globalThis.MAXDESK_ROOM||(typeof process!=='undefined'&&process.env&&process.env.MAXDESK_ROOM)||''}catch(e){}
+  if(!k)try{k=new URLSearchParams(location.search).get('room')||''}catch(e){}
+  if(!k)try{k=localStorage.getItem('maxdeskRoom')||''}catch(e){}return k==='office'?'office':'home'})();
+const W=ROOM==='office'?1600:800,H=ROOM==='office'?1000:500,CS=10,GW=W/CS,GH=H/CS,TR=34,INF=56,HW=28,HH=18;
 const VMAX=40, VSLOW=14, ABRAKE=60;            // VMAX was 60 px/s (~1.2 m/s); 40 px/s is ~0.8 m/s
 const SAFE_DEC=45, STOP_GAP=5, SAFE_M=2, INF_T=TR+8, EMERG_DEC=120; // emergency brake 120 px/s^2 (2.4 m/s^2), just under SLIP_A // safety supervisor + relaxed re-plan inflation
 const LIDAR_RAYS=90;
@@ -106,11 +112,13 @@ const MOVE_THRESH=3, STAND_WAIT=5.0;
 const SLIP_A=2.5;
 const ALPHA_UP=2.0, ALPHA_STOP=3.6;   // rad/s^2: yaw acceleration caps (see the swerve integration)
 // ---------------------------------------------------------------------------
-const rects=[{x:220,y:170,w:40,h:150},{x:450,y:60,w:150,h:40},{x:520,y:300,w:120,h:70}];
+const OFFICE=ROOM==='office'?officeLayout():null;
+const rects=OFFICE?OFFICE.rects:[{x:220,y:170,w:40,h:150},{x:450,y:60,w:150,h:40},{x:520,y:300,w:120,h:70}];
 const RECTS0=rects.map(r=>({...r}));
 let placeBlocks=false, selectedBlock=null, blockDrag=null, roomStyle='office';
-const HOME={x:85,y:95};   // starting spot (centre of the grid cell the desk starts in); parks horizontal, monitor-back forward
-const circs=[{x:400,y:260,r:18}];
+const HOME=OFFICE?OFFICE.home:{x:85,y:95};   // starting spot (centre of the grid cell the desk starts in); parks horizontal, monitor-back forward
+const circs=OFFICE?OFFICE.circs:[{x:400,y:260,r:18}];
+const USER0=OFFICE?OFFICE.user:{x:700,y:430},BASE_SCENE=OFFICE?'office':'default';
 const CIRCS0=circs.map(c=>({...c}));
 const offs=[];for(let a=-5;a<=5;a++)for(let b=-5;b<=5;b++)if(a*a+b*b<=INF*INF/CS/CS)offs.push([a,b]);
 const offsT=[];for(let a=-5;a<=5;a++)for(let b=-5;b<=5;b++)if(a*a+b*b<=INF_T*INF_T/CS/CS)offsT.push([a,b]);
@@ -124,7 +132,7 @@ const smap=new Float32Array(GW*GH); let clrRays=[];
 // Long-term memory. smap = static obstacles (kept until a lidar ray passes through the cell). seen = cells the lidar has
 // ever covered. traffic = where people tend to be. All three persist between trips and, in this browser, between visits.
 const seen=new Uint8Array(GW*GH), traffic=new Float32Array(GW*GH), mapBorn=new Float32Array(GW*GH).fill(-1e9),seenAt=new Float32Array(GW*GH).fill(-1e9);   // when a cell became an obstacle / was first seen
-let sceneKey='default',mapChanged=false,lastSaveT=0,mapCalls=0,stuckCalls=0,tourI=0,tourT=0,readyPending=false,wasCharging=false,cordIn=false,breakaways=0,alertT=0;
+let sceneKey=BASE_SCENE,mapChanged=false,lastSaveT=0,mapCalls=0,stuckCalls=0,tourI=0,tourT=0,readyPending=false,wasCharging=false,cordIn=false,breakaways=0,alertT=0;
 const RISK=new Float32Array(GW*GH), UNK_PEN=.15, TRAF_K=.015, TRAF_MAX=.4;
 // Cells where the desk has recently been stuck get a growing planning cost, so A* prefers
 // a wider route next time. Fades slowly so a temporary obstacle does not poison a cell forever.
@@ -133,9 +141,39 @@ const STUCK_ADD=0.8, STUCK_MAX=4.0, STUCK_DECAY=0.98;
 const TOURS={default:[[160,430],[420,430],[700,420],[730,240],[540,200],[330,140],[330,340],[150,260]],
              slot:[[160,120],[620,120],[400,200],[400,330],[180,430],[650,430]]};
 function tourPts(){return TOURS[sceneKey]||TOURS.default}
+// Frontier exploration ("Learn the room" on the office floor, where no tour is typed in). A frontier is a cell the desk can
+// reach over floor it has already seen, next to a cell nobody has seen. Drive to the nearest; when none are left the
+// walls close the room in on every side, so the map is complete. EXPLORE_R caps how far from the dock it may go.
+const EXPLORE_R=2000;   // px: 40 m from the dock
+let fGoal=null,fBlack=[],fN=0,fCheckT=0,fNoneT=0,resumeExplore=false,exploreDone=false;   // resumeExplore: battery cut a exploration short; carry on once charged
+function frontierMode(){return sceneKey==='office'}
+function underDesk(x,y){return Math.abs(x*CS+CS/2-T.x)<=HW+CS&&Math.abs(y*CS+CS/2-T.y)<=HW+CS}   // floor the desk stands on: known, though the LiDAR can't see it
+function isFrontier(k){const x=k%GW,y=k/GW|0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const nx=x+dx,ny=y+dy;
+  if(nx>=0&&ny>=0&&nx<GW&&ny<GH&&!seen[ny*GW+nx]&&!underDesk(nx,ny))return true}return false}
+function frontierAt(p){if(!p)return false;const gx=p.x/CS|0,gy=p.y/CS|0;
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const x=gx+dx,y=gy+dy;if(x>=0&&y>=0&&x<GW&&y<GH&&isFrontier(y*GW+x))return true}return false}
+function nextFrontier(){
+  // Where the desk's centre can be in at least one orientation: the route planner's own (tight) map, so goals are reachable.
+  const B=buildBlocked(buildOccupancy(),KERN_TIGHT,MG_TIGHT),blk=new Uint8Array(GW*GH).fill(1);
+  for(let i=0;i<GW*GH;i++)for(let k=0;k<B.length;k++)if(!B[k][i]){blk[i]=0;break}
+  const s0=Math.max(0,Math.min(GH-1,T.y/CS|0))*GW+Math.max(0,Math.min(GW-1,T.x/CS|0)),D=new Int32Array(GW*GH).fill(-1),Q=[s0];D[s0]=0;
+  for(let h=0;h<Q.length;h++){const k=Q[h],x=k%GW,y=k/GW|0;
+    if(D[k]>=3&&isFrontier(k)){const p={x:x*CS+CS/2,y:y*CS+CS/2};
+      if(Math.hypot(p.x-HOME.x,p.y-HOME.y)<=EXPLORE_R&&!fBlack.some(b=>Math.hypot(b.x-p.x,b.y-p.y)<60))return p}
+    for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;const j=ny*GW+nx;
+      if(D[j]<0&&!blk[j]&&(seen[j]||underDesk(nx,ny))&&!smap[j]){D[j]=D[k]+1;Q.push(j)}}}
+  return null}
+function frontierStep(dt,du){   // called every frame while exploring
+  fCheckT-=dt;if(fCheckT>0)return;fCheckT=.5;
+  if(fGoal&&du>40&&frontierAt(fGoal))return;   // still worth going to
+  if(fGoal&&du<=40)fBlack.push(fGoal);           // been there: some spots (behind furniture) can never be seen, don't come back
+  const p=nextFrontier();
+  if(p){if(fGoal)fN++;fGoal=p;fNoneT=0;rp=0;path=[];progReset();setSt('Learning the room: exploring ('+fN+' spots so far)','');return}
+  fNoneT+=.5;if(fNoneT<1.5)return;   // the first scans may not have landed yet
+  fGoal=null;exploreDone=true;startReturn();setSt(fBlack.length?'Room mapped (some spots were unreachable) - returning to the dock':'Room mapped - returning to the dock','ok')}
 function dest(){
   if(mode==='home')return HOME;
-  if(mode==='tour'){const p=tourPts()[Math.min(tourI,tourPts().length-1)];return{x:p[0],y:p[1]}}
+  if(mode==='tour'){if(frontierMode())return fGoal||{x:T.x,y:T.y};const p=tourPts()[Math.min(tourI,tourPts().length-1)];return{x:p[0],y:p[1]}}
   return user;
 }
 function mapKey(){return 'summonMap:'+sceneKey}
@@ -176,9 +214,43 @@ let headTarget=0.3, headState='SETTLED';
 // Phone joystick commands are simulation-only; values are normalized to [-1, 1].
 let manualDrive={enabled:false,x:0,y:0,turn:0,speed:0.35,lastCommandAt:0};
 let peopleInPathCount=0, safetyHolds=0, holdLatch=false, squeeze=false, squeezeUntil=0, safetyHoldUntil=0, rotStallT=0, rotStallErr0=0, forceStrictUntil=-99;
-const user={x:700,y:430,r:13};
+const user={x:USER0.x,y:USER0.y,r:13};
 const modAng=[0,0,0,0];
 
+// A straight walk from a to b that touches no furniture or wall (people use it to pick where to walk next).
+function lineClear(ax,ay,bx,by){const n=Math.ceil(Math.hypot(bx-ax,by-ay)/8);
+  for(let k=0;k<=n;k++){const x=ax+(bx-ax)*k/n,y=ay+(by-ay)*k/n;
+    for(const r of rects)if(x>r.x-14&&x<r.x+r.w+14&&y>r.y-14&&y<r.y+r.h+14)return false;
+    for(const c of circs)if(Math.hypot(x-c.x,y-c.y)<c.r+14)return false}return true}
+// Office floor, 32 x 20 m (2 cm per px). Top: four offices and a meeting room off a 3 m corridor (doorways 2 m).
+// Middle: open-plan desk pods and two pillars. Bottom: kitchen (counters, island, fridge), a break area (tables,
+// printer, vending machine) and a lounge (sofa, coffee table, armchairs). The dock is at the west end of the corridor.
+function officeLayout(){
+  const WALL=2.2,rects=[],circs=[],wall=(x,y,w,h)=>rects.push({x,y,w,h,z1:WALL,wall:true});
+  const rooms=[[0,320,'Office 1'],[320,640,'Office 2'],[640,960,'Office 3'],[960,1240,'Office 4'],[1240,1600,'Meeting room']];
+  for(const [a] of rooms.slice(1))wall(a,0,12,260);             // partitions between the rooms
+  let x0=0;for(const [a,b] of rooms){const c=(a+b)/2;wall(x0,260,c-50-x0,12);x0=c+50}wall(x0,260,1600-x0,12);   // front wall, 2 m doorways
+  for(const [a,b] of rooms.slice(0,4)){rects.push({x:a+50,y:40,w:140,h:60,z1:.75});rects.push({x:b-(b===1240?40:52),y:20,w:36,h:140,z1:1.8})}   // desk + bookshelf
+  rects.push({x:1330,y:80,w:200,h:90,z1:.75});                   // meeting table
+  for(const cx of [1370,1430,1490]){circs.push({x:cx,y:62,r:11,z1:.9})}
+  // Kitchen: open to the corridor at the top right and to the break area on the right.
+  wall(0,700,300,12);wall(460,700,12,80);wall(460,880,12,120);
+  rects.push({x:0,y:950,w:460,h:50,z1:.9},{x:0,y:712,w:50,h:238,z1:.9},{x:150,y:810,w:170,h:60,z1:.9},{x:400,y:890,w:56,h:60,z1:1.8});
+  // Open plan: desk pods and pillars.
+  rects.push({x:560,y:450,w:180,h:120,z1:.75},{x:880,y:450,w:180,h:120,z1:.75},{x:1200,y:450,w:180,h:120,z1:.75});
+  circs.push({x:470,y:520,r:16,z1:3},{x:1480,y:520,r:16,z1:3});
+  // Break area.
+  for(const cx of [620,800,980])circs.push({x:cx,y:830,r:30,z1:.75});
+  rects.push({x:700,y:950,w:80,h:50,z1:1.1},{x:1000,y:940,w:70,h:60,z1:1.8});
+  // Lounge, behind a low planter.
+  rects.push({x:1150,y:700,w:200,h:16,z1:1},{x:1250,y:940,w:220,h:60,z1:.8},{x:1300,y:850,w:120,h:50,z1:.45});
+  circs.push({x:1190,y:880,r:26,z1:.9},{x:1540,y:870,r:26,z1:.9});
+  const walk=[[150,340],[480,340],[800,340],[1120,340],[1450,340],[480,660],[800,660],[1120,660],[380,780],[700,760],[1450,780],[1100,800],[620,920],[250,760],
+              [160,200],[480,190],[800,190],[1100,190]];
+  return {rects,circs,home:{x:85,y:345},user:{x:480,y:170},walk,rooms,
+    people:()=>[mkSitter(120,125),mkSitter(760,125),mkSitter(1430,195),mkSitter(650,435),mkSitter(970,588),mkSitter(1360,925),
+                mkTalker(240,780),mkTalker(270,790),mkTalker(800,880),mkWalker(300,350),mkWalker(1000,350),mkWalker(800,670)]};
+}
 // --- Person factory functions ---
 function mkWalker(x,y){return{x,y,r:13,tx:x,ty:y,t:0,sp:22+Math.random()*10,type:'walker',
   lastX:x,lastY:y,stillTime:0,settled:false,convertOnArrival:false};}
@@ -194,7 +266,7 @@ function reset(){
   rects.length=0;for(const r of RECTS0)rects.push({...r});   // Reset scene also restores the normal room
   selectedBlock=null;blockDrag=null;placeBlocks=false;if($('placeMode'))$('placeMode').textContent='Place blocks: off';
   T={x:HOME.x,y:HOME.y,th:0,vx:0,vy:0,w:0};G=T;locLost=false;locSuspect=false;locState='off';locCand=null;locCandN=0;jolt=false;lfAt=-99;   // starts docked on the charging pad (G: see syncTruth)
-  people=[
+  people=OFFICE?OFFICE.people():[
     // Two people seated at the two "desks" (rects). Stationary, already routable.
     mkSitter(285, 220),
     mkSitter(525, 135),
@@ -206,10 +278,10 @@ function reset(){
     mkWalker(160, 380),
   ];
   last.fill(-99); since.fill(-99); clrRays=[]; circs.length=0; for(const c of CIRCS0)circs.push({...c}); parkTh=null; mode='user'; didArrive=false; arT=0; readyPending=false; cordIn=false; breakaways=0; alertT=0; bat.r=80; bat.a=70; charging=false; lowT=0; trail=[]; retreats=0; waitT=0; lowSpeedT=0; patientUntil=0; lastRecEnd=-99;
-  estop=false; deskH=userH=1.05;
+  estop=false; deskH=userH=1.05; resumeExplore=false;
   $('hs').value=105; $('hv').textContent='105';
   path=[]; goal=null; active=false; contacts=0; minGap=1e9; peakA=0;
-  user.x=700; user.y=430;
+  user.x=USER0.x; user.y=USER0.y;
   stuckTime=0; recovery=null; recoveryT=0; stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th; safetyHolds=0; holdLatch=false; squeeze=false; squeezeUntil=0; safetyHoldUntil=0;
   headTarget=T.th; headState='SETTLED';
   setSt('Idle',''); $('rc').textContent='–'; $('hg').textContent='–'; $('sl').textContent='–'; $('pp').textContent='–';
@@ -441,6 +513,10 @@ function scan(){
   const c0=Math.cos(G.th), s0=Math.sin(G.th), conv=G!==T, rth=T.th-G.th, cr=Math.cos(rth), sr=Math.sin(rth);
   const toB=(x,y)=>{const dx=x-G.x,dy=y-G.y;return[T.x+cr*dx-sr*dy,T.y+sr*dx+cr*dy]};
   const seesP=lidarSees(0,1.7);
+  // Only objects this sensor can see and that are within range: in a big floor most of the building is far away.
+  const nearR=rects.filter(r=>lidarSees(objZ0(r),objZ1(r))&&Math.max(r.x-G.x,G.x-r.x-r.w,r.y-G.y,G.y-r.y-r.h)<R+HW+HH),
+    nearC=circs.filter(q=>lidarSees(objZ0(q),objZ1(q))&&Math.hypot(q.x-G.x,q.y-G.y)<R+HW+HH+q.r),
+    nearP=seesP?people.filter(p=>Math.hypot(p.x-G.x,p.y-G.y)<R+HW+HH+p.r):[];
   for(const L of LIDARS){
     const oxw=G.x+c0*L[0]-s0*L[1];
     const oyw=G.y+s0*L[0]+c0*L[1];
@@ -452,9 +528,9 @@ function scan(){
       const d0=Math.max(tExit+2,3);          // rays start outside the desk's own body
       let best=1e9,info=null;
       const consider=(sp,inf)=>{ if(!sp||sp[1]<d0)return; const t=Math.max(sp[0],d0); if(t<best){best=t;info=inf} };
-      for(const r of rects)if(lidarSees(objZ0(r),objZ1(r)))consider(spanRect(oxw,oyw,c,s,r),{type:'rect'});
-      for(const q of circs)if(lidarSees(objZ0(q),objZ1(q)))consider(spanCircle(oxw,oyw,c,s,q.x,q.y,q.r),{type:'circ'});
-      if(seesP){for(const p of people)consider(spanCircle(oxw,oyw,c,s,p.x,p.y,p.r),{type:'person',person:p});
+      for(const r of nearR)consider(spanRect(oxw,oyw,c,s,r),{type:'rect'});
+      for(const q of nearC)consider(spanCircle(oxw,oyw,c,s,q.x,q.y,q.r),{type:'circ'});
+      if(seesP){for(const p of nearP)consider(spanCircle(oxw,oyw,c,s,p.x,p.y,p.r),{type:'person',person:p});
       consider(spanCircle(oxw,oyw,c,s,user.x,user.y,user.r),{type:'user'})}
       const tw=rayExitBox(oxw,oyw,c,s,W,H,0,0);   // map border
       if(tw>=d0&&tw<best){best=tw+0.5;info={type:'wall'}}
@@ -548,7 +624,7 @@ const DIST_DILATE=[];for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)if(a*a+b*b<=4)D
 function computeHomeDist(){   // Dijkstra over free cells (obstacles grown ~ by the desk's half-width) from the dock
   const occ=buildOccupancy(),blk=new Uint8Array(GW*GH);
   for(let i=0;i<GW*GH;i++)if(occ[i]){const cx=i%GW,cy=i/GW|0;for(const[a,b]of DIST_DILATE){const x=cx+a,y=cy+b;if(x>=0&&x<GW&&y>=0&&y<GH)blk[y*GW+x]=1}}
-  const D=new Float32Array(GW*GH).fill(Infinity),hx=Math.min(GW-1,HOME.x/CS|0),hy=Math.min(GH-1,HOME.y/CS|0),h0=hy*GW+hx;blk[h0]=0;D[h0]=0;
+  const D=new Float64Array(GW*GH).fill(Infinity),hx=Math.min(GW-1,HOME.x/CS|0),hy=Math.min(GH-1,HOME.y/CS|0),h0=hy*GW+hx;blk[h0]=0;D[h0]=0;
   const Q=[[0,h0]],push=(d,i)=>{Q.push([d,i]);let k=Q.length-1;while(k>0){const p=(k-1)>>1;if(Q[p][0]<=Q[k][0])break;[Q[p],Q[k]]=[Q[k],Q[p]];k=p}},
     pop=()=>{const t=Q[0],l=Q.pop();if(Q.length){Q[0]=l;let k=0;for(;;){const a=2*k+1,b=a+1;let m=k;if(a<Q.length&&Q[a][0]<Q[m][0])m=a;if(b<Q.length&&Q[b][0]<Q[m][0])m=b;if(m===k)break;[Q[m],Q[k]]=[Q[k],Q[m]];k=m}}return t};
   while(Q.length){const[d,i]=pop();if(d>D[i])continue;const x=i%GW,y=i/GW|0;
@@ -852,12 +928,12 @@ function batStep(dt){
     lowT+=dt;if(lowT>=3){startReturn();batAlert('Battery low: the desk went back to the charger.');setSt('Low battery - returning to the dock to charge','warn')}
   }else lowT=0;
 }
-function startTour(){
+function startTour(resume){const resuming=resume===true&&resumeExplore;resumeExplore=false;
   manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
   if(cordBlocks())return;
   if(estop){setSt('E-stop engaged - release it first','bad');return}
   startTrip('tour');mode='tour';active=true;parkTh=null;didArrive=false;arT=0;tourI=0;tourT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;
-  stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Learning the room: point 1 of '+tourPts().length,'');
+  stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';if(frontierMode()){fGoal=null;exploreDone=false;if(!resuming){fBlack=[];fN=0}fCheckT=0;fNoneT=0;setSt(resuming?'Charged - carrying on learning the room':'Learning the room: exploring','')}else setSt('Learning the room: point 1 of '+tourPts().length,'');
 }
 function startReturn(){
   manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
@@ -898,8 +974,9 @@ for(const p of people){
         p.stillTime=0; p.settled=false;
         p.convertOnArrival=false;
       } else {
-        p.tx=40+Math.random()*(W-80);
-        p.ty=40+Math.random()*(H-80);
+        const opts=OFFICE?OFFICE.walk.filter(q=>Math.hypot(q[0]-p.x,q[1]-p.y)>60&&lineClear(p.x,p.y,q[0],q[1])):null;
+        if(opts&&opts.length){const q=opts[Math.floor(Math.random()*opts.length)];p.tx=q[0];p.ty=q[1]}
+        else{p.tx=40+Math.random()*(W-80);p.ty=40+Math.random()*(H-80)}
         p.t=4+Math.random()*4;
       }
     }
@@ -935,12 +1012,13 @@ scan();if(locStep(dt))scan();mapUpdate();   // a position correction moves T: re
 rp-=dt; if(active&&rp<=0){const t0=performance.now();plan();const pd=(performance.now()-t0)/1000;rp=path.length?Math.min(.5,Math.max(.2,10*pd)):.7}
 
 let cx=0,cy=0,w=0;
+if(active&&mode==='tour'&&frontierMode()&&!estop&&!locLost)frontierStep(dt,fGoal?Math.hypot(fGoal.x-T.x,fGoal.y-T.y):0);   // before du: it may change the destination
 const tgt=dest(),du=Math.hypot(tgt.x-T.x,tgt.y-T.y);
 const low=true;   // the desk no longer lowers before driving: it stays at the user's height the whole trip
 if(estop){active=false;path=[];T.vx=T.vy=T.w=0;manualDrive={...manualDrive,x:0,y:0,turn:0};setSt('E-STOP engaged - click the red button to release','bad')}
 let thTarget=null,rotHere=false;
 if(active){
-  if(mode==='tour'?du<=8:mode==='home'?du<=3:(du<=80&&(!goal||Math.hypot(T.x-goal.x,T.y-goal.y)<=22||du<=70))){
+  if(mode==='tour'?(!frontierMode()&&du<=8):mode==='home'?du<=3:(du<=80&&(!goal||Math.hypot(T.x-goal.x,T.y-goal.y)<=22||du<=70))){
    if(mode==='tour'){
      tourI++;rp=0;path=[];trail=[];
      if(tourI>=tourPts().length){startReturn();setSt('Room mapped - returning to the dock','ok')}
@@ -1093,7 +1171,8 @@ if(!active&&!estop&&parkTh!==null){
 // Tour: skip a waypoint that has no route for 5 s
 if(mode==='tour'&&active&&!estop&&!path.length){
   tourT+=dt;
-  if(tourT>5){tourT=0;tourI++;rp=0;if(tourI>=tourPts().length){startReturn();setSt('Room mapped (some points were unreachable) - returning to the dock','warn')}}
+  if(tourT>5&&frontierMode()){tourT=0;if(fGoal)fBlack.push(fGoal);fGoal=null;fCheckT=0}
+  else if(tourT>5){tourT=0;tourI++;rp=0;if(tourI>=tourPts().length){startReturn();setSt('Room mapped (some points were unreachable) - returning to the dock','warn')}}
 }else tourT=0;
 
 // Patience: if a MOVING person has held the desk up for ~8 s and still hasn't cleared, stop waiting for them. For 12 s they
@@ -1185,7 +1264,9 @@ batStep(dt);
 if(trip){trip.dist+=Math.hypot(T.x-trip.lx,T.y-trip.ly);trip.lx=T.x;trip.ly=T.y;if(!active&&parkTh===null)endTrip('ended')}
 if(time-homeDistAt>1)computeHomeDist();
 if(active&&!estop&&(mode==='user'||mode==='tour')&&time-batCheckAt>.5){batCheckAt=time;
-  if(bat.r<batteryNeedHome(T.x,T.y)+BAT_RESERVE){endTrip('battery');batAlert('Battery low: heading back to the charger. It won\'t come to you until it has charged.');startReturn();setSt('Battery low - heading back to the charger','warn')}}
+  if(bat.r<batteryNeedHome(T.x,T.y)+BAT_RESERVE){const wasExploring=mode==='tour'&&frontierMode();endTrip('battery');batAlert('Battery low: heading back to the charger. It won\'t come to you until it has charged.');startReturn();setSt('Battery low - heading back to the charger','warn');if(wasExploring){resumeExplore=true;batAlert(manualDock()?'Battery low: plug me in at the dock. Unplug me once I\'m charged and I\'ll carry on learning the room.':'Battery low: charging, then I\'ll carry on learning the room.')}}}
+// Recharge and resume: an exploration the battery cut short carries on from where it was once the desk is back to 80%.
+if(resumeExplore&&!active&&!estop&&dockedNow()&&!cordLock()&&bat.r>=80)startTour(true);
 
 // Optional auto-return: 10 s after it has arrived, parked and finished raising
 if($('ar').checked&&didArrive&&mode==='user'&&!active&&!estop&&parkTh===null){
@@ -1296,7 +1377,7 @@ $('pp').textContent = peopleInPathCount>0 ? peopleInPathCount+' (waiting)' : '0'
 function draw(){
   const S=getComputedStyle(document.documentElement),g=n=>S.getPropertyValue(n).trim();
   const obs=g('--obs'),hitc=g('--hit'),acc=g('--acc'),tbl=g('--tbl'),fg=g('--fg');
-  ctx.setTransform(2,0,0,2,0,0);ctx.clearRect(0,0,W,H);
+  ctx.setTransform(cv.width/W,0,0,cv.width/W,0,0);ctx.clearRect(0,0,W,H);
   const floors={office:'#e8e5dc',wood:'#c69a68',tile:'#f4f2e9',warehouse:'#b9b8b2',dark:'#30343b'};
   const floor=floors[roomStyle]||floors.office;ctx.fillStyle=floor;ctx.fillRect(0,0,W,H);
   // Room finish / subtle floor pattern; purely visual, never part of collision geometry.
@@ -1311,9 +1392,12 @@ function draw(){
   for(const z of zones){ctx.save();ctx.fillStyle='rgba(220,60,90,.14)';ctx.fillRect(z.x,z.y,z.w,z.h);ctx.strokeStyle='rgba(220,60,90,.8)';ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.strokeRect(z.x+.5,z.y+.5,z.w-1,z.h-1);ctx.setLineDash([]);ctx.fillStyle='rgba(180,30,60,.95)';ctx.font='600 11px system-ui';ctx.fillText(z.name,z.x+4,z.y+13);ctx.restore()}
   for(const r of rects){const low=objZ1(r)<.3,over=objZ0(r)>=.3;ctx.save();if(low)ctx.globalAlpha=.45;
     if(over){ctx.setLineDash([5,3]);ctx.strokeStyle=r._custom?'#d97706':obs;ctx.lineWidth=2;ctx.strokeRect(r.x+1,r.y+1,r.w-2,r.h-2);ctx.globalAlpha=.18}
-    ctx.fillStyle=r._custom?(r===selectedBlock?'#f59e0b':'#d97706'):obs;ctx.fillRect(r.x,r.y,r.w,r.h);ctx.restore();
+    ctx.fillStyle=r._custom?(r===selectedBlock?'#f59e0b':'#d97706'):r.wall?(roomStyle==='dark'?'#9aa3ad':'#5d5a52'):obs;ctx.fillRect(r.x,r.y,r.w,r.h);ctx.restore();
     if(low||over){ctx.save();ctx.fillStyle=fg;ctx.font='10px system-ui';ctx.textAlign='center';ctx.fillText(low?Math.round(objZ1(r)*100)+' cm':Math.round(objZ0(r)*100)+'–'+Math.round(objZ1(r)*100)+' cm',r.x+r.w/2,r.y+r.h/2+3);ctx.restore()}if(r._custom){ctx.strokeStyle=r===selectedBlock?'#7c2d12':'rgba(70,35,0,.8)';ctx.lineWidth=1.5;ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1)}}
-  for(const c of circs){ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,7);ctx.fill()}
+  ctx.fillStyle=obs;for(const c of circs){ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,7);ctx.fill()}
+  if(OFFICE){ctx.save();ctx.fillStyle=fg;ctx.globalAlpha=.45;ctx.font='600 15px system-ui';ctx.textAlign='center';
+    for(const [a,b,n] of OFFICE.rooms)ctx.fillText(n,(a+b)/2,240);
+    for(const [n,x,y] of [['Kitchen',230,730],['Break area',800,730],['Lounge',1460,730],['Open plan',820,630],['Corridor',800,300]])ctx.fillText(n,x,y);ctx.restore()}
   // Costmap
   if($('cost').checked){   // what it knows: grey = never seen, orange = busy (people), purple = remembered obstacle, red = lidar right now
     ctx.globalAlpha=.12;ctx.fillStyle='#808898';for(let i=0;i<GW*GH;i++)if(!seen[i])ctx.fillRect(i%GW*CS,(i/GW|0)*CS,CS,CS);
@@ -1367,7 +1451,8 @@ function draw(){
     }
     ctx.globalAlpha=1}
   // User
-  if(mode==='tour'&&active){tourPts().forEach((p,i)=>{ctx.beginPath();ctx.arc(p[0],p[1],i===tourI?7:4,0,7);ctx.strokeStyle=acc;ctx.lineWidth=i===tourI?2.5:1.5;ctx.stroke()})}
+  if(mode==='tour'&&active&&frontierMode()){if(fGoal){ctx.beginPath();ctx.arc(fGoal.x,fGoal.y,8,0,7);ctx.strokeStyle=acc;ctx.lineWidth=2.5;ctx.stroke()}}
+  else if(mode==='tour'&&active){tourPts().forEach((p,i)=>{ctx.beginPath();ctx.arc(p[0],p[1],i===tourI?7:4,0,7);ctx.strokeStyle=acc;ctx.lineWidth=i===tourI?2.5:1.5;ctx.stroke()})}
   // charging station: wall socket + cord with breakaway connector
   if(manualDock()){
     ctx.save();ctx.fillStyle=fg;ctx.globalAlpha=.7;ctx.fillRect(0,58,7,26);ctx.restore();
@@ -1445,11 +1530,11 @@ cv.addEventListener('pointermove',e=>{const p=pos(e);if(blockDrag){const b=block
 function finishCanvasDrag(){drag=false;blockDrag=null}
 cv.addEventListener('pointerup',finishCanvasDrag);cv.addEventListener('pointercancel',finishCanvasDrag);
 
-$('go').onclick=()=>{manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(locLost){batAlert('Lost: finding my position first. Try again in a moment.');setSt('Lost: finding my position first','bad');return}if(!estop){const need=batteryNeedTrip(user.x,user.y)+BAT_RESERVE;if(bat.r<need){batAlert('Not enough battery to reach you and get back to the charger: needs '+Math.ceil(need)+'%, has '+Math.floor(bat.r)+'%.');
+$('go').onclick=()=>{resumeExplore=false;manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(locLost){batAlert('Lost: finding my position first. Try again in a moment.');setSt('Lost: finding my position first','bad');return}if(!estop){const need=batteryNeedTrip(user.x,user.y)+BAT_RESERVE;if(bat.r<need){batAlert('Not enough battery to reach you and get back to the charger: needs '+Math.ceil(need)+'%, has '+Math.floor(bat.r)+'%.');
   if(charging||dockedNow()){setSt('Charging - needs '+Math.ceil(need)+'% for that trip','warn')}else{startReturn();setSt('Battery too low for that trip - returning to the charger','warn')}return}}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}startTrip('summon');active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
 $('back').onclick=startReturn;
-$('stop').onclick=()=>{endTrip('stopped');manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;didArrive=false;arT=0;active=false;path=[];recovery=null;stuckTime=0;setSt('Stopped','warn')};
-$('rst').onclick=()=>{forgetMap();sceneKey='default';reset();clearMapArrays();loadMap()};
+$('stop').onclick=()=>{resumeExplore=false;endTrip('stopped');manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;didArrive=false;arT=0;active=false;path=[];recovery=null;stuckTime=0;setSt('Stopped','warn')};
+$('rst').onclick=()=>{forgetMap();sceneKey=BASE_SCENE;reset();clearMapArrays();loadMap()};
 $('learn').onclick=startTour;
 $('cord').onclick=()=>{
   if(!cordIn){if(Math.hypot(G.x-HOME.x,G.y-HOME.y)>45){setSt('The cord only reaches the dock: bring the desk home first','warn');return}cordIn=true;setSt('Cord plugged in','ok')}
@@ -1478,6 +1563,9 @@ $('kick').onclick=()=>{kickDesk();setSt('Bumped: the real desk moved, the wheels
 $('lidarH').oninput=()=>{$('lhv').textContent=$('lidarH').value};
 $('slot').onclick=buildSlotTest;$('runSlot').onclick=buildSlotTest;
 $('roomStyle').onchange=()=>{roomStyle=$('roomStyle').value};
+$('roomPick').value=ROOM;
+$('roomPick').onchange=()=>{const v=$('roomPick').value;try{localStorage.setItem('maxdeskRoom',v)}catch(e){}
+  try{const u=new URL(location.href);u.searchParams.set('room',v);location.replace(u.href)}catch(e){location.reload()}};
 $('placeMode').onclick=()=>{placeBlocks=!placeBlocks;blockDrag=null;$('placeMode').textContent='Place blocks: '+(placeBlocks?'on':'off');$('editHint').textContent=placeBlocks?'Click anywhere in the room to add a block using the width and height above.':'Click and drag an orange block to reposition it. Added blocks affect route planning and collision checks.'};
 $('deleteBlock').onclick=()=>{if(!selectedBlock){$('editHint').textContent='Select an orange added block by clicking or dragging it first.';return}const i=rects.indexOf(selectedBlock);if(i>=0)rects.splice(i,1);selectedBlock=null;blockDrag=null};
 $('clearBlocks').onclick=()=>{for(let i=rects.length-1;i>=0;i--)if(rects[i]._custom)rects.splice(i,1);selectedBlock=null;blockDrag=null;$('editHint').textContent='All added blocks removed. Built-in room obstacles remain.'};
