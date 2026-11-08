@@ -59,7 +59,14 @@ Needs: a JDK (17 or newer), Node 18+, Python 3, curl. No other dependencies.
   `MAXDESK_ROOM=office`.
 - **Java core:** `cd robot/java-core && java tools/Build.java && java -cp out frc.robot.summon.core.CoreTests`.
   To use it in a WPILib project, copy `src/main/java/frc/robot/summon/core/` and read `robot/java-core/README.md`.
-- **Phone controller (Android or iPhone):** run `Start Summon Desk.vbs` on Windows, or run `node bridge/bridge_sim.js` from the project root. On the phone, connected to the same trusted Wi-Fi, open `http://COMPUTER-IP:8787` in Chrome/Safari. On Android, use the browser menu → **Add to Home screen** for an app-like launcher. `dev-token` is a local development token only.
+- **Phone controller (Android or iPhone):** run `Start Summon Desk.vbs` on Windows, or run `node bridge/bridge_sim.js` from the project root. On the phone, connected to the same trusted Wi-Fi, open `http://COMPUTER-IP:8787` in Chrome/Safari. On Android, use the browser menu → **Add to Home screen** for an app-like launcher.
+  - **Pairing:** the first time, the app asks for a 6-digit code, so only your phones can drive the desk. The bridge
+    prints the code and the phone address when it starts.
+  - **The code is valid for 10 minutes.** A paired phone can make a code for the next one: Connection → Pair
+    another phone. This also works in the laptop's own browser, which needs no code. That's the way to get a code
+    when the bridge runs hidden (`Start Summon Desk.vbs`).
+  - **To unpair every phone,** delete `~/.maxdesk/bridge-token.txt` and restart the bridge.
+  - The old fixed `dev-token` no longer works; `SUMMON_TOKEN` still overrides the key for tests.
 - **Desktop simulator:** open `http://localhost:8787/simulator` after the bridge starts. The `/` route is the mobile controller. The visual simulator at `/simulator` publishes its live state (including both battery levels) to the bridge and receives commands from the phone controller. Keep the `/simulator` tab open while controlling it from the phone; the phone reports when the simulator is offline.
 - **No-terminal Windows start:** double-click `Start Summon Desk.vbs`; it starts the Node bridge hidden and opens the simulator in your browser. There is no stop script yet: end the `node` process in Task Manager to stop the bridge. If your organization's policies block VBScript, use the terminal command above instead.
 - **Change the simulator:** edit `robot/simulator/summon_table_sim.html`, then run `python3 scripts/sync_sim_core.py` so the

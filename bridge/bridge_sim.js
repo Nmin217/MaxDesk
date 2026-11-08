@@ -11,5 +11,6 @@ global.matchMedia=()=>({matches:false,addEventListener(){}});
 global.addEventListener=()=>{};global.devicePixelRatio=1;
 global.performance={now:()=>0};global.requestAnimationFrame=()=>{};
 global.localStorage={getItem:()=>null,setItem(){},removeItem(){}};
+const PAIRING_JS=path.join(__dirname,'pairing.js');   // bridge_core.js is eval'd here: resolve its require from this folder
 const code=fs.readFileSync(path.join(__dirname,'sim_core.js'),'utf8')+'\n'+fs.readFileSync(path.join(__dirname,'bridge_core.js'),'utf8');
 eval(code);

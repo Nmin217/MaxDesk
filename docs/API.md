@@ -6,8 +6,16 @@ simulator bridge in `bridge/` implements it and has been tested with curl.
 
 - Transport: HTTP/1.1 and JSON, local network only. Header `Authorization: Bearer <token>` on everything except health
   and the static pages `/` (also `/app`), `/simulator` and `/manifest.webmanifest`, which are served without a token.
-  The simulator bridge injects its token into `/simulator` only when the request comes from loopback (127.0.0.1 / ::1),
-  so a page opened from another machine falls back to the default `dev-token`.
+- **Where the key comes from:** the bridge makes a random key on first start and keeps it in
+  `<MAXDESK_DATA_DIR or ~/.maxdesk>/bridge-token.txt` (owner-only); `SUMMON_TOKEN` overrides it.
+- **Pages opened on the bridge's own computer:** pages loaded from loopback (127.0.0.1 / ::1) get the key built
+  in, both `/` and `/simulator`.
+- **Phones pair:** `POST /v1/pair { "code": "123456" }` (no key needed) returns `{ paired: true, token }`. The code is
+  printed when the bridge starts, or made by `POST /v1/pair/new` (key needed), which returns `{ code, expires_in_s }`.
+  Codes last 10 minutes.
+- **Wrong or missing codes:** 401 for a wrong code, 410 when no code is active, and 429 after 5 wrong codes in a
+  minute from one address. 403 after 20 wrong codes in total switches pairing off until the bridge restarts.
+- A call with a wrong or missing key gets 401 with `pair_required: true`. Key comparisons are constant-time.
 - Epoch: every JSON reply carries `epoch`, a counter bumped each time the simulator page (re)connects after being
   stale. Commands may send the last `epoch` they saw; a mismatch is refused with 409 and `stale_epoch: true`.
 - Units: meters and radians. Room frame: origin top-left, x to the right, y DOWN, theta 0 = desk long axis along +x.

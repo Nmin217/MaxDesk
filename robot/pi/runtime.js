@@ -163,7 +163,10 @@ function createRuntime({
 } = {}) {
   if (!io) throw new Error('io is required');
   if (!bridgeUrl) throw new Error('bridgeUrl is required');
-  if (!token) throw new Error('token is required');
+  // Same computer as the bridge: use its pairing key (bridge/pairing.js) unless one is passed in.
+  if (!token) token = process.env.SUMMON_TOKEN || '';
+  if (!token && dataDir !== null) { try { token = fs.readFileSync(path.join(dataDir, 'bridge-token.txt'), 'utf8').trim(); } catch (_) {} }
+  if (!token) throw new Error('token is required (pass one, set SUMMON_TOKEN, or start the bridge once so it makes bridge-token.txt)');
   if (!Number.isFinite(hz) || hz <= 0) throw new Error('hz must be positive');
 
   global.localStorage = createStorage(dataDir);

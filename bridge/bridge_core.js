@@ -1,6 +1,9 @@
 // Runs inside the simulator's scope. Exposes the simulator API and a mobile-first web controller.
 $('dm').value='manual'; $('il').checked=true;
-const TOKEN=process.env.SUMMON_TOKEN||'dev-token', PORT=+process.env.PORT||8787, PX=0.02;
+const PORT=+process.env.PORT||8787, PX=0.02;
+// Which phones may control the desk: a random key, handed out only to a phone that types the current pairing code
+// (bridge/pairing.js). SUMMON_TOKEN overrides the key (tests, development).
+const PAIR=require(typeof PAIRING_JS!=='undefined'?PAIRING_JS:'./pairing').createPairing({dataDir:process.env.MAXDESK_DATA_DIR||require('path').join(require('os').homedir(),'.maxdesk'),envToken:process.env.SUMMON_TOKEN||''});
 let lastT=Date.now();
 // When the visual browser simulator is open, it is the authoritative simulation state.
 let browserState=null,browserStateAt=0,browserMap=null,browserMapAt=0;
@@ -43,19 +46,23 @@ function stateJSON(){
 }
 function mapJSON(){const rows=[];for(let y=0;y<GH;y++){let r='';for(let x=0;x<GW;x++){const i=y*GW+x;r+=smap[i]>0?'#':traffic[i]>2?'+':seen[i]?'_':'.'}rows.push(r)}return {width_m:W*PX,height_m:H*PX,cell_m:CS*PX,gw:GW,gh:GH,rows}}
 function send(res,code,obj){const b=JSON.stringify(obj);res.writeHead(code,{'Content-Type':'application/json; charset=utf-8','Content-Length':Buffer.byteLength(b),'Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(b)}
-// The bridge listens on 0.0.0.0: only a page loaded from this machine gets the token injected.
+// The bridge listens on 0.0.0.0: only a page loaded from THIS machine (loopback) gets the key injected; phones pair.
 function isLoopback(a){return a==='127.0.0.1'||a==='::1'||a==='::ffff:127.0.0.1'}
-function sendFile(res,file,type,req){try{let b=require('fs').readFileSync(require('path').join(__dirname,'..',file));if(file==='robot/simulator/summon_table_sim.html'&&req&&isLoopback(req.socket.remoteAddress)){let html=b.toString('utf8');html=html.replace('</head>','<script>window.SUMMON_BRIDGE_TOKEN='+JSON.stringify(TOKEN)+'</script></head>');b=Buffer.from(html)}res.writeHead(200,{'Content-Type':type,'Content-Length':b.length,'Cache-Control':'no-store'});res.end(b)}catch(e){send(res,404,{error:'file not found'})}}
+function sendFile(res,file,type,req){try{let b=require('fs').readFileSync(require('path').join(__dirname,'..',file));if((file==='robot/simulator/summon_table_sim.html'||file==='mobile/index.html')&&req&&isLoopback(req.socket.remoteAddress)){let html=b.toString('utf8');html=html.replace('</head>','<script>window.SUMMON_BRIDGE_TOKEN='+JSON.stringify(PAIR.token)+'</script></head>');b=Buffer.from(html)}res.writeHead(200,{'Content-Type':type,'Content-Length':b.length,'Cache-Control':'no-store'});res.end(b)}catch(e){send(res,404,{error:'file not found'})}}
 function readBody(req,cb){let s='';req.on('data',c=>{s+=c;if(s.length>262144)req.destroy()});req.on('end',()=>{try{cb(s?JSON.parse(s):{})}catch(e){cb(null)}})}
 const server=require('http').createServer((req,res)=>{
   const url=req.url.split('?')[0];
   if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'GET, POST, OPTIONS'});return res.end()}
   // The web app and simulator are served by this same local server, so the phone only needs one URL.
-  if(req.method==='GET'&&(url==='/'||url==='/app'||url==='/app/'))return sendFile(res,'mobile/index.html','text/html; charset=utf-8');
+  if(req.method==='GET'&&(url==='/'||url==='/app'||url==='/app/'))return sendFile(res,'mobile/index.html','text/html; charset=utf-8',req);
   if(req.method==='GET'&&url==='/manifest.webmanifest')return sendFile(res,'mobile/manifest.webmanifest','application/manifest+json; charset=utf-8');
   if(req.method==='GET'&&url==='/simulator')return sendFile(res,'robot/simulator/summon_table_sim.html','text/html; charset=utf-8',req);
   if(req.method==='GET'&&url==='/v1/health')return send(res,200,{ok:true,name:'summon-desk-bridge (simulator)',version:1,epoch:epoch});
-  if((req.headers.authorization||'')!=='Bearer '+TOKEN)return send(res,401,{error:'unauthorized'});
+  // Pairing: the only call that needs no key. Body { code: "123456" } -> { paired, token } or a reason.
+  if(req.method==='POST'&&url==='/v1/pair')return readBody(req,body=>{const r=PAIR.pair(body&&String(body.code||''),req.socket.remoteAddress);send(res,r.status,r.body)});
+  if(!PAIR.checkAuth(req.headers.authorization))return send(res,401,{error:'unauthorized',status:'This device is not paired with the desk.',pair_required:true});
+  // A paired phone (or the desk computer itself) makes a code for the next phone.
+  if(req.method==='POST'&&url==='/v1/pair/new'){const c=PAIR.newCode();console.log('Pairing code for a new phone: '+c.code+' (valid 10 minutes)');return send(res,200,c)}
   if(req.method==='GET'&&url==='/v1/state'){const live=!!browserState&&(Date.now()-browserStateAt<3000);return send(res,200,{...(live?browserState:stateJSON()),simulator_connected:live,epoch:epoch})}
   if(req.method==='GET'&&url==='/v1/map')return send(res,200,{...(browserMap&&(Date.now()-browserMapAt<5000)?browserMap:mapJSON()),epoch:epoch});
   if(req.method==='GET'&&url==='/v1/lidar'){const live=!!browserLidar&&(Date.now()-browserLidarAt<3000);const points=live?browserLidar:(hits||[]).filter(h=>h&&h.hit&&Number.isFinite(h.d)&&h.d>0).map(h=>({angle:+(((h.a-T.th)*180/Math.PI+540)%360-180).toFixed(2),range:+(h.d*PX).toFixed(3),type:h.type||'obstacle'}));return send(res,200,{source:live?'simulator-live':'bridge-sim-core',simulator_connected:live,max_range:5.2,frame:'robot',units:'meters',points,updated_at:Date.now(),epoch:epoch})}
@@ -159,4 +166,11 @@ const server=require('http').createServer((req,res)=>{
     send(res,200,{accepted:true,status:'Command sent to simulator',severity:'info',command_id:queued.id});
   });
 });
-server.listen(PORT,'0.0.0.0',()=>console.log('Summon Desk local web app + simulator bridge on port '+PORT+' (token configured, epoch='+epoch+')'));
+server.listen(PORT,'0.0.0.0',()=>{
+  console.log('Summon Desk local web app + simulator bridge on port '+PORT+' (epoch='+epoch+')');
+  const ips=[];for(const list of Object.values(require('os').networkInterfaces()))for(const a of list||[])if(a.family==='IPv4'&&!a.internal)ips.push(a.address);
+  const c=PAIR.newCode();
+  console.log('\nPair a phone (same Wi-Fi): open '+(ips.length?ips.map(ip=>'http://'+ip+':'+PORT).join(' or '):'http://<this computer>:'+PORT)+' and enter the code  '+c.code+'  (valid 10 minutes).');
+  console.log('This computer\'s own browser needs no code: http://127.0.0.1:'+PORT+'/');
+  console.log(PAIR.fromEnv?'Key: SUMMON_TOKEN from the environment.':'Key kept in '+PAIR.tokenFile+(PAIR.created?' (new)':'')+'. Delete it and restart to unpair every phone.');
+});

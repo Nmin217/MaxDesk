@@ -170,6 +170,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 
 /* Alert banner */
 .alert-banner{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:12px;border:1px solid var(--warn);background:rgba(255,162,76,.1);color:var(--ink);font-size:13px}
+.pair .small{margin:4px 0 10px}.pair-row{display:flex;gap:8px}.pair-row input{flex:1;min-width:0;font:600 22px/1 var(--mono);letter-spacing:.3em;padding:10px 12px;border-radius:10px;border:1px solid var(--line2);background:var(--panel);color:var(--ink)}
 .alert-banner.problem{border-color:var(--stop);background:rgba(255,92,92,.1)}.alert-banner.problem b{color:var(--stop)}.alert-banner small{display:block;color:var(--mute);margin-top:3px}
 .alert-banner b{color:var(--warn);font:700 10px/1.6 var(--display);font-stretch:118%;letter-spacing:.14em;text-transform:uppercase;flex:0 0 auto}
 /* No-go zones */
@@ -222,6 +223,12 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 <nav class="tabs" role="tablist" aria-label="Views"><button class="tab active" data-tab="control" role="tab" aria-selected="true" aria-controls="tab-control">Control</button><button class="tab" data-tab="drive" role="tab" aria-selected="false" aria-controls="tab-drive">Drive</button><button class="tab" data-tab="lidar" role="tab" aria-selected="false" aria-controls="tab-lidar">3D</button><button class="tab" data-tab="history" role="tab" aria-selected="false" aria-controls="tab-history">History</button></nav>
 <div id="problemBanner" class="alert-banner problem" role="alert" hidden><b>Problem</b><span><strong id="problemTitle"></strong> <span id="problemText"></span><small id="problemMore"></small></span></div>
 <div id="alertBanner" class="alert-banner" role="alert" hidden><b>Alert</b><span id="alertText"></span></div>
+<section id="pairPanel" class="panel pair" hidden aria-labelledby="pairTitle">
+ <h2 class="eyebrow" id="pairTitle">Pair this phone with the desk</h2>
+ <p class="small">So only your phones can drive it. Enter the 6-digit code shown by the desk software: in its window on the laptop, in the Pi's log, or on a phone that is already paired (Connection → Pair another phone).</p>
+ <div class="pair-row"><input id="pairCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="123456" aria-label="Pairing code"><button class="btn primary small" id="pairBtn" type="button">Pair</button></div>
+ <div id="pairMsg" class="toast" role="status" aria-live="polite"></div>
+</section>
 
 <section id="tab-control" class="tab-panel active" role="tabpanel">
 <div class="layout">
@@ -263,7 +270,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
   <details><summary>Position &amp; map</summary><div class="body"><div class="kv"><div><span class="eyebrow">X</span><b id="px">—</b></div><div><span class="eyebrow">Y</span><b id="py">—</b></div><div><span class="eyebrow">Explored</span><b id="explored">—</b></div></div></div></details>
   <details><summary>Safety &amp; dock</summary><div class="body"><div class="kv"><div><span class="eyebrow">E-stop</span><b id="estop" class="value">—</b></div><div><span class="eyebrow">Cord</span><b id="cord" class="value">—</b></div><div><span class="eyebrow">Interlock</span><b id="interlock" class="value">—</b></div></div></div></details>
   <details id="simTools"><summary><span><b class="simtag">SIM</b> Simulator tools</span></summary><div class="body"><p class="small" style="margin:0">These change the simulated room only. On the real desk, Summon comes to where you are.</p><div class="eyebrow">Where you are standing</div><div class="fields"><div class="field"><label for="x">X (m from left wall)</label><input id="x" type="number" step="0.1" min="0.5" value="4.0" inputmode="decimal"></div><div class="field"><label for="y">Y (m from top wall)</label><input id="y" type="number" step="0.1" min="0.5" value="3.0" inputmode="decimal"></div></div><p class="small" style="margin:0">Tapping the plan sets this too.</p><div class="actions"><button id="cordIn" class="btn subtle">Plug in cord</button><button id="cordOut" class="btn subtle">Unplug cord</button><button id="learn" class="btn subtle return">Map the room</button></div></div></details>
-  <details class="settings-card" id="settings"><summary>Connection</summary><div class="body"><div class="field"><label for="token">API token (simulator default: dev-token)</label><input id="token" type="password" autocomplete="off" value="dev-token"></div><button class="btn subtle" id="saveToken">Apply token</button><p class="small" style="margin:0">On your phone, open the computer's local address, for example http://192.168.1.25:8787, on the same trusted Wi-Fi. Don't expose this service to the internet.</p></div></details>
+  <details class="settings-card" id="settings"><summary>Connection</summary><div class="body"><div class="field"><label for="token">Pairing key (advanced: normally set by pairing)</label><input id="token" type="password" autocomplete="off" value=""></div><button class="btn subtle" id="saveToken">Apply key</button> <button class="btn subtle" id="pairNew" type="button">Pair another phone</button><div id="pairCodeOut" class="small" style="margin:8px 0;font-variant-numeric:tabular-nums"></div><p class="small" style="margin:0">On your phone, open the computer's local address, for example http://192.168.1.25:8787, on the same trusted Wi-Fi. Don't expose this service to the internet.</p></div></details>
  </section>
 </div>
 </section>
@@ -312,7 +319,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 </div></div>
 <div class="stopbar"><div class="stopbar-inner"><button class="btn stop" id="stop">STOP</button><div class="stop-note">Software stop. Keep the physical E-stop in reach on real hardware.</div></div></div>
 <script>
-(()=>{'use strict';let lastSource='',appliedReal=null,lastProblems='',token='dev-token',busy=false,lastMap=0,lastMapSignature='',currentEpoch=null;const $=id=>document.getElementById(id);const fmt=(n,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d):'—';const say=(s,kind='')=>{ $('message').textContent=s;$('message').className='toast '+kind};
+(()=>{'use strict';let lastSource='',appliedReal=null,lastProblems='',token='',pairShown=false,busy=false,lastMap=0,lastMapSignature='',currentEpoch=null;const $=id=>document.getElementById(id);const fmt=(n,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d):'—';const say=(s,kind='')=>{ $('message').textContent=s;$('message').className='toast '+kind};
 const EVENT_LOG_KEY='summonDeskEventLogV1';let eventItems=[],lastObservedState=null;
 function renderEventLog(){
  const host=$('eventLogList');if(!host)return;host.replaceChildren();
@@ -344,7 +351,14 @@ function observeState(s){
 }
 
 
-async function api(path,method='GET',body){if(method==='POST'&&body!==undefined&&currentEpoch!==null&&body.epoch===undefined){body={...body,epoch:currentEpoch}}const r=await fetch(path,{method,headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});let data={};try{data=await r.json()}catch{}if(!r.ok){const e=new Error(data.status||data.error||('HTTP '+r.status));e.statusCode=r.status;e.response=data;throw e}return data}
+// The pairing key: injected when this page is opened on the desk computer itself, from a pairing link (#pair=...),
+// or remembered from pairing on this phone.
+const KEY_STORE='maxdeskKey';
+function loadKey(){try{const h=location.hash.match(/(?:^#|&)pair=([A-Za-z0-9_-]{16,})/);if(h){localStorage.setItem(KEY_STORE,h[1]);history.replaceState(null,'',location.pathname+location.search)}}catch(_){}
+ if(window.SUMMON_BRIDGE_TOKEN)return String(window.SUMMON_BRIDGE_TOKEN);try{return localStorage.getItem(KEY_STORE)||''}catch(_){return ''}}
+token=loadKey();
+function showPair(on){pairShown=on;$('pairPanel').hidden=!on;if(on&&document.activeElement!==$('pairCode'))setTimeout(()=>{try{$('pairCode').focus({preventScroll:true})}catch(_){}},50)}
+async function api(path,method='GET',body){if(method==='POST'&&body!==undefined&&currentEpoch!==null&&body.epoch===undefined){body={...body,epoch:currentEpoch}}const r=await fetch(path,{method,headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});let data={};try{data=await r.json()}catch{}if(r.status===401&&data.pair_required)showPair(true);else if(r.ok&&pairShown)showPair(false);if(!r.ok){const e=new Error(data.status||data.error||('HTTP '+r.status));e.statusCode=r.status;e.response=data;throw e}return data}
 function setText(id,v){$(id).textContent=v}
 
 // ============ Live state: polled 4x a second on the Control tab; the plan slides between updates ============
@@ -661,7 +675,7 @@ function stopLidar(){
 }
 
 function activateTab(name){document.querySelectorAll('.tab').forEach(t=>{const on=t.dataset.tab===name;t.classList.toggle('active',on);t.setAttribute('aria-selected',on?'true':'false')});document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));if(name==='lidar'){requestAnimationFrame(()=>startLidar())}else stopLidar();if(name==='control')startPlanLoop()}
-async function refresh(){try{const t0=performance.now();const s=await api('/v1/state');latencyMs=Math.round(performance.now()-t0);render(s);if(!lastMap||Date.now()-lastMap>MAP_MS)await refreshMap()}catch(e){$('connection').textContent='Disconnected';$('connection').classList.remove('online');setText('status','Offline');setText('mode','Check the bridge and Wi-Fi');say(e.message,'danger');latencyMs=null;render({simulator_connected:false})}}
+async function refresh(){try{const t0=performance.now();const s=await api('/v1/state');latencyMs=Math.round(performance.now()-t0);render(s);if(!lastMap||Date.now()-lastMap>MAP_MS)await refreshMap()}catch(e){const np=e.statusCode===401;latencyMs=null;render({simulator_connected:false});$('connection').textContent=np?'Not paired':'Disconnected';$('connection').classList.remove('online');setText('status',np?'Not paired':'Offline');setText('mode',np?'Enter the pairing code above':'Check the bridge and Wi-Fi');if(!np)say(e.message,'danger')}}
 async function refreshMap(){try{const m=await api('/v1/map');const signature=[m.gw,m.gh,m.width_m,m.height_m,...m.rows].join('|');lastMap=Date.now();if(signature===lastMapSignature)return;lastMapSignature=signature;mapData=m;mapLayer=null;setText('mapinfo',`${fmt(m.width_m,1)} × ${fmt(m.height_m,1)} m room · ${m.gw} × ${m.gh} cells of ${fmt(m.cell_m*100,0)} cm`)}catch{}}
 async function pollLoop(){const t0=performance.now();await refresh();const wait=document.hidden?POLL_HIDDEN_MS:$('tab-control').classList.contains('active')?POLL_CONTROL_MS:POLL_OTHER_MS;anim.dur=wait;setTimeout(pollLoop,Math.max(0,wait-(performance.now()-t0)))}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('tab-control').classList.contains('active'))startPlanLoop()});
@@ -698,7 +712,13 @@ $('speedModal').addEventListener('click',e=>{if(e.target===$('speedModal'))close
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>activateTab(t.dataset.tab)));
 initEventLog();$('clearEventLog').addEventListener('click',()=>{eventItems=[];try{localStorage.removeItem(EVENT_LOG_KEY)}catch(_){}renderEventLog()});
 $('summon').addEventListener('click',()=>{const x=Number($('x').value),y=Number($('y').value);if(!Number.isFinite(x)||!Number.isFinite(y)){say('Enter a valid position under Simulator tools.','danger');return}trail=[];command('/v1/summon',{x,y},'Sending summon command','summon')});for(const id of ['x','y'])$(id).addEventListener('input',()=>{$(id).dataset.edited='1';updateTargetText()});
-$('return').onclick=()=>{releaseDrive(false);trail=[];command('/v1/return',{},'Returning to dock','return')};$('stop').onclick=()=>{releaseDrive(false);urgentCommand('/v1/stop',{},'Sending software stop')};$('learn').onclick=()=>command('/v1/learn',{},'Starting mapping tour','learn');$('cordIn').onclick=()=>command('/v1/sim/cord',{plugged:true},'Connecting simulated cord','cordIn');$('cordOut').onclick=()=>command('/v1/sim/cord',{plugged:false},'Disconnecting simulated cord','cordOut');$('saveToken').onclick=()=>{token=$('token').value.trim();say('Token applied. Checking connection…');refresh()};$('settingsLink').onclick=()=>{$('settings').scrollIntoView({behavior:'smooth',block:'center'});$('settings').open=true};pollLoop();startPlanLoop();
+$('return').onclick=()=>{releaseDrive(false);trail=[];command('/v1/return',{},'Returning to dock','return')};$('stop').onclick=()=>{releaseDrive(false);urgentCommand('/v1/stop',{},'Sending software stop')};$('learn').onclick=()=>command('/v1/learn',{},'Starting mapping tour','learn');$('cordIn').onclick=()=>command('/v1/sim/cord',{plugged:true},'Connecting simulated cord','cordIn');$('cordOut').onclick=()=>command('/v1/sim/cord',{plugged:false},'Disconnecting simulated cord','cordOut');$('saveToken').onclick=()=>{token=$('token').value.trim();try{localStorage.setItem(KEY_STORE,token)}catch(_){}say('Key applied. Checking connection…');refresh()};
+async function doPair(){const code=$('pairCode').value.replace(/\D/g,'');if(code.length!==6){setText('pairMsg','Enter all 6 digits.');return}
+ try{const r=await fetch('/v1/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code}),cache:'no-store'});const d=await r.json().catch(()=>({}));
+  if(r.ok&&d.token){token=d.token;try{localStorage.setItem(KEY_STORE,token)}catch(_){}$('pairCode').value='';setText('pairMsg','');showPair(false);say('Paired. This phone can now control the desk.','good');refresh()}
+  else setText('pairMsg',d.status||('Pairing failed ('+r.status+')'))}catch(e){setText('pairMsg','Could not reach the desk: '+e.message)}}
+$('pairBtn').onclick=doPair;$('pairCode').addEventListener('keydown',e=>{if(e.key==='Enter')doPair()});
+$('pairNew').onclick=async()=>{try{const d=await api('/v1/pair/new','POST',{});setText('pairCodeOut','Code for the new phone: '+d.code+' (valid '+Math.round(d.expires_in_s/60)+' minutes). Open this page on it and enter the code.')}catch(e){setText('pairCodeOut','Could not make a code: '+e.message)}};$('settingsLink').onclick=()=>{$('settings').scrollIntoView({behavior:'smooth',block:'center'});$('settings').open=true};pollLoop();startPlanLoop();
 // Offline caching is not configured: avoid registering a missing /sw.js endpoint.
 })();
 </script></body></html>
