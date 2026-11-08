@@ -1,5 +1,6 @@
 # Runs on every push to GitHub. Two jobs:
-#   module-test : compiles the roboRIO bench test program (needs the FRC/REV download servers, which GitHub can reach)
+#   module-test      : compiles the roboRIO bench test program (needs the FRC/REV download servers, which GitHub can reach)
+#   module-test-2024 : the same program for WPILib/REVLib 2024 (SPARK firmware 24.x)
 #   tests       : scripts/verify.sh, the same checks as on a laptop (sim scenarios, bridge, Pi runtime, Java core)
 # A third, "full", runs scripts/verify.sh --full (adds ~15 min of long sim runs) when started by hand from the Actions tab.
 name: CI
@@ -21,6 +22,23 @@ jobs:
     defaults:
       run:
         working-directory: firmware/module-test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - run: chmod +x gradlew
+      - run: ./gradlew build --no-daemon --stacktrace
+
+  module-test-2024:
+    name: Build roboRIO bench test, 2024 / SPARK firmware 24 (firmware/module-test-2024)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: firmware/module-test-2024
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5

@@ -1,5 +1,8 @@
 # MAXSwerve Module Bench Test
 
+> **SPARKs on firmware 24.x?** Use [`../module-test-2024`](../module-test-2024/README.md) instead: the same test
+> built on WPILib/REVLib 2024. This 2026 version needs SPARK firmware 25.x or later.
+
 A WPILib 2026 / REVLib 2026 robot program that checks MAXSwerve modules before they go on a
 frame. It's set up for three modules (FL, FR, RL); the modules are listed in `Constants.java`, so
 it works with any number from one to four. Based on REV's
