@@ -47,7 +47,7 @@ jobs:
           java-version: "17"
           cache: gradle
       - run: chmod +x gradlew
-      - run: ./gradlew build --no-daemon --stacktrace
+      - run: ./gradlew build --no-daemon
 
   tests:
     name: Simulator, bridge, Pi runtime, Java core (verify.sh)
