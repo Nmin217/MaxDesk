@@ -288,7 +288,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 
 <section id="tab-history" class="tab-panel" role="tabpanel" aria-label="History">
  <section class="panel">
-  <div class="panel-head"><h2 class="eyebrow">Trips</h2><button id="clearTrips" class="btn subtle small" type="button">Clear</button></div>
+  <div class="panel-head"><h2 class="eyebrow">Trips</h2><span><button id="saveBlackBox" class="btn subtle small" type="button" title="Save the last minute of what the desk did (black box), to look at later">Save last minute</button> <button id="clearTrips" class="btn subtle small" type="button">Clear</button></span></div>
   <div class="trip-summary"><div><span class="eyebrow">Trips</span><b id="tripCount">0</b></div><div><span class="eyebrow">Distance</span><b><span id="tripDist">0</span><small style="font-size:11px;color:var(--mute)"> m</small></b></div><div><span class="eyebrow">Stops</span><b id="tripHolds">0</b></div></div>
   <div id="tripList" class="trip-list"><div class="trip-empty">No trips yet. Each summon, return and room-mapping run shows up here with how it ended.</div></div>
  </section>
@@ -402,6 +402,7 @@ function renderTrips(){const host=$('tripList');host.replaceChildren();setText('
   add('Distance',fmt(t.distance_m,1)+' m');add('Time',fmtDur(t.duration_s));add('Battery',fmt(t.battery_used_pct,1)+'%');add('Safety stops',String(t.safety_holds??0));card.append(top,st);host.appendChild(card)}}
 renderTrips();
 $('clearTrips').addEventListener('click',()=>{tripItems=[];try{localStorage.removeItem(TRIPS_KEY)}catch(_){}renderTrips()});
+$('saveBlackBox').addEventListener('click',async()=>{try{await api('/v1/blackbox','POST',{});say('Saving the last minute to the desk\'s black box (ready in about 5 s).','good')}catch(e){say('Could not save: '+e.message,'danger')}});
 
 // ============ Room plan: cached map layer + live desk, trail, LiDAR hits, you and the summon spot ============
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();

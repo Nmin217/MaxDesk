@@ -66,8 +66,9 @@ fi
 node tests/pi/test_runtime.js > /tmp/pi.log 2>&1 && ok "pi runtime: units, cord lock, exceptions, e-stop, timeouts, saved map/zones" || { no "pi runtime"; tail -8 /tmp/pi.log; }
 node tests/pi/test_motion_guard.js > /tmp/mg.log 2>&1 && ok "motion guard: slew backstop, jam stop (drive + steering)" || { no "motion guard"; grep FAIL /tmp/mg.log | head -6; }
 node tests/pi/test_hardware_check.js > /tmp/hwc.log 2>&1 && ok "hardware check: missing module, encoder, low volts, faults block motion until 2 s normal" || { no "hardware check"; grep FAIL /tmp/hwc.log | head -5; }
+node tests/pi/test_black_box.js > /tmp/bbx.log 2>&1 && ok "black box: 60 s ring, save 5 s after a trigger, one file per incident, keep 20, safe on write errors" || { no "black box"; grep FAIL /tmp/bbx.log | head -5; }
 node tests/pi/test_pi_io.js > /tmp/pio.log 2>&1 && ok "pi_io on a fake SPARK bus: CAN IDs, units, field-relative, 180 flip, heartbeat, odometry, faults" || { no "pi_io"; grep FAIL /tmp/pio.log | head -5; }
-node tests/pi/test_hw_loop.js > /tmp/hwl.log 2>&1 && ok "fake hardware end to end: summon arrives, no contact, LiDAR/SPARK unplugged stop it" || { no "fake hardware end to end"; grep -E "FAIL|    " /tmp/hwl.log | head -8; }
+node tests/pi/test_hw_loop.js > /tmp/hwl.log 2>&1 && ok "fake hardware end to end: summon arrives, no contact, LiDAR/SPARK unplugged stop it, black box files" || { no "fake hardware end to end"; grep -E "FAIL|    " /tmp/hwl.log | head -8; }
 node tests/pi/test_swerve.js > /tmp/sw.log 2>&1 && ok "swerve maths: module angles/speeds, desaturate, 90° flip, odometry" || { no "swerve maths"; grep FAIL /tmp/sw.log | head -6; }
 if MAXDESK_ROOM=office node tests/sim/run.js office > /tmp/of.log 2>&1 && grep -q "OFFICE PASS" /tmp/of.log; then
   ok "office floor (32 x 20 m): summons into offices, kitchen, lounge, meeting room arrive with no contact"

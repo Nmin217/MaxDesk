@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Black Box Viewer</title>
+<style>
+:root{--bg:#f6f5f2;--panel:#fff;--fg:#1d1f22;--mute:#6b6f76;--line:#e2e0db;--acc:#2563eb;--bad:#c2410c;--grid:#ecebe7;
+  --m0:#2563eb;--m1:#d97706;--m2:#059669;--m3:#9333ea;--path:#94a3b8;--scan:#0f766e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141518;--panel:#1c1e22;--fg:#e8e8e6;--mute:#9a9ea6;--line:#2c2f35;--acc:#60a5fa;--bad:#fb923c;--grid:#25282d;
+  --m0:#60a5fa;--m1:#fbbf24;--m2:#34d399;--m3:#c084fc;--path:#64748b;--scan:#2dd4bf}}
+:root[data-theme="dark"]{--bg:#141518;--panel:#1c1e22;--fg:#e8e8e6;--mute:#9a9ea6;--line:#2c2f35;--acc:#60a5fa;--bad:#fb923c;--grid:#25282d;
+  --m0:#60a5fa;--m1:#fbbf24;--m2:#34d399;--m3:#c084fc;--path:#64748b;--scan:#2dd4bf}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1200px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:var(--mute);margin:0 0 12px}
+.drop{display:block;border:2px dashed var(--line);border-radius:12px;padding:24px;text-align:center;color:var(--mute);background:var(--panel)}
+.drop.over{border-color:var(--acc);color:var(--fg)}
+.grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;margin-top:12px}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.panel h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:0 0 8px}
+canvas{width:100%;display:block}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+button,select{font:inherit;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+input[type=range]{flex:1;min-width:160px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-variant-numeric:tabular-nums}
+.kv span:nth-child(odd){color:var(--mute)}
+.bad{color:var(--bad);font-weight:600}
+.events{max-height:260px;overflow:auto;font-variant-numeric:tabular-nums}
+.events div{padding:3px 4px;border-radius:6px;cursor:pointer;display:flex;gap:8px}
+.events div:hover{background:var(--grid)}
+.events .t{color:var(--mute);min-width:52px;text-align:right}
+.events .trig{color:var(--bad)}
+.events .now{background:var(--grid)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--mute);font-size:12px;margin:2px 0 6px}
+.legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:860px){.charts{grid-template-columns:minmax(0,1fr)}}
+#info{margin-top:6px}
+</style>
+</head>
+<body>
+<main>
+<h1>Black box viewer</h1>
+<p class="sub">Open a file from the desk's <code>blackbox</code> folder (on the Pi: <code>~/.maxdesk/blackbox/</code>) to see the last minute before something went wrong.</p>
+<label class="drop" id="drop">Drop a black box <code>.json</code> file here, or <input type="file" id="file" accept=".json,application/json"></label>
+<div id="info"></div>
+<div id="view" hidden>
+<div class="grid">
+  <div class="panel">
+    <h2>Floor plan: path, LiDAR, desk</h2>
+    <canvas id="map" height="420"></canvas>
+    <div class="bar">
+      <button id="play" type="button">Play</button>
+      <select id="speed" aria-label="Speed"><option value="1">1×</option><option value="4" selected>4×</option><option value="0.25">¼×</option></select>
+      <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Time">
+      <button id="toTrig" type="button">Jump to trigger</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>At <span id="tnow">0.0</span> s</h2>
+    <div class="kv" id="readout"></div>
+    <h2 style="margin-top:12px">Events</h2>
+    <div class="events" id="events"></div>
+  </div>
+</div>
+<div class="legend" id="legend"></div>
+<div class="charts">
+  <div class="panel"><h2>Wheel speed, m/s (solid = measured, dashed = asked for)</h2><canvas id="cSpeed" height="170"></canvas></div>
+  <div class="panel"><h2>Drive current, A</h2><canvas id="cDrive" height="170"></canvas></div>
+  <div class="panel"><h2>Steering current, A</h2><canvas id="cSteer" height="170"></canvas></div>
+  <div class="panel"><h2>Motor temperature, °C (solid = drive, dashed = steering)</h2><canvas id="cTemp" height="170"></canvas></div>
+</div>
+</div>
+</main>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const MCOL = ['--m0', '--m1', '--m2', '--m3'];
+// m: [name, angleDeg, driveCmd, driveMps, driveA, steerErrDeg, steerA, driveTempC, turnTempC, busV]
+const COL = { angle: 1, cmd: 2, mps: 3, driveA: 4, steerErr: 5, steerA: 6, tDrive: 7, tTurn: 8, volts: 9 };
+let D = null, names = [], cur = 0, playing = false, lastFrame = 0;
+
+function load(text) {
+  let d;
+  try { d = JSON.parse(text); } catch (e) { $('info').textContent = 'Not a JSON file: ' + e.message; return; }
+  if (!d || d.kind !== 'maxdesk-blackbox' || !Array.isArray(d.samples) || !d.samples.length) { $('info').textContent = 'This is not a MaxDesk black box file.'; return; }
+  D = d;
+  names = [];
+  for (const s of d.samples) for (const m of s.m || []) if (!names.includes(m[0])) names.push(m[0]);
+  $('info').innerHTML = '';
+  const b = document.createElement('div');
+  b.innerHTML = `<b class="bad"></b> · saved <span></span> · ${(last().t - d.samples[0].t).toFixed(1)} s · ${d.samples.length} samples · ${d.keyframes.length} LiDAR snapshots`;
+  b.querySelector('b').textContent = d.reason; b.querySelector('span').textContent = new Date(d.saved_at).toLocaleString();
+  $('info').appendChild(b);
+  $('legend').innerHTML = names.map((n, i) => `<span><i style="background:var(${MCOL[i % 4]})"></i>${n}</span>`).join('') + '<span><i style="background:var(--bad)"></i>trigger</span><span><i style="background:var(--fg)"></i>now</span>';
+  const ev = $('events'); ev.replaceChildren();
+  for (const e of d.events) {
+    const row = document.createElement('div'); row.dataset.t = e.t;
+    const t = document.createElement('span'); t.className = 't'; t.textContent = e.t.toFixed(1);
+    const x = document.createElement('span'); x.textContent = e.text; if (/^Trigger|^Saved/.test(e.text)) x.className = 'trig';
+    row.append(t, x); row.onclick = () => { seekT(e.t); }; ev.appendChild(row);
+  }
+  $('view').hidden = false;
+  seekT(Math.max(d.samples[0].t, d.trigger_t - 8));
+}
+const last = () => D.samples[D.samples.length - 1];
+function idxAt(t) { let lo = 0, hi = D.samples.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (D.samples[m].t <= t) lo = m; else hi = m - 1; } return lo; }
+function seekT(t) { cur = idxAt(t); draw(); }
+
+function setupCanvas(c) {
+  const r = window.devicePixelRatio || 1, w = c.clientWidth, h = +c.getAttribute('height');
+  c.width = Math.round(w * r); c.height = Math.round(h * r); c.style.height = h + 'px';
+  const g = c.getContext('2d'); g.setTransform(r, 0, 0, r, 0, 0); return { g, w, h };
+}
+
+function drawMap() {
+  const { g, w, h } = setupCanvas($('map'));
+  g.fillStyle = css('--panel'); g.fillRect(0, 0, w, h);
+  const S = D.samples; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const grow = (x, y) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
+  for (const s of S) grow(s.x, s.y);
+  for (const k of D.keyframes) for (const p of k.points) grow(p[0], p[1]);
+  const pad = 0.8; x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
+  const sc = Math.min(w / (x1 - x0), h / (y1 - y0)), ox = (w - (x1 - x0) * sc) / 2, oy = (h - (y1 - y0) * sc) / 2;
+  const P = (x, y) => [ox + (x - x0) * sc, oy + (y - y0) * sc];
+  // 1 m grid
+  g.strokeStyle = css('--grid'); g.lineWidth = 1; g.beginPath();
+  for (let x = Math.ceil(x0); x <= x1; x++) { const [a] = P(x, 0); g.moveTo(a, 0); g.lineTo(a, h); }
+  for (let y = Math.ceil(y0); y <= y1; y++) { const [, b] = P(0, y); g.moveTo(0, b); g.lineTo(w, b); }
+  g.stroke();
+  // LiDAR: the snapshot at or before now
+  const t = S[cur].t; let kf = null; for (const k of D.keyframes) if (k.t <= t) kf = k;
+  if (kf) { g.fillStyle = css('--scan'); for (const p of kf.points) { const [a, b] = P(p[0], p[1]); g.fillRect(a - 1.5, b - 1.5, 3, 3); } }
+  // path: done (solid), still to come (faint)
+  const path = (from, to, alpha) => { g.globalAlpha = alpha; g.strokeStyle = css('--path'); g.lineWidth = 2; g.beginPath(); for (let i = from; i <= to; i++) { const [a, b] = P(S[i].x, S[i].y); i === from ? g.moveTo(a, b) : g.lineTo(a, b); } g.stroke(); g.globalAlpha = 1; };
+  path(0, cur, 1); if (cur < S.length - 1) path(cur, S.length - 1, 0.25);
+  // trigger marker
+  const ti = idxAt(D.trigger_t), [tx, ty] = P(S[ti].x, S[ti].y);
+  g.strokeStyle = css('--bad'); g.lineWidth = 2; g.beginPath(); g.arc(tx, ty, 7, 0, 7); g.stroke();
+  // desk: 1.12 m wide x 0.72 m deep; forward (monitor back) is map -y at th = 0, th clockwise
+  const s = S[cur], c = Math.cos(s.th), n = Math.sin(s.th), HW = 0.56, HH = 0.36;
+  const corner = (u, v) => P(s.x + u * c - v * n, s.y + u * n + v * c);
+  g.fillStyle = css('--acc'); g.globalAlpha = .25; g.strokeStyle = css('--acc'); g.lineWidth = 2; g.beginPath();
+  [[-HW, -HH], [HW, -HH], [HW, HH], [-HW, HH]].forEach(([u, v], i) => { const [a, b] = corner(u, v); i ? g.lineTo(a, b) : g.moveTo(a, b); });
+  g.closePath(); g.fill(); g.globalAlpha = 1; g.stroke();
+  const [fa, fb] = corner(0, -HH), [ca, cb] = corner(0, 0); g.beginPath(); g.moveTo(ca, cb); g.lineTo(fa, fb); g.stroke();
+  g.fillStyle = css('--mute'); g.font = '11px system-ui'; g.fillText('1 m grid', 8, h - 8);
+}
+
+function chart(id, series, unit) {
+  const { g, w, h } = setupCanvas($(id));
+  g.fillStyle = css('--panel'); g.fillRect(0, 0, w, h);
+  const S = D.samples, t0 = S[0].t, t1 = last().t, L = 34, R = 6, T = 6, B = 18;
+  let lo = Infinity, hi = -Infinity;
+  for (const se of series) for (const s of S) { const v = se.get(s); if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
+  if (!Number.isFinite(lo)) { g.fillStyle = css('--mute'); g.fillText('no data', L, h / 2); return; }
+  if (hi - lo < 1e-6) { hi += 1; lo -= 1; }
+  const pad = (hi - lo) * .08; lo -= pad; hi += pad;
+  const X = t => L + (t - t0) / (t1 - t0 || 1) * (w - L - R), Y = v => T + (hi - v) / (hi - lo) * (h - T - B);
+  g.strokeStyle = css('--grid'); g.fillStyle = css('--mute'); g.font = '10px system-ui'; g.lineWidth = 1;
+  for (let k = 0; k <= 3; k++) { const v = lo + (hi - lo) * k / 3, y = Y(v); g.beginPath(); g.moveTo(L, y); g.lineTo(w - R, y); g.stroke(); g.fillText(v.toFixed(Math.abs(hi - lo) < 3 ? 2 : 0), 2, y + 3); }
+  g.fillText(t0.toFixed(0) + ' s', L, h - 4); g.fillText(t1.toFixed(0) + ' s', w - R - 28, h - 4);
+  for (const se of series) {
+    g.strokeStyle = css(se.color); g.lineWidth = 1.6; g.setLineDash(se.dash ? [4, 3] : []); g.beginPath(); let pen = false;
+    for (const s of S) { const v = se.get(s); if (!Number.isFinite(v)) { pen = false; continue; } const x = X(s.t), y = Y(v); pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; }
+    g.stroke();
+  }
+  g.setLineDash([]);
+  const vline = (t, col) => { g.strokeStyle = css(col); g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(t), T); g.lineTo(X(t), h - B); g.stroke(); };
+  vline(D.trigger_t, '--bad'); vline(S[cur].t, '--fg');
+}
+
+function readout() {
+  const s = D.samples[cur];
+  $('tnow').textContent = s.t.toFixed(1);
+  const out = s.out || '', rows = [
+    ['Wheels', out === 'drive' ? 'driving' : out.startsWith('stop:') ? 'stopped: ' + out.slice(5) : out, out.startsWith('stop:')],
+    ['Speed asked', Math.hypot(s.vx, s.vy).toFixed(2) + ' m/s, turn ' + (s.w || 0).toFixed(2) + ' rad/s'],
+    ['Mode', (s.mode || '') + (s.active ? ' (trip under way)' : '')],
+    ['Position', (s.loc || '?') + ` (${s.x.toFixed(2)}, ${s.y.toFixed(2)}) m`, s.loc === 'lost'],
+    ['LiDAR age', s.lidarMs === null || s.lidarMs === undefined ? '–' : s.lidarMs + ' ms', s.lidarMs > 300],
+    ['Battery', s.bat + ' %'],
+    ['E-stop / cord / bridge', [s.estop ? 'E-STOP' : 'ok', s.cord ? 'CORD' : 'ok', s.bridge === false ? 'SILENT' : 'ok'].join(' / '), s.estop || s.cord || s.bridge === false],
+    ['Hardware check', s.hw ? 'BLOCKED' : 'ok', s.hw]
+  ];
+  for (const m of s.m || []) rows.push([m[0], `${m[COL.angle] ?? '–'}°, ${m[COL.mps] ?? '–'} of ${m[COL.cmd] ?? '–'} m/s, ${m[COL.driveA] ?? '–'} A / ${m[COL.steerA] ?? '–'} A, ${m[COL.tDrive] ?? '–'}°C`, (m[COL.driveA] || 0) > 20]);
+  const k = $('readout'); k.replaceChildren();
+  for (const [a, b, bad] of rows) { const x = document.createElement('span'), y = document.createElement('span'); x.textContent = a; y.textContent = b; if (bad) y.className = 'bad'; k.append(x, y); }
+  let best = null; for (const row of $('events').children) { row.classList.remove('now'); if (+row.dataset.t <= s.t) best = row; }
+  if (best) best.classList.add('now');
+}
+
+function draw() {
+  if (!D) return;
+  $('scrub').value = Math.round(cur / (D.samples.length - 1) * 1000);
+  drawMap(); readout();
+  const mi = n => names.indexOf(n), col = n => MCOL[mi(n) % 4];
+  const per = (c, dash) => names.map(n => ({ color: col(n), dash, get: s => { const m = (s.m || []).find(x => x[0] === n); return m ? m[c] : NaN; } }));
+  chart('cSpeed', [...per(COL.mps, false), ...per(COL.cmd, true)]);
+  chart('cDrive', per(COL.driveA, false));
+  chart('cSteer', per(COL.steerA, false));
+  chart('cTemp', [...per(COL.tDrive, false), ...per(COL.tTurn, true)]);
+}
+
+function tick(ts) {
+  if (!playing) return;
+  const dt = lastFrame ? (ts - lastFrame) / 1000 : 0; lastFrame = ts;
+  const t = D.samples[cur].t + dt * +$('speed').value;
+  if (t >= last().t) { cur = D.samples.length - 1; playing = false; $('play').textContent = 'Play'; draw(); return; }
+  cur = idxAt(t); draw(); requestAnimationFrame(tick);
+}
+$('play').onclick = () => { if (!D) return; playing = !playing; $('play').textContent = playing ? 'Pause' : 'Play'; if (playing) { if (cur >= D.samples.length - 1) cur = 0; lastFrame = 0; requestAnimationFrame(tick); } };
+$('scrub').oninput = () => { if (!D) return; cur = Math.round(+$('scrub').value / 1000 * (D.samples.length - 1)); draw(); };
+$('toTrig').onclick = () => { if (D) seekT(D.trigger_t); };
+$('file').onchange = e => { const f = e.target.files[0]; if (f) f.text().then(load); };
+const drop = $('drop');
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) f.text().then(load); };
+addEventListener('resize', draw);
+window.loadBlackBox = load;   // for tests
+})();
+</script>
+</body>
+</html>

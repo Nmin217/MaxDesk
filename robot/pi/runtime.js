@@ -6,6 +6,7 @@ const path = require('path');
 const http = require('http');
 const { URL } = require('url');
 const { createHardwareMonitor } = require('./hardware_check');
+const { createBlackBox } = require('./black_box');
 const { createSlewLimiter, createJamDetector } = require('./motion_guard');
 
 // Fake DOM so the simulator core runs headlessly. Mirrors bridge/bridge_sim.js.
@@ -155,9 +156,10 @@ function createRuntime({
   io, bridgeUrl, token, hz = 60,
   dataDir = process.env.MAXDESK_DATA_DIR || path.join(os.homedir(), '.maxdesk'),   // room map + no-go zones
   nowMs = () => Date.now(),
-  statePushMs = 100, pollMs = 100, staleBridgeMs = 2000,
+  statePushMs = 100, pollMs = 100, staleBridgeMs = 2000,   // 100 ms: a Stop reaches the wheels within ~0.1 s plus Wi-Fi
   autoLoop = true,   // false: the caller runs tickOnce/pollNow itself (tests that step a fake world in lockstep)
-  expectedModules = (process.env.MAXDESK_MODULES || 'FL,FR,RL,RR').split(',').map(x => x.trim()).filter(Boolean)   // the hardware check expects these   // 100 ms: a Stop reaches the wheels within ~0.1 s plus Wi-Fi
+  blackBox = true,   // record the last 60 s and save it to <dataDir>/blackbox when something goes wrong (black_box.js)
+  expectedModules = (process.env.MAXDESK_MODULES || 'FL,FR,RL,RR').split(',').map(x => x.trim()).filter(Boolean)   // the hardware check expects these
 } = {}) {
   if (!io) throw new Error('io is required');
   if (!bridgeUrl) throw new Error('bridgeUrl is required');
@@ -174,6 +176,36 @@ function createRuntime({
   const hwMode = !!io.isHardware;
   if (hwMode) sim.setHardwareInput(true);
   let lastPose = null, lastScanSeq, lidarAgeMs = Infinity, batT = 0;
+  // Black box: what the desk did over the last minute, saved when something goes wrong (view: tools/blackbox_viewer.html).
+  const bb = blackBox && dataDir !== null ? createBlackBox({ dir: path.join(dataDir, 'blackbox'), nowMs }) : null;
+  const BAD_TRIPS = new Set(['jam', 'hardware', 'e-stop', 'blocked', 'cord']);
+  let bbPrev = { estop: false, hw: false, stale: false, lost: false, status: '', trip: null }, bbExtras = null, bbExtrasT = 0;
+  function blackBoxStep(dt, out, mods, flags) {
+    if (!bb) return;
+    try {
+      const s = sim.getState(), status = sim.getStatusText();
+      if ((bbExtrasT -= dt) <= 0) { bbExtrasT = 0.5; bbExtras = sim.getExtras(); }
+      const loc = bbExtras && bbExtras.localization || {}, trip = bbExtras && bbExtras.trips && bbExtras.trips[0];
+      bb.record({
+        x: +(s.T.x * PX).toFixed(3), y: +(s.T.y * PX).toFixed(3), th: +s.T.th.toFixed(3),   // map metres, y down (as the floor plan)
+        vx: +(s.T.vx * PX).toFixed(3), vy: +(s.T.vy * PX).toFixed(3), w: +s.T.w.toFixed(3),
+        out, mode: s.mode, active: !!s.active, loc: loc.state || '', estop: flags.estop, cord: flags.cord, bridge: flags.fresh,
+        lidarMs: Number.isFinite(lidarAgeMs) ? Math.round(lidarAgeMs) : null, hw: !!hwState.blocked, bat: +(+s.bat.r).toFixed(1),
+        m: Array.isArray(mods) ? mods.map(m => [m.name, r1(m.angleDeg), r2(m.driveCmdMps), r2(m.driveMps), r1(m.driveAmps), r1(m.steerErrDeg), r1(m.steerAmps), r1(m.driveTempC), r1(m.turnTempC), r1(m.busVolts)]) : null
+      });
+      if (Array.isArray(s.hits)) bb.keyframe(s.hits.filter((_, i) => i % 2 === 0).map(h => [+(h.x * PX).toFixed(2), +(h.y * PX).toFixed(2)]));
+      if (status !== bbPrev.status) { bb.event(status); bbPrev.status = status; }
+      // What counts as "something went wrong": a rising edge, so one incident is one trigger.
+      if (flags.estop && !bbPrev.estop) bb.trigger('E-stop');
+      if (hwState.blocked && !bbPrev.hw) bb.trigger('hardware problem');
+      if (flags.stale && !bbPrev.stale) bb.trigger('LiDAR stopped sending');
+      if (loc.lost && !bbPrev.lost) bb.trigger('lost position');
+      if (trip && trip.id !== bbPrev.trip) { if (bbPrev.trip !== null && BAD_TRIPS.has(trip.outcome)) bb.trigger('trip ended: ' + trip.outcome); bbPrev.trip = trip.id; }
+      if (bbPrev.trip === null) bbPrev.trip = trip ? trip.id : undefined;
+      Object.assign(bbPrev, { estop: flags.estop, hw: !!hwState.blocked, stale: flags.stale, lost: !!loc.lost });
+    } catch (_) {}   // the recorder must never disturb the control loop
+  }
+  const r1 = v => Number.isFinite(v) ? +v.toFixed(1) : null, r2 = v => Number.isFinite(v) ? +v.toFixed(2) : null;
   function feedSensors(dt) {
     // Odometry: hand over only the change since last tick, in the desk's frame. The brain's position is LiDAR-corrected
     // and the wheels' is not, so passing the wheels' absolute position would undo every correction.
@@ -247,6 +279,7 @@ function createRuntime({
     } else if (c.type === 'return') sim.clickBack();
     else if (c.type === 'stop') sim.clickStop();
     else if (c.type === 'learn') sim.clickLearn();
+    else if (c.type === 'blackbox') { if (bb) bb.trigger('saved from the app'); }
     else if (c.type === 'cord') sim.setCord(!!c.plugged);
     else if (c.type === 'zones') sim.setZones(c.zones);
     else if (c.type === 'drive') sim.setManualDrive({
@@ -272,10 +305,14 @@ function createRuntime({
 
   async function tickOnce(dt) {
     if (dt <= 0) return;
+    // out = what went to the wheels this tick and why, for the black box.
+    let out = 'idle', mods = null;
+    const flags = { estop: false, cord: false, fresh: true, stale: false };
     try {
-      const fresh = bridgeFresh();
+      const fresh = bridgeFresh(); flags.fresh = fresh;
       let estop;
       try { estop = !!io.estopEngaged(); } catch (_) { estop = true; }   // unreadable e-stop = engaged
+      flags.estop = estop;
       if (estop) { sim.setEstop(true); hwEstopLatched = true; }
       else if (hwEstopLatched) { sim.setEstop(false); hwEstopLatched = false; }   // released: the sim left active=false, so no auto-resume
       // Cord: {plugged, interlock_on}. Plugged with interlock on = no wheel command. Unreadable = locked.
@@ -285,9 +322,10 @@ function createRuntime({
         cordLocked = !c || (!!c.plugged && !!c.interlock_on);
         if (c && hwCordPlugged !== !!c.plugged) { hwCordPlugged = !!c.plugged; sim.setCord(hwCordPlugged); }   // on change only, so bridge 'cord' commands still work
       } catch (_) { cordLocked = true; }
+      flags.cord = cordLocked;
       // Per-module readings, if the IO has them (pi_io.js will; null/mock IO may not). null = this IO
       // doesn't report modules (no checks); a throw = it should but can't (the hardware check blocks).
-      let mods = null, modsErr = false;
+      let modsErr = false;
       if (typeof io.readModules === 'function') { try { mods = io.readModules(); } catch (_) { modsErr = true; } }
       // Hardware check (hardware_check.js), twice a second: a module missing, an encoder not reading, low
       // voltage or a controller fault blocks all motion; the sim ends the trip and refuses new ones.
@@ -303,20 +341,29 @@ function createRuntime({
       sim.update(dt);
       const s = sim.getState();
       const lidarStale = hwMode && lidarAgeMs > LIDAR_HOLD_MS;   // never drive on an old picture of the room
-      if (estop || !fresh || cordLocked || hwState.blocked || lidarStale) { io.stopAll(); slew.reset(); return; }
+      flags.stale = lidarStale;
+      if (estop || !fresh || cordLocked || hwState.blocked || lidarStale) {
+        out = 'stop:' + (estop ? 'e-stop' : !fresh ? 'bridge silent' : cordLocked ? 'cord' : hwState.blocked ? 'hardware' : 'lidar old');
+        io.stopAll(); slew.reset(); return;
+      }
       if (mods) {
         const j = jam.step(mods, dt);
-        if (j) { sim.jamStop(j.text); io.stopAll(); slew.reset(); return; }
+        if (j) { out = 'stop:' + j.kind; sim.jamStop(j.text); if (bb) bb.trigger(j.text); io.stopAll(); slew.reset(); return; }
       }
       const moving = Math.hypot(s.T.vx, s.T.vy) > 0.01 || Math.abs(s.T.w) > 0.01;
       if (moving || s.active) {
         const v = toField(s.T.vx, s.T.vy, s.T.w);
         const o = slew.step(v.vx, v.vy, v.omega, dt);
         io.writeWheels(o.vx, o.vy, o.omega, -s.T.th);   // + the heading the brain believes (IO convention: theta = -sim th)
+        out = 'drive';
       } else { io.stopAll(); slew.reset(); }
-    } catch (_) {
+    } catch (e) {
+      out = 'stop:error';
       slew.reset();
       try { io.stopAll(); } catch (_) {}   // any failure in the tick leaves the wheels stopped
+      if (bb) bb.trigger('control loop error: ' + (e && e.message || e));
+    } finally {
+      blackBoxStep(dt, out, mods, flags);
     }
   }
 
@@ -352,10 +399,12 @@ function createRuntime({
       if (timer) { clearInterval(timer); timer = null; }
       io.stopAll();
       try { sim.saveMap(); } catch (_) {}   // the sim also saves every 10 s; this catches the last few
+      try { if (bb && bb.pending) bb.flush(); } catch (_) {}   // an incident still recording its last seconds: save it now
     },
     get connected() { return connected; },
     get sim() { return sim; },
     get hardware() { return { ...hwState, lidarAgeMs, hwMode }; },
+    get blackBox() { return bb; },
     tickOnce, pollNow, pushStateNow, healthCheck
   };
 }

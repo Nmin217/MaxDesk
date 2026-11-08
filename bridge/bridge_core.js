@@ -107,6 +107,7 @@ const server=require('http').createServer((req,res)=>{
     }else if(url==='/v1/return')command={type:'return'};
     else if(url==='/v1/learn')command={type:'learn'};
     else if(url==='/v1/stop')command={type:'stop'};
+    else if(url==='/v1/blackbox')command={type:'blackbox'};   // save the last minute of what the desk did (robot/pi/black_box.js)
     else if(url==='/v1/sim/cord')command={type:'cord',plugged:!!body.plugged};
     else if(url==='/v1/zones'){
       // Keep-out zones in metres: [{name,x,y,w,h}], replaces the whole list (empty list clears them).

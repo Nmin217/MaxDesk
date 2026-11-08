@@ -24,6 +24,7 @@ simulator bridge in `bridge/` implements it and has been tested with curl.
 | `POST /v1/return` | `{}` | same |
 | `POST /v1/learn` | `{}` | same (drives a mapping tour, then returns to the dock) |
 | `POST /v1/stop` | `{}` | same. A SOFT stop. Always purges queued drive/summon/return/learn and clears the duplicate-navigation guard. A repeat within 250 ms while the first Stop is still queued is coalesced: `200 { accepted: true, status: "Stop already queued" }`, never 429. There is deliberately no way to release the E-stop. |
+| `POST /v1/blackbox` | `{}` | same. On the real desk, saves the last minute of what it did (black box) to a file on the Pi, to look at with `tools/blackbox_viewer.html`. It also saves by itself when a trip ends badly, the E-stop is pressed, the hardware check trips, the LiDAR goes quiet or the desk gets lost. The simulator ignores it |
 | `POST /v1/sim/cord` | `{ "plugged": true }` | simulator only: stands in for a person plugging the cord in |
 | `POST /v1/zones` | `{ "zones": [{ "name": "Desk", "x": 7, "y": 3.8, "w": 2, "h": 1.6 }] }` | same. Replaces all keep-out zones (metres from the room's top-left; up to 20; `[]` clears). The planner treats them as solid and keeps the desk's footprint plus margin away. 422 if a zone is outside the room or smaller than 0.1 m |
 | `GET /v1/sim/poll` | none | simulator page only: `{ commands, server_time, epoch }`, drains the queue (each command delivered once, current epoch only) |

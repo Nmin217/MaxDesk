@@ -121,6 +121,37 @@ LiDAR points relative to the desk.
   or correcting heading more eagerly each helped here but broke the bump and bad-floor tests (one made a 5 m
   wrong jump), so none was kept. Improving it means retuning the localisation as its own job.
 
+## Black box (black_box.js)
+
+The runtime keeps the last 60 s of what the desk did in memory: 20 samples a second, a LiDAR snapshot once a
+second, and every status message. When something goes wrong it records 5 s more, so you also see what
+happened next, then saves it as `<dataDir>/blackbox/<date>-<time>-<reason>.json` (on the Pi:
+`~/.maxdesk/blackbox/`).
+
+**What each sample holds:**
+- where the desk thinks it is and what speed was asked for;
+- what went to the wheels: `drive`, `idle`, or `stop:` with the reason (e-stop, bridge silent, cord,
+  hardware, lidar old, drive or steer jam, reverse, error);
+- mode, localisation state, battery, LiDAR age, E-stop, cord, bridge and the hardware check;
+- for each module: angle, asked-for and measured wheel speed, drive and steering current, both motor
+  temperatures and voltage.
+
+**When it saves:**
+- a trip ending as jam, hardware problem, E-stop, boxed in or cord;
+- the E-stop, the hardware check, the LiDAR going quiet or getting lost, each on the moment it starts;
+- an error inside the control loop;
+- "Save last minute" in the app's History tab (`POST /v1/blackbox`).
+
+Triggers within 10 s of a save belong to the same incident: they're added as events, not saved again. Files
+are written atomically (temp file, fsync, rename), and only the newest 20 are kept (a full minute is about
+550 KB). A file that can't be written never disturbs the control loop.
+
+**To look at one,** open `tools/blackbox_viewer.html` in a browser (no server needed) and drop the file
+on it (try `tools/blackbox_example.json`, a jammed RR wheel from the fake-hardware test). It shows the path on the floor plan with the LiDAR snapshot at each moment, a play/scrub timeline,
+the event list, and charts for each module: wheel speed (asked for and measured), drive current, steering
+current and temperature. Tests: `tests/pi/test_black_box.js`, and the black box tests in
+`tests/pi/test_hw_loop.js` (a jammed wheel, the LiDAR going quiet, saving from the app).
+
 ## Position: drift, LiDAR correction and getting lost (prototyped in the simulator)
 
 The simulator's "Sensors & drift" panel models what the real desk will face: wheel odometry and the

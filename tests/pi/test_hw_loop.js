@@ -50,7 +50,7 @@ async function rig(worldOpts = {}, { gyro = !!process.env.GYRO } = {}) {
   const err = () => { const b = believed(), p = world.pose; return Math.hypot(b.x - p.x, b.y - p.y); };
   const summon = async (x, y) => { bridge.queue({ type: 'summon', x, y, epoch: 1, id: Math.random() }); await runtime.pollNow(); };
   const done = async () => { runtime.stop(); await bridge.close(); };
-  return { bus, world, io, runtime, tick, believed, err, summon, done };
+  return { bus, world, io, runtime, tick, believed, err, summon, done, queue: c => bridge.queue(c) };
 }
 
 (async () => {
@@ -141,6 +141,55 @@ async function rig(worldOpts = {}, { gyro = !!process.env.GYRO } = {}) {
       assert.equal(r.runtime.sim.getState().active, false);
       assert.match(ex.hardware.problem, /FR not answering on CAN/);
       assert.ok(!r.bus.truth(1).enabled, 'everything disabled');
+    } finally { await r.done(); }
+  });
+
+  const fs2 = require('fs');
+  const bbFiles = (r) => r.runtime.blackBox.saved.map(f => JSON.parse(fs2.readFileSync(f, 'utf8')));
+
+  await test('black box: a jammed wheel mid-trip saves one file naming the module, with the current spike and the stop', async () => {
+    reseed(12345);
+    const r = await rig();
+    try {
+      await r.tick(120); await r.summon(14, 8.6); await r.tick(300);
+      r.bus.setFault(7, 'jammed');                       // RR drive
+      await r.tick(Math.round(7 / dt));                  // jam caught in ~0.5 s, then 5 s more recording
+      const files = bbFiles(r);
+      assert.equal(files.length, 1, 'one incident, one file');
+      const d = files[0];
+      assert.match(d.reason, /RR wheel can't turn/);
+      const before = d.samples.filter(x => x.t < d.trigger_t), afterT = d.samples.filter(x => x.t > d.trigger_t);
+      assert.ok(before.some(x => x.out === 'drive'), 'was driving before');
+      assert.ok(afterT.every(x => x.out !== 'drive'), 'never drove after');
+      const rrAmps = d.samples.filter(x => Math.abs(x.t - d.trigger_t) < 0.6).map(x => x.m.find(m => m[0] === 'RR')[4]);
+      assert.ok(Math.max(...rrAmps) > 20, 'RR current spike recorded: ' + Math.max(...rrAmps));
+      assert.ok(d.keyframes.length > 5 && d.keyframes[0].points.length > 50, 'LiDAR snapshots');
+      assert.ok(d.events.some(e => /Driving to you/.test(e.text)), 'status messages recorded');
+      console.log(`    ${d.samples.length} samples over ${(d.samples[d.samples.length - 1].t - d.samples[0].t).toFixed(1)} s, ${d.keyframes.length} LiDAR snapshots, ${d.events.length} events, ${(JSON.stringify(d).length / 1024).toFixed(0)} KB`);
+    } finally { await r.done(); }
+  });
+
+  await test('black box: the LiDAR going quiet saves a file saying so', async () => {
+    reseed(12345);
+    const r = await rig();
+    try {
+      await r.tick(120); await r.summon(14, 8.6); await r.tick(240);
+      r.world.stopScans();
+      await r.tick(Math.round(6 / dt));
+      const files = bbFiles(r);
+      assert.equal(files.length, 1); assert.equal(files[0].reason, 'LiDAR stopped sending');
+      assert.ok(files[0].samples.some(x => x.out === 'stop:lidar old'));
+    } finally { await r.done(); }
+  });
+
+  await test('black box: "save what just happened" from the app', async () => {
+    reseed(12345);
+    const r = await rig();
+    try {
+      await r.tick(300);
+      r.queue({ type: 'blackbox', epoch: 1, id: 99 }); await r.tick(Math.round(5.5 / dt));
+      const files = bbFiles(r);
+      assert.equal(files.length, 1); assert.equal(files[0].reason, 'saved from the app');
     } finally { await r.done(); }
   });
 
