@@ -65,7 +65,7 @@ public class Robot extends TimedRobot {
       .mapToDouble(id -> Math.hypot(id.xMeters(), id.yMeters())).max().orElse(0.05));
   private final SendableChooser<Mode> modeChooser = new SendableChooser<>();
   private Mode mode = Mode.READOUT;
-  private Rotation2d joystickAngle = Rotation2d.kZero;
+  private Rotation2d joystickAngle = new Rotation2d();
 
   public Robot() {
     modeChooser.setDefaultOption("Readout (no motion)", Mode.READOUT);
@@ -108,7 +108,7 @@ public class Robot extends TimedRobot {
       System.err.println("WARNING: cart module positions are placeholders. Measure them (Constants.kModules)"
           + " or turning will make the wheels fight. Driving straight still works.");
     }
-    joystickAngle = Rotation2d.kZero;
+    joystickAngle = new Rotation2d();
     // Ignore whatever command was left over from before this enable.
     double[] cmd = appCommand.get();
     appLastSeq = cmd.length >= 4 ? cmd[0] : Double.NaN;
@@ -135,7 +135,7 @@ public class Robot extends TimedRobot {
   }
 
   private void joystick() {
-    if (!controller.getRightBumperButton()) {
+    if (!controller.getRightBumper()) {
       stopAll();
       return;
     }
@@ -173,7 +173,7 @@ public class Robot extends TimedRobot {
   }
 
   private void cartJoystick() {
-    if (!controller.getRightBumperButton()) {
+    if (!controller.getRightBumper()) {
       stopAll();
       return;
     }
