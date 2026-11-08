@@ -22,6 +22,10 @@
  *   one per swerve module: commanded and measured wheel speed, drive current, how far the steering
  *   is from its target, steering current. The runtime uses it to stop on a jammed module
  *   (motion_guard.js). Without it there is no jam check.
+ *   Optional extra fields per module, for the hardware check (hardware_check.js): present (both SPARKs
+ *   answering on CAN), encoderOk, angleDeg (absolute steering angle), busVolts, faults (array of names).
+ *   Returning null means "this IO doesn't report modules" (no checks). Throwing means "it should but
+ *   can't": the hardware check blocks all motion (fail closed).
  *
  * Implementations:
  *   null_io.js   safe default: refuses all motion

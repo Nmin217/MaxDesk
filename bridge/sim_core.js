@@ -184,7 +184,7 @@ function reset(){
     mkWalker(160, 380),
   ];
   last.fill(-99); since.fill(-99); clrRays=[]; circs.length=0; for(const c of CIRCS0)circs.push({...c}); parkTh=null; mode='user'; didArrive=false; arT=0; readyPending=false; cordIn=false; breakaways=0; alertT=0; bat.r=80; bat.a=70; charging=false; lowT=0; trail=[]; retreats=0; waitT=0; lowSpeedT=0; patientUntil=0; lastRecEnd=-99;
-  estop=false; deskH=userH=1.05; resumeExplore=false;
+  estop=false; deskH=userH=1.05; resumeExplore=false; hwFault="";
   $('hs').value=105; $('hv').textContent='105';
   path=[]; goal=null; active=false; contacts=0; minGap=1e9; peakA=0;
   user.x=USER0.x; user.y=USER0.y;
@@ -551,13 +551,13 @@ let trip=null,trips=[],tripSeq=0;
 function startTrip(kind){if(trip)endTrip('replaced');progReset();trip={id:Date.now().toString(36)+'-'+(++tripSeq),kind,start:time,startedAt:Date.now(),dist:0,lx:T.x,ly:T.y,holds0:safetyHolds,bat0:bat.r}}
 function endTrip(outcome){if(!trip)return;
   // A trip that went nowhere (already at the dock, stopped at once) isn't worth a history entry, unless it ended badly.
-  if(trip.dist*M_PER_PX<0.05&&time-trip.start<2&&outcome!=='e-stop'&&outcome!=='cord'&&outcome!=='jam'){trip=null;return}
+  if(trip.dist*M_PER_PX<0.05&&time-trip.start<2&&outcome!=='e-stop'&&outcome!=='cord'&&outcome!=='jam'&&outcome!=='hardware'){trip=null;return}
   trips.unshift({id:trip.id,kind:trip.kind,outcome,started_at:trip.startedAt,duration_s:+(time-trip.start).toFixed(1),
   distance_m:+(trip.dist*M_PER_PX).toFixed(2),safety_holds:safetyHolds-trip.holds0,battery_used_pct:+Math.max(0,trip.bat0-bat.r).toFixed(1)});trips=trips.slice(0,10);trip=null}
 // Extra state for the phone app; every state producer (simulator page, bridge, Pi runtime) adds this.
 function extraStateJSON(){const need=batteryNeedHome(T.x,T.y),tripNeed=batteryNeedTrip(user.x,user.y);
   return {zones:zonesJSON(),battery_plan:{need_home_pct:+need.toFixed(1),need_trip_pct:+tripNeed.toFixed(1),reserve_pct:BAT_RESERVE,can_summon:bat.r>=tripNeed+BAT_RESERVE},
-    alert_text:alertT>0?alertText:'',localization:{drift:driftMode(),lidar:lidar3D()?'3d':'2d',lidar_height_m:lidar3D()?null:lidarH(),state:G===T?'exact':locState,lost:locLost,sim_error_m:+(posErr().d*M_PER_PX).toFixed(3)},trips:trips.slice(0,10),trip:trip?{id:trip.id,kind:trip.kind,distance_m:+(trip.dist*M_PER_PX).toFixed(2),duration_s:+(time-trip.start).toFixed(1)}:null}}
+    alert_text:alertT>0?alertText:'',hardware:{ok:!hwFault,problem:hwFault},localization:{drift:driftMode(),lidar:lidar3D()?'3d':'2d',lidar_height_m:lidar3D()?null:lidarH(),state:G===T?'exact':locState,lost:locLost,sim_error_m:+(posErr().d*M_PER_PX).toFixed(3)},trips:trips.slice(0,10),trip:trip?{id:trip.id,kind:trip.kind,distance_m:+(trip.dist*M_PER_PX).toFixed(2),duration_s:+(time-trip.start).toFixed(1)}:null}}
 
 function buildOccupancy(){
   const occ=new Uint8Array(GW*GH);
@@ -813,6 +813,13 @@ function supervise(cx,cy,w){
 //  2) BREAKAWAY: if it is driven anyway (interlock off or failed), the connector lets go at ~0.9 m instead of dragging the plug.
 function manualDock(){return $('dm').value==='manual'}
 function cordLock(){return manualDock()&&cordIn&&$('il').checked}   // true = the wheels must not be commanded
+// Hardware fault (set by the Pi runtime's hardware check, robot/pi/hardware_check.js): a module missing, an encoder
+// not reading, low voltage, a controller fault. While set: no trip starts, a running one ends, the wheels get nothing.
+let hwFault='';
+function setHardwareFault(text){text=text?String(text):'';if(text===hwFault)return;hwFault=text;
+  if(hwFault){if(active){active=false;path=[];endTrip('hardware')}parkTh=null;manualDrive={...manualDrive,x:0,y:0,turn:0};setSt('Hardware problem: '+hwFault,'bad');batAlert(hwFault)}
+  else setSt('Hardware OK again - ready','ok')}
+function hwBlocks(){if(!hwFault)return false;setSt('Hardware problem: '+hwFault,'bad');batAlert(hwFault);return true}
 function cordBlocks(){
   if(manualDock()&&cordIn&&$('il').checked){setSt('Cord is still plugged in: unplug it first (the desk will not drive)','bad');alertT=4;return true}
   return false;
@@ -836,14 +843,14 @@ function batStep(dt){
 }
 function startTour(resume){const resuming=resume===true&&resumeExplore;resumeExplore=false;
   manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
-  if(cordBlocks())return;
+  if(cordBlocks()||hwBlocks())return;
   if(estop){setSt('E-stop engaged - release it first','bad');return}
   startTrip('tour');mode='tour';active=true;parkTh=null;didArrive=false;arT=0;tourI=0;tourT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;
   stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';if(frontierMode()){fGoal=null;exploreDone=false;if(!resuming){fBlack=[];fN=0}fCheckT=0;fNoneT=0;setSt(resuming?'Charged - carrying on learning the room':'Learning the room: exploring','')}else setSt('Learning the room: point 1 of '+tourPts().length,'');
 }
 function startReturn(){
   manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;
-  if(cordBlocks())return;
+  if(cordBlocks()||hwBlocks())return;
   if(estop){setSt('E-stop engaged - release it first','bad');return}
   startTrip('return');mode='home';active=true;parkTh=null;didArrive=false;arT=0;trail=[];retreats=0;waitT=0;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;
   stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Returning to start…','');
@@ -1436,7 +1443,7 @@ cv.addEventListener('pointermove',e=>{const p=pos(e);if(blockDrag){const b=block
 function finishCanvasDrag(){drag=false;blockDrag=null}
 cv.addEventListener('pointerup',finishCanvasDrag);cv.addEventListener('pointercancel',finishCanvasDrag);
 
-$('go').onclick=()=>{resumeExplore=false;manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks())return;if(locLost){batAlert('Lost: finding my position first. Try again in a moment.');setSt('Lost: finding my position first','bad');return}if(!estop){const need=batteryNeedTrip(user.x,user.y)+BAT_RESERVE;if(bat.r<need){batAlert('Not enough battery to reach you and get back to the charger: needs '+Math.ceil(need)+'%, has '+Math.floor(bat.r)+'%.');
+$('go').onclick=()=>{resumeExplore=false;manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;if(cordBlocks()||hwBlocks())return;if(locLost){batAlert('Lost: finding my position first. Try again in a moment.');setSt('Lost: finding my position first','bad');return}if(!estop){const need=batteryNeedTrip(user.x,user.y)+BAT_RESERVE;if(bat.r<need){batAlert('Not enough battery to reach you and get back to the charger: needs '+Math.ceil(need)+'%, has '+Math.floor(bat.r)+'%.');
   if(charging||dockedNow()){setSt('Charging - needs '+Math.ceil(need)+'% for that trip','warn')}else{startReturn();setSt('Battery too low for that trip - returning to the charger','warn')}return}}parkTh=null;mode='user';didArrive=false;arT=0;trail=[];retreats=0;waitT=0;if(estop){setSt('E-stop engaged - release it first','bad');return}startTrip('summon');active=true;peakA=0;rp=0;minGap=1e9;stuckTime=0;recovery=null;recoveryT=0;stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th;headTarget=T.th;headState='SETTLED';setSt('Request sent…','')};
 $('back').onclick=startReturn;
 $('stop').onclick=()=>{resumeExplore=false;endTrip('stopped');manualDrive.enabled=false;manualDrive.x=manualDrive.y=manualDrive.turn=0;didArrive=false;arT=0;active=false;path=[];recovery=null;stuckTime=0;setSt('Stopped','warn')};

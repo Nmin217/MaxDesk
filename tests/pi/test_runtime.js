@@ -336,7 +336,7 @@ async function test(name, fn) {
   await test('motion guard: a jammed wheel mid-summon stops the desk, alerts and logs the trip', async () => {
     const bridge = await startStubBridge();
     const io = createMockIO();
-    const runtime = createRuntime({ io, bridgeUrl: bridge.url, token: 't', statePushMs: 1e12, pollMs: 1e12 });
+    const runtime = createRuntime({ io, bridgeUrl: bridge.url, token: 't', statePushMs: 1e12, pollMs: 1e12, expectedModules: ['FL'] });
     try {
       await runtime.start();
       bridge.queue({ type: 'summon', x: 4, y: 3, epoch: 1, id: 1 });
@@ -359,6 +359,78 @@ async function test(name, fn) {
       await runtime.pollNow();
       for (let i = 0; i < 60; i++) await runtime.tickOnce(1 / 60);
       assert.ok(io.getWrites().length > writes, 'should drive again after a new summon');
+    } finally { runtime.stop(); await bridge.close(); }
+  });
+
+  const okMods = (over = {}) => ['FL', 'FR', 'RL', 'RR'].map(name => ({ name, present: true, encoderOk: true, angleDeg: 0, busVolts: 12.4,
+    faults: [], driveCmdMps: 0, driveMps: 0, driveAmps: 0, steerErrDeg: 0, steerAmps: 0, ...(over[name] || {}) }));
+
+  await test('hardware check: a module missing at start-up blocks every summon and says which', async () => {
+    const bridge = await startStubBridge();
+    const io = createMockIO();
+    io.setModules(okMods().filter(m => m.name !== 'RR'));
+    const runtime = createRuntime({ io, bridgeUrl: bridge.url, token: 't', statePushMs: 1e12, pollMs: 1e12 });
+    try {
+      await runtime.start();
+      bridge.queue({ type: 'summon', x: 4, y: 3, epoch: 1, id: 1 });
+      await runtime.pollNow();
+      for (let i = 0; i < 120; i++) await runtime.tickOnce(1 / 60);
+      const ex = runtime.sim.getExtras();
+      assert.equal(io.getWrites().length, 0, 'no wheel commands');
+      assert.equal(runtime.sim.getState().active, false, 'summon refused');
+      assert.equal(ex.hardware.ok, false);
+      assert.match(ex.hardware.problem, /RR module not found/);
+      assert.match(runtime.sim.getStatusText(), /Hardware problem/);
+    } finally { runtime.stop(); await bridge.close(); }
+  });
+
+  await test('hardware check: an encoder that stops reading mid-trip ends the trip; fixed + 2 s = drives again', async () => {
+    const bridge = await startStubBridge();
+    const io = createMockIO();
+    io.setModules(okMods());
+    const runtime = createRuntime({ io, bridgeUrl: bridge.url, token: 't', statePushMs: 1e12, pollMs: 1e12 });
+    try {
+      await runtime.start();
+      bridge.queue({ type: 'summon', x: 4, y: 3, epoch: 1, id: 1 });
+      await runtime.pollNow();
+      for (let i = 0; i < 90; i++) await runtime.tickOnce(1 / 60);
+      assert.ok(runtime.sim.getState().active && io.getWrites().length > 0, 'trip under way');
+      io.setModules(okMods({ FR: { encoderOk: false, angleDeg: NaN } }));
+      for (let i = 0; i < 40; i++) await runtime.tickOnce(1 / 60);
+      const ex = runtime.sim.getExtras();
+      assert.equal(runtime.sim.getState().active, false, 'trip ended');
+      assert.equal(ex.trips[0].outcome, 'hardware');
+      assert.match(ex.alert_text, /FR steering encoder not reading/);
+      const writes = io.getWrites().length;
+      for (let i = 0; i < 60; i++) await runtime.tickOnce(1 / 60);
+      assert.equal(io.getWrites().length, writes, 'no wheel commands while the fault lasts');
+      assert.ok(io.isStopped());
+
+      io.setModules(okMods());                                   // cable pushed back in
+      for (let i = 0; i < 60; i++) await runtime.tickOnce(1 / 60);
+      assert.ok(runtime.hardware.blocked, 'still blocked 1 s after the fix');
+      for (let i = 0; i < 120; i++) await runtime.tickOnce(1 / 60);
+      assert.equal(runtime.hardware.blocked, false, 'clear after 2 s of normal readings');
+      assert.equal(runtime.sim.getState().active, false, 'never resumes a trip by itself');
+      bridge.queue({ type: 'summon', x: 4, y: 3, epoch: 1, id: 2 });
+      await runtime.pollNow();
+      for (let i = 0; i < 60; i++) await runtime.tickOnce(1 / 60);
+      assert.ok(io.getWrites().length > writes, 'a new summon drives');
+    } finally { runtime.stop(); await bridge.close(); }
+  });
+
+  await test('hardware check: module readings that throw block motion (fail closed)', async () => {
+    const bridge = await startStubBridge();
+    const io = createMockIO();
+    io.readModules = () => { throw new Error('CAN bus down'); };
+    const runtime = createRuntime({ io, bridgeUrl: bridge.url, token: 't', statePushMs: 1e12, pollMs: 1e12 });
+    try {
+      await runtime.start();
+      bridge.queue({ type: 'summon', x: 4, y: 3, epoch: 1, id: 1 });
+      await runtime.pollNow();
+      for (let i = 0; i < 60; i++) await runtime.tickOnce(1 / 60);
+      assert.equal(io.getWrites().length, 0);
+      assert.match(runtime.sim.getExtras().hardware.problem, /No readings from the motor controllers/);
     } finally { runtime.stop(); await bridge.close(); }
   });
 

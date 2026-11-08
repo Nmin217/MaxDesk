@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const http = require('http');
 const { URL } = require('url');
+const { createHardwareMonitor } = require('./hardware_check');
 const { createSlewLimiter, createJamDetector } = require('./motion_guard');
 
 // Fake DOM so the simulator core runs headlessly. Mirrors bridge/bridge_sim.js.
@@ -87,6 +88,7 @@ function loadSim() {
       update: update, reset: reset, startReturn: startReturn, startTour: startTour,
       saveMap: function () { saveMap(); },
       jamStop: function (text) { jamStop(text); },
+      setHardwareFault: function (text) { setHardwareFault(text); },
       getExtras: function () { return extraStateJSON(); },
       setZones: function (z) { return setZonesM(z); },
       getState: function () {
@@ -145,7 +147,8 @@ function createRuntime({
   io, bridgeUrl, token, hz = 60,
   dataDir = process.env.MAXDESK_DATA_DIR || path.join(os.homedir(), '.maxdesk'),   // room map + no-go zones
   nowMs = () => Date.now(),
-  statePushMs = 100, pollMs = 100, staleBridgeMs = 2000   // 100 ms: a Stop reaches the wheels within ~0.1 s plus Wi-Fi
+  statePushMs = 100, pollMs = 100, staleBridgeMs = 2000,
+  expectedModules = (process.env.MAXDESK_MODULES || 'FL,FR,RL,RR').split(',').map(x => x.trim()).filter(Boolean)   // the hardware check expects these   // 100 ms: a Stop reaches the wheels within ~0.1 s plus Wi-Fi
 } = {}) {
   if (!io) throw new Error('io is required');
   if (!bridgeUrl) throw new Error('bridgeUrl is required');
@@ -156,6 +159,8 @@ function createRuntime({
   const sim = loadSim();
   const slew = createSlewLimiter();
   const jam = createJamDetector();
+  const hw = createHardwareMonitor(expectedModules);
+  let hwCheckT = 0, hwState = { blocked: false, text: '' };
   let connected = false;
   let lastStatePush = 0;
   let lastPoll = 0;
@@ -242,13 +247,22 @@ function createRuntime({
         cordLocked = !c || (!!c.plugged && !!c.interlock_on);
         if (c && hwCordPlugged !== !!c.plugged) { hwCordPlugged = !!c.plugged; sim.setCord(hwCordPlugged); }   // on change only, so bridge 'cord' commands still work
       } catch (_) { cordLocked = true; }
+      // Per-module readings, if the IO has them (pi_io.js will; null/mock IO may not). null = this IO
+      // doesn't report modules (no checks); a throw = it should but can't (the hardware check blocks).
+      let mods = null, modsErr = false;
+      if (typeof io.readModules === 'function') { try { mods = io.readModules(); } catch (_) { modsErr = true; } }
+      // Hardware check (hardware_check.js), twice a second: a module missing, an encoder not reading, low
+      // voltage or a controller fault blocks all motion; the sim ends the trip and refuses new ones.
+      hwCheckT -= dt;
+      if ((mods || modsErr) && hwCheckT <= 0) {
+        hwCheckT = 0.5;
+        hwState = hw.step(modsErr ? undefined : mods, 0.5);
+        sim.setHardwareFault(hwState.blocked ? (hwState.text || 'Hardware check failed') : '');
+      }
       sim.update(dt);
       const s = sim.getState();
-      if (estop || !fresh || cordLocked) { io.stopAll(); slew.reset(); return; }
-      // Per-module readings, if the IO has them (pi_io.js will; null/mock IO may not).
-      if (typeof io.readModules === 'function') {
-        let mods = null;
-        try { mods = io.readModules(); } catch (_) {}
+      if (estop || !fresh || cordLocked || hwState.blocked) { io.stopAll(); slew.reset(); return; }
+      if (mods) {
         const j = jam.step(mods, dt);
         if (j) { sim.jamStop(j.text); io.stopAll(); slew.reset(); return; }
       }
@@ -299,6 +313,7 @@ function createRuntime({
     },
     get connected() { return connected; },
     get sim() { return sim; },
+    get hardware() { return { ...hwState }; },
     tickOnce, pollNow, pushStateNow, healthCheck
   };
 }

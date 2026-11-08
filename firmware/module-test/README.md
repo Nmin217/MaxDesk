@@ -6,10 +6,9 @@ it works with any number from one to four. Based on REV's
 [MAXSwerve Java template](https://github.com/REVrobotics/MAXSwerve-Java-Template) (2026 branch),
 with the same configuration and CAN IDs, so the IDs carry over to the full drivetrain.
 
-> **Status:** I couldn't compile this in the environment I wrote it in (the FRC Maven servers
-> were blocked there). Every WPILib call was checked against the WPILib 2026 source and every
-> REVLib call against REV's 2026 template and docs. Run `./gradlew build` once before deploying,
-> and expect at most a small fix.
+> **Status:** builds. GitHub CI (`.github/workflows/ci.yml`) compiles it against WPILib 2026 and
+> REVLib 2026 on every push. The first build passed on 2026-11-08 with no changes. It has not been
+> run on hardware yet, so the bench steps below still apply.
 
 Assumed hardware for each module: NEO drive motor with SPARK MAX, NEO 550 steering motor with
 SPARK MAX, and the REV Through Bore Encoder on the steering SPARK MAX. If you have a NEO Vortex

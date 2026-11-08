@@ -39,6 +39,18 @@ Two checks sit between the planner and `io.writeWheels`:
   While the desk is lost, E-stopped or cord-locked this timer doesn't run, since those have their
   own messages. Test: `tests/sim/scenarios/boxed.js`.
 
+## Hardware check (hardware_check.js)
+
+At start-up and twice a second after that, the runtime checks the module readings from
+`io.readModules()`: every expected module there (`MAXDESK_MODULES`, default `FL,FR,RL,RR`; a
+three-wheel cart sets `FL,FR,RL`), its steering encoder reading, supply voltage at least 10.5 V, and no
+controller faults. Any problem stops the wheels, ends the current trip ("Hardware problem" in
+History), refuses new summons, and shows the first problem in plain words, for example "FR not
+answering on CAN: check its CAN wires and power." It clears after 2 s of normal readings. It never
+restarts a trip by itself. If `readModules()` throws, motion is blocked. If it returns null (an IO
+without module readings), there is no check. Tests: `tests/pi/test_hardware_check.js` and the
+hardware tests in `test_runtime.js`.
+
 ## Position: drift, LiDAR correction and getting lost (prototyped in the simulator)
 
 The simulator's "Sensors & drift" panel models what the real desk will face: wheel odometry and the
