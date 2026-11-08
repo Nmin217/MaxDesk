@@ -214,5 +214,32 @@ test('odometry: resetPose rebases distances and gyro', () => {
   const p = odo.getPose(); near(p.x, 6, 1e-9); near(p.y, -1, 1e-9); near(p.theta, 0, 1e-12);
 });
 
+test('three modules (test cart): inverse then forward kinematics gives back the same motion', () => {
+  const k = S.createKinematics([{ x: 0.2, y: 0.2 }, { x: 0.2, y: -0.2 }, { x: -0.2, y: 0 }]);
+  for (const [vx, vy, w] of [[0.5, 0, 0], [0, -0.3, 0], [0, 0, 1.2], [0.4, 0.2, -0.7]]) {
+    const st = k.toModuleStates(vx, vy, w);
+    assert.equal(st.length, 3);
+    const c = k.toChassisSpeeds(st);
+    near(c.vx, vx, 1e-9); near(c.vy, vy, 1e-9); near(c.omega, w, 1e-9);
+  }
+});
+
+test('odometry without a gyro: heading comes from the wheels (spin in place, then drive)', () => {
+  const k = S.createKinematics([{ x: 0.3, y: 0.25 }, { x: 0.3, y: -0.25 }, { x: -0.3, y: 0.25 }]);
+  const odo = new S.Odometry(k);
+  const dist = [0, 0, 0];
+  // Turn 90 degrees CCW in place in 100 steps: each wheel rolls along its tangent.
+  for (let i = 0; i < 100; i++) {
+    const st = k.toModuleStates(0, 0, (PI / 2) / 100);   // per step: speed = distance this step
+    st.forEach((m, j) => { dist[j] += m.speed; });
+    odo.update(dist, st.map(m => m.angle), null);
+  }
+  nearAngle(odo.getPose().theta, PI / 2, 1e-6, 'heading after the spin');
+  near(odo.getPose().x, 0, 1e-6); near(odo.getPose().y, 0, 1e-6);
+  // Now drive 1 m robot-forward: robot forward is field +y after the turn.
+  for (let i = 0; i < 100; i++) { dist.forEach((d, j) => { dist[j] += 0.01; }); odo.update(dist, [0, 0, 0], undefined); }
+  near(odo.getPose().x, 0, 1e-6); near(odo.getPose().y, 1, 1e-6);
+});
+
 console.log(`${passed} passed, ${failed} failed`);
 if (failed) process.exitCode = 1;

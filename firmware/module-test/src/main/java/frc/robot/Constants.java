@@ -23,10 +23,10 @@ public final class Constants {
       // PLACEHOLDER positions for a three-wheel triangle cart: two at the front, one at the back
       // middle. MEASURE yours (centre of each module from the centre of the cart) and set
       // kCartPositionsMeasured = true. Wrong numbers make the wheels fight each other when it turns.
-      new ModuleId("FL", 11, 10, 0.20, 0.20),
-      new ModuleId("FR", 15, 14, 0.20, -0.20),
-      new ModuleId("RL", 13, 12, -0.20, 0.0)
-      // , new ModuleId("RR", 17, 16, -0.20, -0.20)   // on the four-wheel frame: all four corners
+      new ModuleId("FL", 1, 2, 0.20, 0.20),   // CAN IDs as wired: odd = drive NEO, even = turn NEO 550
+      new ModuleId("FR", 3, 4, 0.20, -0.20),
+      new ModuleId("RL", 5, 6, -0.20, 0.0)
+      // , new ModuleId("RR", 7, 8, -0.20, -0.20)   // on the four-wheel frame: all four corners
   );
 
   /** Set true once the positions above are measured. Until then the Cart modes print a warning. */

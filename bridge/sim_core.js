@@ -190,6 +190,7 @@ function reset(){
   user.x=USER0.x; user.y=USER0.y;
   stuckTime=0; recovery=null; recoveryT=0; stuckWindowT=0;stuckCmdTransT=0;stuckCmdRotT=0;stuckWindowX=T.x;stuckWindowY=T.y;stuckWindowTh=T.th; safetyHolds=0; holdLatch=false; squeeze=false; squeezeUntil=0; safetyHoldUntil=0;
   headTarget=T.th; headState='SETTLED';
+  if(HWIN){people=[];G=T}
   setSt('Idle',''); $('rc').textContent='–'; $('hg').textContent='–'; $('sl').textContent='–'; $('pp').textContent='–';
 }
 
@@ -266,7 +267,34 @@ function driftMode(){const v=$('drift').value;return DRIFT[v]?v:'off'}
 function lidar3D(){return $('lidarType').value==='3d'}
 function lidarH(){const v=+$('lidarH').value;return v>=5&&v<=120?v/100:0.25}   // 2D LiDAR mount height, m
 function locOn(){return !$('locOff').checked}
+// ============ Hardware input (the Pi runtime, robot/pi/runtime.js) ============
+// On the real desk the brain must not simulate the world. setHardwareInput(true) empties the pretend room (no furniture,
+// no people) and from then on: position moves by the wheel odometry the runtime hands over each step (hwOdometry), the
+// LiDAR points are the real scan's rays (hwScan), and the battery is the real reading (hwBattery). The planner, safety
+// supervisor, map and localisation are untouched: they get the same kind of data as in the simulator.
+// Desk frame for all three: metres, +x forward (the monitor's back), +y left, angles counter-clockwise.
+let HWIN=null;
+function setHardwareInput(on){HWIN=on?{odo:[0,0,0],rays:null,at:null,bat:null,scanT:-99}:null;
+  if(on){rects.length=0;circs.length=0;RECTS0.length=0;CIRCS0.length=0;people=[];G=T}}
+function hwOdometry(dx,dy,dth){if(!HWIN||![dx,dy,dth].every(Number.isFinite))return;HWIN.odo[0]+=dx;HWIN.odo[1]+=dy;HWIN.odo[2]+=dth}
+// rays: [[ox,oy,ex,ey,hit], ...]: from the sensor (ox,oy) to the return (ex,ey); hit=false means nothing within range.
+function hwScan(rays){if(!HWIN||!Array.isArray(rays))return;HWIN.rays=rays;HWIN.at={x:T.x,y:T.y,th:T.th};HWIN.scanT=time}
+function hwBattery(b){if(HWIN)HWIN.bat=b&&typeof b==='object'?b:null}
+// Desk frame (metres) -> map (px) at pose P. The desk's forward is screen -y at th=0, th is clockwise on the y-down map.
+function deskToWorld(p,q,P){const c=Math.cos(P.th),s=Math.sin(P.th);return[P.x+(p*s-q*c)/M_PER_PX,P.y+(-p*c-q*s)/M_PER_PX]}
+// The real scan, placed where the desk was when it arrived, becomes this step's hits and free-space rays.
+function hwScanToHits(){
+  hits=[];peopleInPathCount=0;clrRays=[];const r=HWIN.rays,P=HWIN.at;if(!r||!P)return;const R=260;
+  for(const ray of r){if(!Array.isArray(ray)||ray.length<5)continue;const [ox,oy,ex,ey,hit]=ray;
+    const [wx,wy]=deskToWorld(ox,oy,P),[hx,hy]=deskToWorld(ex,ey,P),dx=hx-wx,dy=hy-wy,d=Math.hypot(dx,dy);if(!(d>0))continue;
+    const c=dx/d,sn=dy/d;
+    if(!hit||d>=R){clrRays.push([wx,wy,c,sn,3,Math.min(d,R)]);continue}
+    clrRays.push([wx,wy,c,sn,3,d-12]);
+    hits.push({a:Math.atan2(sn,c),d,hit:true,x:hx,y:hy,ox:wx,oy:wy,dyn:false,settledPerson:false,type:'obstacle'});
+    const gx=hx/CS|0,gy=hy/CS|0;if(gx>=0&&gx<GW&&gy>=0&&gy<GH){const k=gy*GW+gx;if(time-last[k]>.4)since[k]=time;last[k]=time}}
+}
 function syncTruth(){
+  if(HWIN){G=T;return}   // real desk: there is no separate "true" desk in here, only what the sensors say
   if(driftMode()==='off'){if(G!==T){T.x=G.x;T.y=G.y;T.th=G.th;G=T}return}
   if(G===T){G={x:T.x,y:T.y,th:T.th};driftSign=[0,1,2,3].map(()=>Math.random()<.5?-1:1)}
 }
@@ -354,7 +382,7 @@ function globalSearch(pts){
   return {...b,inl:b.sc[1]/N,unique:!rival||rival.rank<.8*b.rank};
 }
 function locStep(dt){
-  if(G===T||!locOn()){locState='off';locLost=false;locSuspect=false;return false}
+  if((G===T&&!HWIN)||!locOn()){locState='off';locLost=false;locSuspect=false;return false}
   if(jolt){jolt=false;locSuspect=true;locT=.2}   // felt a shove: stop mapping and check the position right now
   if((locT+=dt)<.2)return false;locT=0;
   if(time-lfAt>1)buildField();
@@ -412,6 +440,7 @@ function locStep(dt){
 function posErr(){return G&&G!==T?{d:Math.hypot(G.x-T.x,G.y-T.y),th:Math.abs(ang(G.th,T.th))}:{d:0,th:0}}
 
 function scan(){
+  if(HWIN){hwScanToHits();return}
   hits=[]; peopleInPathCount=0; clrRays=[];
   const R=260;
   // Rays leave the REAL desk (G) and hit the real room; the points are then placed relative to where the desk
@@ -557,7 +586,7 @@ function endTrip(outcome){if(!trip)return;
 // Extra state for the phone app; every state producer (simulator page, bridge, Pi runtime) adds this.
 function extraStateJSON(){const need=batteryNeedHome(T.x,T.y),tripNeed=batteryNeedTrip(user.x,user.y);
   return {zones:zonesJSON(),battery_plan:{need_home_pct:+need.toFixed(1),need_trip_pct:+tripNeed.toFixed(1),reserve_pct:BAT_RESERVE,can_summon:bat.r>=tripNeed+BAT_RESERVE},
-    alert_text:alertT>0?alertText:'',hardware:{ok:!hwFault,problem:hwFault},localization:{drift:driftMode(),lidar:lidar3D()?'3d':'2d',lidar_height_m:lidar3D()?null:lidarH(),state:G===T?'exact':locState,lost:locLost,sim_error_m:+(posErr().d*M_PER_PX).toFixed(3)},trips:trips.slice(0,10),trip:trip?{id:trip.id,kind:trip.kind,distance_m:+(trip.dist*M_PER_PX).toFixed(2),duration_s:+(time-trip.start).toFixed(1)}:null}}
+    alert_text:alertT>0?alertText:'',hardware:{ok:!hwFault,problem:hwFault},localization:{drift:driftMode(),lidar:lidar3D()?'3d':'2d',lidar_height_m:lidar3D()?null:lidarH(),state:(G===T&&!HWIN)?'exact':locState,lost:locLost,sim_error_m:HWIN?null:+(posErr().d*M_PER_PX).toFixed(3),source:HWIN?'hardware':'simulator'},trips:trips.slice(0,10),trip:trip?{id:trip.id,kind:trip.kind,distance_m:+(trip.dist*M_PER_PX).toFixed(2),duration_s:+(time-trip.start).toFixed(1)}:null}}
 
 function buildOccupancy(){
   const occ=new Uint8Array(GW*GH);
@@ -834,7 +863,9 @@ function batStep(dt){
   if(cordIn&&Math.hypot(G.x-HOME.x,G.y-HOME.y)>45){cordIn=false;breakaways++;setSt('Cord pulled out: the breakaway connector released safely','warn')}
   if(charging&&!wasCharging&&!active&&!readyPending&&$('st').textContent.startsWith('Ready - back'))setSt('Ready - docked and charging, desk at '+Math.round(deskH*100)+' cm','ok');
   wasCharging=charging;
-  if(charging){bat.r+=.9*dt;bat.a+=.6*dt}
+  if(HWIN&&HWIN.bat){const b=HWIN.bat;   // real readings; anything not reported keeps the estimate below
+    if(Number.isFinite(b.robot_pct))bat.r=b.robot_pct;if(Number.isFinite(b.ups_pct))bat.a=b.ups_pct;if(typeof b.charging==='boolean')charging=b.charging}
+  else if(charging){bat.r+=.9*dt;bat.a+=.6*dt}
   else{bat.r-=(.03+.35*sp/VMAX+.08*Math.abs(T.w))*dt;bat.a-=(.04+(lifting?.5:0))*dt}
   bat.r=Math.max(0,Math.min(100,bat.r));bat.a=Math.max(0,Math.min(100,bat.a));
   if(!active&&!estop&&!charging&&mode==='user'&&parkTh===null&&(bat.r<25||bat.a<20||bat.r<batteryNeedHome(T.x,T.y)+BAT_RESERVE+3)){
@@ -921,7 +952,7 @@ for(const p of people){
   p.lastX = p.x; p.lastY = p.y;
 }
 
-scan();if(locStep(dt))scan();mapUpdate();   // a position correction moves T: re-place this frame's points before mapping
+scan();{const b={x:T.x,y:T.y,th:T.th};if(locStep(dt)){if(HWIN&&HWIN.at){HWIN.at.x+=T.x-b.x;HWIN.at.y+=T.y-b.y;HWIN.at.th+=T.th-b.th}scan()}}mapUpdate();   // a position correction moves T: re-place this frame's points before mapping
 rp-=dt; if(active&&rp<=0){const t0=performance.now();plan();const pd=(performance.now()-t0)/1000;rp=path.length?Math.min(.5,Math.max(.2,10*pd)):.7}
 
 let cx=0,cy=0,w=0;
@@ -1254,10 +1285,15 @@ if(dd>a&&dd>1e-6){T.vx+=ddx/dd*a;T.vy+=ddy/dd*a}else{T.vx=cx;T.vy=cy}
  const dw=(w-T.w)*Math.min(1,dt*8),slowing=Math.abs(T.w+dw)<Math.abs(T.w)&&(T.w+dw)*T.w>=0,cap=(slowing?ALPHA_STOP:ALPHA_UP)*dt;
  T.w+=Math.max(-cap,Math.min(cap,dw))}
 const bx0=T.x,by0=T.y,bth0=T.th;
+if(HWIN){   // real desk: move by what the wheels measured (the command above is only what was ASKED for)
+ const o=HWIN.odo,c=Math.cos(T.th),sn=Math.sin(T.th);HWIN.odo=[0,0,0];
+ T.x=Math.max(0,Math.min(W,T.x+(o[0]*sn-o[1]*c)/M_PER_PX));T.y=Math.max(0,Math.min(H,T.y+(-o[0]*c-o[1]*sn)/M_PER_PX));T.th-=o[2];
+}else{
 {const ex=HW*Math.abs(Math.cos(T.th))+HH*Math.abs(Math.sin(T.th)),ey=HW*Math.abs(Math.sin(T.th))+HH*Math.abs(Math.cos(T.th));
  T.x=Math.max(ex,Math.min(W-ex,T.x+T.vx*dt));
  T.y=Math.max(ey,Math.min(H-ey,T.y+T.vy*dt));}
 T.th+=T.w*dt;
+}
 if(G!==T)driftStep(T.x-bx0,T.y-by0,T.th-bth0,bth0,dt);
 {const ax=Math.hypot(T.vx-(T._px||0),T.vy-(T._py||0))/Math.max(dt,1e-3)/50;T._px=T.vx;T._py=T.vy;if(ax>peakA&&ax<20)peakA=ax}
 

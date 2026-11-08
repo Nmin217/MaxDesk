@@ -51,6 +51,76 @@ restarts a trip by itself. If `readModules()` throws, motion is blocked. If it r
 without module readings), there is no check. Tests: `tests/pi/test_hardware_check.js` and the
 hardware tests in `test_runtime.js`.
 
+## Real hardware: pi_io.js and the brain's hardware input
+
+**`pi_io.js`** drives the MAXSwerve modules. It turns the brain's field-frame command into each module's
+steering angle and wheel speed, and sends them to the right CAN IDs in motor units:
+- rpm through the 5.08:1 gearing and the 3 in wheel;
+- steering as absolute-encoder rotations.
+
+It uses the brain's LiDAR-corrected heading to convert from the field frame. A wheel more than 90° from its
+target turns the short way and runs backwards, and a wheel that hasn't finished turning gets less speed
+(cosine scaling).
+
+It reads back each module's angle, speed, current, temperature, voltage and faults. From those it gives
+odometry (from the drive encoders' positions; heading from a gyro if one is configured, else from the
+wheels), the hardware check's readings, the jam and wrong-direction checks, and the battery percentage.
+If the E-stop or cord input isn't wired in, it reports them as unsafe.
+
+CAN IDs default to the cart's wiring: odd = drive NEO, even = turn NEO 550. FL is 1/2, FR 3/4, RL 5/6 and
+RR 7/8. Zero each module's absolute encoder with the wheel pointing at the desk's front.
+
+**The SPARK bus.** `pi_io.js` reaches the controllers only through five calls: `configure`, `setVelocity`,
+`setPosition`, `heartbeat` and `status`. The Pi-to-CAN route (a `sparkcan` helper on firmware 24.x, our own
+SocketCAN driver, or Python; see `docs/OPTION-B-PI-CAN.md`) only has to provide those five calls.
+`fake_spark_bus.js` is the test version:
+- drive motors lag;
+- steering takes the short way round;
+- the controllers stop if the heartbeat stops for 100 ms;
+- faults can be switched on: unplugged, encoder unplugged, jammed, wired backwards, low voltage.
+
+**Hardware input.** When the IO is real (`isHardware`), the runtime switches the brain to hardware input. Its
+pretend room is emptied (no furniture, no people), and from then on:
+- **position** moves by the measured odometry (the change each tick, so LiDAR corrections stick);
+- **LiDAR points** are the real scan, minus returns that land on the desk itself;
+- **the battery** is the real reading.
+
+The planner, supervisor, map and localisation are unchanged. A scan older than 0.3 s holds the wheels;
+older than 2 s ends the trip with "LiDAR not sending data".
+
+**Wrong direction.** A wheel turning against its command for 0.3 s stops the desk with "FL wheel turning the
+wrong way: check the motor's phase wires or its inversion setting" (`motion_guard.js`).
+
+**End-to-end test without hardware** (`tests/pi/test_hw_loop.js`): runtime → brain in hardware mode →
+`pi_io` → fake SPARKs → a fake room where the true desk moves by what the motors actually did (2% more
+distance than the encoders count, and a heading creep of 0.57°/m) → two fake LiDARs → back into the brain.
+The brain only ever sees encoder counts and LiDAR rays. The test runs on a fake clock with fixed random
+seeds, so every run is identical. It also covers an unplugged LiDAR or SPARK stopping the desk with a plain
+message.
+
+### How accurate is it
+
+Worst position error at any moment of a trip, over several random seeds:
+
+| Situation | No gyro | With a gyro |
+|---|---|---|
+| Summon in a learned room (everyday use) | 4–32 cm | 4–10 cm |
+| First trip into an unknown room | 35–37 cm | 17 cm |
+| First trip with heavy slip (5% + 1.7°/m creep) | 100–125 cm | 39–41 cm |
+
+Every run arrived, made no contact, and ended within about 7 cm of its true position. The big numbers happen
+mid-trip, before walls ahead pull the estimate back. Safety doesn't depend on them: the supervisor checks live
+LiDAR points relative to the desk.
+
+- **Fit a gyro.** Without one, the heading creeps between LiDAR corrections. A BNO085 IMU board (about $25,
+  on the Pi's pins) cuts the error by two to three times. Pass it to `pi_io` as `imu: { yaw() }`, in radians,
+  counter-clockwise positive.
+- **Learn the room before first use.** A learned room is where accuracy is best.
+- **First-trip accuracy is limited by design.** The LiDAR correction only matches against map marks at least
+  8 s old, which is what keeps bump recovery safe. Shortening it to 2 s, scoring returns on the far walls,
+  or correcting heading more eagerly each helped here but broke the bump and bad-floor tests (one made a 5 m
+  wrong jump), so none was kept. Improving it means retuning the localisation as its own job.
+
 ## Position: drift, LiDAR correction and getting lost (prototyped in the simulator)
 
 The simulator's "Sensors & drift" panel models what the real desk will face: wheel odometry and the

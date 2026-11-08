@@ -4,7 +4,8 @@ A WPILib 2026 / REVLib 2026 robot program that checks MAXSwerve modules before t
 frame. It's set up for three modules (FL, FR, RL); the modules are listed in `Constants.java`, so
 it works with any number from one to four. Based on REV's
 [MAXSwerve Java template](https://github.com/REVrobotics/MAXSwerve-Java-Template) (2026 branch),
-with the same configuration and CAN IDs, so the IDs carry over to the full drivetrain.
+with the same configuration. CAN IDs are as wired on the cart: odd = drive NEO, even = turn NEO 550
+(FL 1/2, FR 3/4, RL 5/6, RR 7/8 later). If yours differ, change `kModules` in `Constants.java`.
 
 > **Status:** builds. GitHub CI (`.github/workflows/ci.yml`) compiles it against WPILib 2026 and
 > REVLib 2026 on every push. The first build passed on 2026-11-08 with no changes. It has not been
@@ -45,7 +46,7 @@ knows which way the wheel points even right after power-on.
    └───┬───────┬─────┴───┬───────┬─────┴───┬───────┬─────┴────────┬────────┘
        │12 AWG │         │       │         │       │              │ 18 AWG
     FL-turn FL-drive  FR-turn FR-drive  RL-turn RL-drive      roboRIO 2 (power in)
-     ID 10   ID 11     ID 14   ID 15     ID 12   ID 13
+     ID 2    ID 1      ID 4    ID 3      ID 6    ID 5
 
  CAN (yellow = CAN-H, green = CAN-L), ONE daisy chain through all six SPARKs, no branches:
 
@@ -115,10 +116,10 @@ be unique).
 
    | Module | Turn SPARK | Drive SPARK |
    |---|---|---|
-   | FL | 10 | 11 |
-   | FR | 14 | 15 |
-   | RL | 12 | 13 |
-   | RR (later) | 16 | 17 |
+   | FL | 2 | 1 |
+   | FR | 4 | 3 |
+   | RL | 6 | 5 |
+   | RR (later) | 8 | 7 |
 
 3. **Zero the steering (turn SPARKs only)**: open *Absolute Encoder*, set **Direction = Inverted**
    *first*, then fit the MAXSwerve calibration tool on the module so the wheel is locked straight,

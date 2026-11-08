@@ -38,6 +38,10 @@ if (!global.document) {
 }
 
 const PX = 0.02; // 1 px = 0.02 m, same as simulator and bridge
+// The desk's own outline in its frame (m): LiDAR returns inside it are its own legs and frame, not obstacles.
+const DESK_HALF_FWD = 0.36 + 0.03, DESK_HALF_LEFT = 0.56 + 0.03;
+const LIDAR_HOLD_MS = 300, LIDAR_FAULT_MS = 2000;   // older scan: hold the wheels / call it a hardware fault
+const wrapPi = a => a - 2 * Math.PI * Math.floor((a + Math.PI) / (2 * Math.PI));
 // Hard ceiling on anything sent to writeWheels, whatever the planner asks for (sim VMAX is ~0.8 m/s).
 const MAX_V = 1.0;   // m/s
 const MAX_W = 2.0;   // rad/s
@@ -89,6 +93,10 @@ function loadSim() {
       saveMap: function () { saveMap(); },
       jamStop: function (text) { jamStop(text); },
       setHardwareFault: function (text) { setHardwareFault(text); },
+      setHardwareInput: function (on) { setHardwareInput(on); },
+      hwOdometry: function (dx, dy, dth) { hwOdometry(dx, dy, dth); },
+      hwScan: function (rays) { hwScan(rays); },
+      hwBattery: function (b) { hwBattery(b); },
       getExtras: function () { return extraStateJSON(); },
       setZones: function (z) { return setZonesM(z); },
       getState: function () {
@@ -148,6 +156,7 @@ function createRuntime({
   dataDir = process.env.MAXDESK_DATA_DIR || path.join(os.homedir(), '.maxdesk'),   // room map + no-go zones
   nowMs = () => Date.now(),
   statePushMs = 100, pollMs = 100, staleBridgeMs = 2000,
+  autoLoop = true,   // false: the caller runs tickOnce/pollNow itself (tests that step a fake world in lockstep)
   expectedModules = (process.env.MAXDESK_MODULES || 'FL,FR,RL,RR').split(',').map(x => x.trim()).filter(Boolean)   // the hardware check expects these   // 100 ms: a Stop reaches the wheels within ~0.1 s plus Wi-Fi
 } = {}) {
   if (!io) throw new Error('io is required');
@@ -161,6 +170,35 @@ function createRuntime({
   const jam = createJamDetector();
   const hw = createHardwareMonitor(expectedModules);
   let hwCheckT = 0, hwState = { blocked: false, text: '' };
+  // Hardware input: an IO that drives real motors (pi_io.js) also feeds the brain real sensors instead of its pretend room.
+  const hwMode = !!io.isHardware;
+  if (hwMode) sim.setHardwareInput(true);
+  let lastPose = null, lastScanSeq, lidarAgeMs = Infinity, batT = 0;
+  function feedSensors(dt) {
+    // Odometry: hand over only the change since last tick, in the desk's frame. The brain's position is LiDAR-corrected
+    // and the wheels' is not, so passing the wheels' absolute position would undo every correction.
+    let p = null;
+    try { p = io.readPose(); } catch (_) {}
+    if (p && [p.x, p.y, p.theta].every(Number.isFinite)) {
+      if (lastPose) {
+        const dxF = p.x - lastPose.x, dyF = p.y - lastPose.y, h = lastPose.theta + Math.PI / 2;   // heading of desk-forward
+        const c = Math.cos(h), sn = Math.sin(h);
+        sim.hwOdometry(c * dxF + sn * dyF, -sn * dxF + c * dyF, wrapPi(p.theta - lastPose.theta));
+      }
+      lastPose = p;
+    }
+    // LiDAR: a new scan goes to the brain without the returns that land on the desk itself.
+    let l = null;
+    try { l = io.readLidar(); } catch (_) {}
+    if (l && Array.isArray(l.rays) && Number.isFinite(l.ageMs)) {
+      lidarAgeMs = l.ageMs;
+      if (l.seq !== lastScanSeq) {
+        lastScanSeq = l.seq;
+        sim.hwScan(l.rays.filter(r => !(r[4] && Math.abs(r[2]) <= DESK_HALF_FWD && Math.abs(r[3]) <= DESK_HALF_LEFT)));
+      }
+    } else lidarAgeMs = Infinity;
+    if ((batT -= dt) <= 0) { batT = 1; try { sim.hwBattery(io.readBattery()); } catch (_) {} }
+  }
   let connected = false;
   let lastStatePush = 0;
   let lastPoll = 0;
@@ -253,15 +291,19 @@ function createRuntime({
       if (typeof io.readModules === 'function') { try { mods = io.readModules(); } catch (_) { modsErr = true; } }
       // Hardware check (hardware_check.js), twice a second: a module missing, an encoder not reading, low
       // voltage or a controller fault blocks all motion; the sim ends the trip and refuses new ones.
+      if (hwMode) feedSensors(dt);
       hwCheckT -= dt;
-      if ((mods || modsErr) && hwCheckT <= 0) {
+      if ((mods || modsErr || hwMode) && hwCheckT <= 0) {
         hwCheckT = 0.5;
-        hwState = hw.step(modsErr ? undefined : mods, 0.5);
-        sim.setHardwareFault(hwState.blocked ? (hwState.text || 'Hardware check failed') : '');
+        if (mods || modsErr) hwState = hw.step(modsErr ? undefined : mods, 0.5);
+        const lidarDead = hwMode && lidarAgeMs > LIDAR_FAULT_MS;
+        sim.setHardwareFault(hwState.blocked ? (hwState.text || 'Hardware check failed')
+          : lidarDead ? 'LiDAR not sending data: check its cable and power.' : '');
       }
       sim.update(dt);
       const s = sim.getState();
-      if (estop || !fresh || cordLocked || hwState.blocked) { io.stopAll(); slew.reset(); return; }
+      const lidarStale = hwMode && lidarAgeMs > LIDAR_HOLD_MS;   // never drive on an old picture of the room
+      if (estop || !fresh || cordLocked || hwState.blocked || lidarStale) { io.stopAll(); slew.reset(); return; }
       if (mods) {
         const j = jam.step(mods, dt);
         if (j) { sim.jamStop(j.text); io.stopAll(); slew.reset(); return; }
@@ -270,7 +312,7 @@ function createRuntime({
       if (moving || s.active) {
         const v = toField(s.T.vx, s.T.vy, s.T.w);
         const o = slew.step(v.vx, v.vy, v.omega, dt);
-        io.writeWheels(o.vx, o.vy, o.omega);
+        io.writeWheels(o.vx, o.vy, o.omega, -s.T.th);   // + the heading the brain believes (IO convention: theta = -sim th)
       } else { io.stopAll(); slew.reset(); }
     } catch (_) {
       slew.reset();
@@ -302,7 +344,7 @@ function createRuntime({
       connected = true;
       lastBridgeOk = nowMs();
       running = true;
-      if (!timer) timer = setInterval(() => { loop().catch(() => {}); }, Math.round(1000 / hz));
+      if (!timer && autoLoop) timer = setInterval(() => { loop().catch(() => {}); }, Math.round(1000 / hz));
       return true;
     },
     stop() {
@@ -313,7 +355,7 @@ function createRuntime({
     },
     get connected() { return connected; },
     get sim() { return sim; },
-    get hardware() { return { ...hwState }; },
+    get hardware() { return { ...hwState, lidarAgeMs, hwMode }; },
     tickOnce, pollNow, pushStateNow, healthCheck
   };
 }

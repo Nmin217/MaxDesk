@@ -50,12 +50,15 @@ const JAM = {
   driveAmps: 20,         // ...while drawing more than this (the robot limit is 40 A)
   steerErrDeg: 30,       // steering this far from its target
   steerAmps: 12,         // ...while the NEO 550 draws more than this (limit 20 A)
-  seconds: 0.5           // for this long
+  seconds: 0.5,          // for this long
+  reverseMps: 0.05,      // a wheel told to go one way (>= driveCmdMps) but turning the other way faster than this...
+  reverseSeconds: 0.3    // ...for this long is wired or configured backwards
 };
 
 /**
  * modules: [{ name, driveCmdMps, driveMps, driveAmps, steerErrDeg, steerAmps }] from io.readModules().
- * Returns null, or { name, kind: 'drive' | 'steer', text } once a module has been jammed for JAM.seconds.
+ * Returns null, or { name, kind: 'drive' | 'steer' | 'reverse', text } once a module has been jammed for JAM.seconds,
+ * or turning against its command for JAM.reverseSeconds. driveCmdMps and driveMps are signed for the reverse check.
  */
 function createJamDetector(limits = {}) {
   const L = { ...JAM, ...limits };
@@ -67,12 +70,14 @@ function createJamDetector(limits = {}) {
         const driveJam = cmd >= L.driveCmdMps && Math.abs(+m.driveMps || 0) < cmd * L.driveRatio
           && +m.driveAmps > L.driveAmps;
         const steerJam = Math.abs(+m.steerErrDeg || 0) > L.steerErrDeg && +m.steerAmps > L.steerAmps;
-        for (const [kind, jammed] of [['drive', driveJam], ['steer', steerJam]]) {
+        const reverse = cmd >= L.driveCmdMps && (+m.driveCmdMps || 0) * (+m.driveMps || 0) < 0 && Math.abs(+m.driveMps || 0) > L.reverseMps;
+        for (const [kind, jammed, limit] of [['drive', driveJam, L.seconds], ['steer', steerJam, L.seconds], ['reverse', reverse, L.reverseSeconds]]) {
           const key = m.name + ':' + kind;
           const t = jammed ? (since.get(key) || 0) + dt : 0;
           since.set(key, t);
-          if (t >= L.seconds) {
+          if (t >= limit) {
             since.clear();
+            if (kind === 'reverse') return { name: m.name, kind, text: `${m.name} wheel turning the wrong way: check the motor's phase wires or its inversion setting. Stopped.` };
             const what = kind === 'drive' ? 'wheel can\'t turn' : 'steering can\'t turn';
             return { name: m.name, kind, text: `${m.name} ${what}: jammed or pushing against something. Stopped. Check the module.` };
           }

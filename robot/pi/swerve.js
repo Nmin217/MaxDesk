@@ -97,9 +97,11 @@ function optimize(state, currentAngle) {
 function cosineScale(speed, angleError) { return speed * Math.max(0, Math.cos(wrapAngle(angleError))); }
 
 function createKinematics(modules = rectModules()) {
-  if (!Array.isArray(modules) || modules.length !== 4) throw new Error('need 4 module positions');
+  // Any number of modules from 2 up (a three-wheel test cart, the four-wheel desk). Two or more modules are
+  // enough to solve the chassis motion (x, y, turn) from the wheels, as long as they are not all in one spot.
+  if (!Array.isArray(modules) || modules.length < 2) throw new Error('need at least 2 module positions');
   const m = modules.map(p => ({ x: +p.x, y: +p.y }));
-  // A (8x3): rows [1 0 -y_i] and [0 1 x_i]. pinv = (A^T A)^-1 A^T, computed once.
+  // A (2N x 3): rows [1 0 -y_i] and [0 1 x_i]. pinv = (A^T A)^-1 A^T, computed once.
   const A = [];
   for (const p of m) { A.push([1, 0, -p.y]); A.push([0, 1, p.x]); }
   const N = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
@@ -119,10 +121,10 @@ function createKinematics(modules = rectModules()) {
     return maxSpeed === undefined ? states : desaturate(states, maxSpeed);
   }
 
-  // Forward kinematics, least squares over all 8 wheel velocity components.
+  // Forward kinematics, least squares over all 2N wheel velocity components.
   function twistFromVectors(comp) {
     const out = [0, 0, 0];
-    for (let i = 0; i < 3; i++) for (let k = 0; k < 8; k++) out[i] += pinv[i][k] * comp[k];
+    for (let i = 0; i < 3; i++) for (let k = 0; k < comp.length; k++) out[i] += pinv[i][k] * comp[k];
     return out;
   }
   function toChassisSpeeds(states) {
@@ -155,7 +157,7 @@ function inv3(a) {
  * moduleDistances: cumulative drive positions (m). moduleAngles: robot-frame angles (offset removed).
  */
 class Odometry {
-  constructor(kinematics = createKinematics(), { gyroYaw = 0, distances = [0, 0, 0, 0], pose = { x: 0, y: 0, theta: 0 } } = {}) {
+  constructor(kinematics = createKinematics(), { gyroYaw = 0, distances = kinematics.modules.map(() => 0), pose = { x: 0, y: 0, theta: 0 } } = {}) {
     this.kin = kinematics;
     this.lastDist = distances.slice();
     this.lastGyro = gyroYaw;
@@ -172,14 +174,18 @@ class Odometry {
     return this.getPose();
   }
 
+  // gyroYaw: null/undefined when there is no gyro. The heading change then comes from the wheels (the third
+  // value of the same least-squares solve). That drifts faster than a gyro, which the LiDAR correction fixes.
   update(moduleDistances, moduleAngles, gyroYaw) {
     const comp = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < moduleDistances.length; i++) {
       const d = moduleDistances[i] - this.lastDist[i];
       comp.push(d * Math.cos(moduleAngles[i])); comp.push(d * Math.sin(moduleAngles[i]));
     }
-    const [dx, dy] = this.kin.twistFromVectors(comp);
-    const theta = wrapAngle(gyroYaw + this.gyroOffset);
+    const [dx, dy, wheelDth] = this.kin.twistFromVectors(comp);
+    const hasGyro = Number.isFinite(gyroYaw);
+    const theta = hasGyro ? wrapAngle(gyroYaw + this.gyroOffset) : wrapAngle(this.pose.theta + wheelDth);
+    if (!hasGyro) gyroYaw = this.lastGyro;
     const dth = wrapAngle(theta - this.pose.theta);
     let s, c;   // sin(dth)/dth and (1 - cos(dth))/dth, series near 0
     if (Math.abs(dth) < 1e-9) { s = 1 - dth * dth / 6; c = dth / 2; }

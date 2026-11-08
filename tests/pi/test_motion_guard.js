@@ -78,5 +78,21 @@ test('jam: steering stuck far from its target with high current trips; normal sl
   assert.ok(hit && hit.kind === 'steer', JSON.stringify(hit));
 });
 
+test('jam: a wheel turning against its command for 0.3 s is reported as wired backwards', () => {
+  const j = createJamDetector();
+  const m = { name: 'RL', driveCmdMps: 0.4, driveMps: -0.35, driveAmps: 5, steerErrDeg: 0, steerAmps: 1 };
+  for (let i = 0; i < 17; i++) assert.equal(j.step([m], dt), null);
+  const r = j.step([m], dt);
+  assert.equal(r.kind, 'reverse'); assert.match(r.text, /RL wheel turning the wrong way/);
+});
+
+test('jam: briefly reversing (the 180 degree flip, a direction change) is not a fault', () => {
+  const j = createJamDetector();
+  const flip = { name: 'FL', driveCmdMps: -0.4, driveMps: 0.3, driveAmps: 8, steerErrDeg: 0, steerAmps: 1 };
+  for (let i = 0; i < 10; i++) assert.equal(j.step([flip], dt), null);   // 0.17 s of the wheel slowing to turn round
+  const ok = { ...flip, driveMps: -0.2 };
+  for (let i = 0; i < 60; i++) assert.equal(j.step([ok], dt), null);
+});
+
 console.log(`${passed} passed, ${failed} failed`);
 if (failed) process.exitCode = 1;
