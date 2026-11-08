@@ -120,7 +120,9 @@ const server=require('http').createServer((req,res)=>{
     else return send(res,404,{error:'not found'});
     const browserLive=!!browserState&&(Date.now()-browserStateAt<3000);
     const browserEverSeen=!!browserState;
-    if(browserEverSeen&&!browserLive)return send(res,503,{accepted:false,status:'Simulator page is not connected. Open /simulator and keep it running.'});
+    if(browserEverSeen&&!browserLive)return send(res,503,{accepted:false,status:browserState&&browserState.localization&&browserState.localization.source==='hardware'
+      ?'The desk is not responding (no update for 3 s). Check it is switched on and on Wi-Fi.'
+      :'Simulator page is not connected. Open /simulator and keep it running.'});
     // Enforce the cord interlock before acknowledging or queueing a movement request.
     // Stop and cord plug/unplug commands remain available so the user can stop or clear the interlock.
     const movementTypes=new Set(['summon','drive','return','learn']);

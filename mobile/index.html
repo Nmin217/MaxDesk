@@ -170,6 +170,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 
 /* Alert banner */
 .alert-banner{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:12px;border:1px solid var(--warn);background:rgba(255,162,76,.1);color:var(--ink);font-size:13px}
+.alert-banner.problem{border-color:var(--stop);background:rgba(255,92,92,.1)}.alert-banner.problem b{color:var(--stop)}.alert-banner small{display:block;color:var(--mute);margin-top:3px}
 .alert-banner b{color:var(--warn);font:700 10px/1.6 var(--display);font-stretch:118%;letter-spacing:.14em;text-transform:uppercase;flex:0 0 auto}
 /* No-go zones */
 .zones{margin-top:12px;display:grid;gap:8px}
@@ -219,6 +220,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 <body><main>
 <header class="top"><div class="wordmark"><svg class="badge" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fd4b0"/><stop offset="1" stop-color="#2f8fe0"/></linearGradient></defs><path d="M20 1.5 37 11v18L20 38.5 3 29V11z" fill="url(#bg1)" stroke="#06131a" stroke-width="1.5"/><path d="M20 6 33 13.4v13.2L20 34 7 26.6V13.4z" fill="#06131a"/><g transform="rotate(-28 20 20)"><path d="M20 10.5a9.5 9.5 0 1 1-9.1 6.8" fill="none" stroke="#2fd4b0" stroke-width="2.2" stroke-linecap="round"/><path d="m8.4 18.9 2.6-5.6 3.9 4.6z" fill="#2fd4b0"/></g><rect x="17" y="12.6" width="6" height="14.8" rx="2.2" fill="#2fd4b0" transform="rotate(24 20 20)"/><rect x="18.9" y="15" width="2.2" height="10" rx="1" fill="#06131a" transform="rotate(24 20 20)"/></svg><h1 class="brand"><span class="b1">MAXSWERVE</span><span class="b2">DESK</span></h1></div><div class="header-tools"><div id="connection" class="pill">Connecting</div><div class="hbat" id="hbat" title="Robot battery"><span class="hbat-body"><span class="hbat-fill" id="hbatFill"></span></span><b id="hbatPct">—</b></div></div></header>
 <nav class="tabs" role="tablist" aria-label="Views"><button class="tab active" data-tab="control" role="tab" aria-selected="true" aria-controls="tab-control">Control</button><button class="tab" data-tab="drive" role="tab" aria-selected="false" aria-controls="tab-drive">Drive</button><button class="tab" data-tab="lidar" role="tab" aria-selected="false" aria-controls="tab-lidar">3D</button><button class="tab" data-tab="history" role="tab" aria-selected="false" aria-controls="tab-history">History</button></nav>
+<div id="problemBanner" class="alert-banner problem" role="alert" hidden><b>Problem</b><span><strong id="problemTitle"></strong> <span id="problemText"></span><small id="problemMore"></small></span></div>
 <div id="alertBanner" class="alert-banner" role="alert" hidden><b>Alert</b><span id="alertText"></span></div>
 
 <section id="tab-control" class="tab-panel active" role="tabpanel">
@@ -237,13 +239,13 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
    <button class="btn primary" id="summon"><span class="t">Summon desk</span><small id="targetText">to 4.0, 3.0 m</small></button>
    <button class="btn return" id="return">Return to dock</button>
   </div>
-  <div id="message" class="toast" role="status" aria-live="polite">Connecting to the simulator…</div>
+  <div id="message" class="toast" role="status" aria-live="polite">Connecting…</div>
  </section>
  <section class="panel plan-panel">
   <div class="panel-head"><h2 class="eyebrow">Room plan · live</h2><span class="eyebrow" style="color:var(--faint)">1 m grid</span></div>
   <div class="plan"><canvas id="map" aria-label="Room plan. Tap to set where to summon the desk."></canvas><div class="plan-hint"><b class="simtag">SIM</b> Tap to place yourself</div></div>
   <div class="legend"><span><i style="background:var(--wall)"></i>Wall / object</span><span><i style="background:var(--floor);outline:1px solid var(--line2)"></i>Seen floor</span><span><i style="background:var(--busy)"></i>Busy</span><span><i class="dot" style="background:var(--lidar)"></i>LiDAR</span><span><i style="background:var(--accent)"></i>Desk</span><span><i class="dot" style="background:var(--ink)"></i>You</span><span><i style="background:var(--zone)"></i>No-go</span></div>
-  <div id="mapinfo">Map updates with simulator state.</div>
+  <div id="mapinfo">The map fills in as the desk explores.</div>
   <div class="zones">
    <div class="zones-head"><span class="eyebrow">No-go zones</span><button class="btn subtle small" id="zoneAdd" type="button">+ Add zone</button></div>
    <div id="zoneForm" class="zone-form" hidden><input id="zoneName" maxlength="24" value="Keep out" aria-label="Zone name"><button class="btn small" id="zoneSave" type="button">Save</button><button class="zone-x" id="zoneCancel" type="button" aria-label="Cancel">×</button></div>
@@ -260,7 +262,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
  <section class="panel more">
   <details><summary>Position &amp; map</summary><div class="body"><div class="kv"><div><span class="eyebrow">X</span><b id="px">—</b></div><div><span class="eyebrow">Y</span><b id="py">—</b></div><div><span class="eyebrow">Explored</span><b id="explored">—</b></div></div></div></details>
   <details><summary>Safety &amp; dock</summary><div class="body"><div class="kv"><div><span class="eyebrow">E-stop</span><b id="estop" class="value">—</b></div><div><span class="eyebrow">Cord</span><b id="cord" class="value">—</b></div><div><span class="eyebrow">Interlock</span><b id="interlock" class="value">—</b></div></div></div></details>
-  <details><summary><span><b class="simtag">SIM</b> Simulator tools</span></summary><div class="body"><p class="small" style="margin:0">These change the simulated room only. On the real desk, Summon comes to where you are.</p><div class="eyebrow">Where you are standing</div><div class="fields"><div class="field"><label for="x">X (m from left wall)</label><input id="x" type="number" step="0.1" min="0.5" value="4.0" inputmode="decimal"></div><div class="field"><label for="y">Y (m from top wall)</label><input id="y" type="number" step="0.1" min="0.5" value="3.0" inputmode="decimal"></div></div><p class="small" style="margin:0">Tapping the plan sets this too.</p><div class="actions"><button id="cordIn" class="btn subtle">Plug in cord</button><button id="cordOut" class="btn subtle">Unplug cord</button><button id="learn" class="btn subtle return">Map the room</button></div></div></details>
+  <details id="simTools"><summary><span><b class="simtag">SIM</b> Simulator tools</span></summary><div class="body"><p class="small" style="margin:0">These change the simulated room only. On the real desk, Summon comes to where you are.</p><div class="eyebrow">Where you are standing</div><div class="fields"><div class="field"><label for="x">X (m from left wall)</label><input id="x" type="number" step="0.1" min="0.5" value="4.0" inputmode="decimal"></div><div class="field"><label for="y">Y (m from top wall)</label><input id="y" type="number" step="0.1" min="0.5" value="3.0" inputmode="decimal"></div></div><p class="small" style="margin:0">Tapping the plan sets this too.</p><div class="actions"><button id="cordIn" class="btn subtle">Plug in cord</button><button id="cordOut" class="btn subtle">Unplug cord</button><button id="learn" class="btn subtle return">Map the room</button></div></div></details>
   <details class="settings-card" id="settings"><summary>Connection</summary><div class="body"><div class="field"><label for="token">API token (simulator default: dev-token)</label><input id="token" type="password" autocomplete="off" value="dev-token"></div><button class="btn subtle" id="saveToken">Apply token</button><p class="small" style="margin:0">On your phone, open the computer's local address, for example http://192.168.1.25:8787, on the same trusted Wi-Fi. Don't expose this service to the internet.</p></div></details>
  </section>
 </div>
@@ -271,7 +273,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
   <div class="drive-head"><div><h2>Manual drive</h2><p class="small" style="margin:2px 0 0">Drag to move in any direction. Hold a rotate button to turn.</p></div><span class="tag">SIM ONLY</span></div>
   <div class="drive-grid"><div><div class="stick-pad" id="stickPad" role="application" aria-label="Movement joystick"><span class="stick-label up">FWD</span><span class="stick-label down">BACK</span><span class="stick-label left">LEFT</span><span class="stick-label right">RIGHT</span><div class="stick-knob" id="stickKnob"></div></div><div class="small" style="text-align:center;margin-top:8px">Let go to stop</div></div>
   <div class="drive-side"><div><div class="eyebrow">Rotate</div><div class="turn-controls"><button type="button" class="turn-btn" id="turnLeft">↶ Left</button><button type="button" class="turn-btn" id="turnRight">Right ↷</button></div></div><div class="drive-readout"><span>Command</span><strong id="driveVector">X 0.00 · Y 0.00 · Ω 0.00</strong></div><div class="drive-speed"><label for="driveSpeed" class="eyebrow">Speed limit <strong id="driveSpeedValue">35%</strong></label><input id="driveSpeed" type="range" min="8" max="100" value="35" step="1" aria-describedby="speedWarning speedLimitNote"><div id="speedLimitNote" class="small">35% of the simulator's maximum.</div><div id="speedWarning" class="speed-warning" role="status" aria-live="polite" hidden></div><div class="override-on" id="overrideOn" hidden><span>Speed override on: up to 100%</span><button type="button" id="overrideOff">Turn off</button></div></div></div></div>
-  <div class="drive-safety">Simulation only. The simulator still applies its LiDAR footprint checks; this is not a safety certification for real hardware.</div>
+  <div class="drive-safety" id="driveSafety">Simulation only. The simulator still applies its LiDAR footprint checks; this is not a safety certification for real hardware.</div>
   <div id="driveStatus" class="lidar-status" role="status" aria-live="polite">Manual drive idle.</div>
  </section>
 </section>
@@ -299,8 +301,8 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
  </section>
 </section>
 
-<nav class="links"><a href="/simulator" target="_blank" rel="noopener">Open full simulator ↗</a><a href="/v1/health" target="_blank" rel="noopener">Bridge health ↗</a><a href="#settings" id="settingsLink">Connection settings</a></nav>
-<div class="footer">Summon Desk · local network only · simulation mode</div>
+<nav class="links"><a href="/simulator" target="_blank" rel="noopener" id="simLink">Open full simulator ↗</a><a href="/v1/health" target="_blank" rel="noopener">Bridge health ↗</a><a href="#settings" id="settingsLink">Connection settings</a></nav>
+<div class="footer">Summon Desk · local network only · <span id="footerMode">simulation mode</span></div>
 </main>
 <div class="modal" id="speedModal" hidden><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="speedModalTitle" aria-describedby="speedModalBody">
  <div class="eyebrow" style="color:var(--warn)">Speed override</div>
@@ -310,7 +312,7 @@ input[type=number],input[type=password]{width:100%;min-height:44px;border:1px so
 </div></div>
 <div class="stopbar"><div class="stopbar-inner"><button class="btn stop" id="stop">STOP</button><div class="stop-note">Software stop. Keep the physical E-stop in reach on real hardware.</div></div></div>
 <script>
-(()=>{'use strict';let token='dev-token',busy=false,lastMap=0,lastMapSignature='',currentEpoch=null;const $=id=>document.getElementById(id);const fmt=(n,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d):'—';const say=(s,kind='')=>{ $('message').textContent=s;$('message').className='toast '+kind};
+(()=>{'use strict';let lastSource='',appliedReal=null,lastProblems='',token='dev-token',busy=false,lastMap=0,lastMapSignature='',currentEpoch=null;const $=id=>document.getElementById(id);const fmt=(n,d=1)=>Number.isFinite(Number(n))?Number(n).toFixed(d):'—';const say=(s,kind='')=>{ $('message').textContent=s;$('message').className='toast '+kind};
 const EVENT_LOG_KEY='summonDeskEventLogV1';let eventItems=[],lastObservedState=null;
 function renderEventLog(){
  const host=$('eventLogList');if(!host)return;host.replaceChildren();
@@ -329,14 +331,14 @@ function initEventLog(){
 }
 function observeState(s){
  const next={connected:s.simulator_connected!==false,cord:!!s.cord?.plugged,interlock:!!s.cord?.interlock_on,estop:!!s.estop,moving:!!s.active,status:String(s.status||'')};
- if(!lastObservedState){logEvent('Monitor started',next.connected?'Simulator connected':'Simulator disconnected',next.connected?'':'warn')}
+ const who=lastSource==='hardware'?'Desk':'Simulator';if(!lastObservedState){logEvent('Monitor started',next.connected?who+' connected':who+' disconnected',next.connected?'':'warn')}
  else{
-  if(next.connected!==lastObservedState.connected)logEvent(next.connected?'Simulator connected':'Simulator disconnected',next.connected?'Live simulator updates resumed':'Telemetry is unavailable',next.connected?'':'warn');
+  if(next.connected!==lastObservedState.connected)logEvent(next.connected?who+' connected':who+' disconnected',next.connected?'Live updates resumed':'Telemetry is unavailable',next.connected?'':'warn');
   if(next.cord!==lastObservedState.cord)logEvent(next.cord?'Cord plugged in':'Cord unplugged',next.cord?'Movement should remain interlocked while plugged in':'Cord interlock released',next.cord?'warn':'');
   if(next.interlock!==lastObservedState.interlock)logEvent('Cord interlock '+(next.interlock?'enabled':'disabled'),'',next.interlock?'warn':'');
-  if(next.estop!==lastObservedState.estop)logEvent(next.estop?'Simulator E-stop engaged':'Simulator E-stop released',next.estop?'Motion should be blocked':'Verify the area before resuming',next.estop?'danger':'warn');
+  if(next.estop!==lastObservedState.estop)logEvent(next.estop?'E-stop engaged':'E-stop released',next.estop?'Motion should be blocked':'Verify the area before resuming',next.estop?'danger':'warn');
   if(next.moving!==lastObservedState.moving)logEvent(next.moving?'Desk movement started':'Desk movement stopped',next.status,next.moving?'warn':'');
-  if(next.status&&next.status!==lastObservedState.status)logEvent('Simulator status changed',next.status,next.status.toLowerCase().includes('stop')?'warn':'');
+  if(next.status&&next.status!==lastObservedState.status)logEvent('Status',next.status,next.status.toLowerCase().includes('stop')?'warn':'');
  }
  lastObservedState=next;
 }
@@ -354,9 +356,23 @@ function posePoint(p){return p&&Number.isFinite(+p.x)?{x:+p.x,y:+p.y,th:+p.theta
 function shownPose(now=performance.now()){const {from,to}=anim;if(!to)return null;if(!from)return to;const k=Math.min(1,(now-anim.t0)/anim.dur);return {x:from.x+(to.x-from.x)*k,y:from.y+(to.y-from.y)*k,th:from.th+wrapPi(to.th-from.th)*k}}
 function segs(id,pct,known){const host=$(id);if(host.children.length!==10)host.replaceChildren(...Array.from({length:10},()=>document.createElement('i')));const lit=known?Math.round(Math.max(0,Math.min(100,pct))/10):0;[...host.children].forEach((c,i)=>c.classList.toggle('on',i<lit));host.classList.toggle('low',known&&pct<=20);host.classList.toggle('mid',known&&pct>20&&pct<=40)}
 function updateTargetText(){setText('targetText','to you · '+fmt($('x').value,1)+', '+fmt($('y').value,1)+' m')}
-function render(s){observeState(s);lastState=s;if(Number.isFinite(Number(s.epoch)))currentEpoch=Number(s.epoch);const off=s.simulator_connected===false;const connected=$('connection');connected.textContent=off?'Simulator offline':'Live';connected.classList.toggle('online',!off);setText('status',s.status||'Unknown');$('status').className=s.severity==='bad'?'bad':s.severity==='warn'?'warn':'';setText('mode',off?'Open /simulator in another tab to connect':'mode: '+(s.mode||'—'));setText('active',off?'Unknown':s.active?'Moving':'Parked');$('active').classList.toggle('moving',!off&&!!s.active);
+// Real desk or simulator: the robot says where its data comes from (localization.source). While the desk is offline the bridge
+// falls back to its own simulation, so remember the last thing that was live.
+function deskKind(s){const off=s.simulator_connected===false;if(!off&&s.localization&&s.localization.source)lastSource=s.localization.source;return lastSource==='hardware'?'real':'sim'}
+function applyDeskKind(real){if(real===appliedReal)return;appliedReal=real;
+ $('driveSafety').textContent=real?'Real desk. Keep the physical E-stop within reach. LiDAR checks still stop it for obstacles, but this is not a certified safety system.':'Simulation only. The simulator still applies its LiDAR footprint checks; this is not a safety certification for real hardware.';
+ $('simTools').hidden=real;$('simLink').hidden=real;setText('footerMode',real?'real desk':'simulation mode');}
+// Problems that stop the desk stay on screen for as long as they last (alerts only show for a few seconds).
+function deskProblems(s,off,real){const p=[];
+ if(off&&real)p.push(['Desk not responding','No update for over 3 s. Check it is switched on and on Wi-Fi.']);
+ if(off)return p;
+ if(s.estop)p.push(['E-stop engaged','Release it on the desk once the area is clear. The desk will not move until then.']);
+ if(s.hardware&&s.hardware.ok===false)p.push(['Hardware problem',String(s.hardware.problem||'A motor controller or sensor is not reading properly.')+' It will not drive until this clears (2 s after it is fixed).']);
+ if(s.localization&&s.localization.lost)p.push(['Lost','It cannot work out where it is and has stopped. Push it back near the dock, or Forget map and Learn the room.']);
+ return p}
+function render(s){observeState(s);lastState=s;if(Number.isFinite(Number(s.epoch)))currentEpoch=Number(s.epoch);const off=s.simulator_connected===false;const real=deskKind(s)==='real';applyDeskKind(real);const who=real?'Desk':'Simulator';const connected=$('connection');connected.textContent=off?(real?'Desk offline':'Sim offline'):(real?'Real desk':'Simulator');connected.title=off?'No live updates':'Live updates';if(!off&&/^Connecting/.test($('message').textContent))say('Connected to the '+(real?'desk':'simulator')+'.','good');connected.classList.toggle('online',!off);setText('status',s.status||'Unknown');$('status').className=s.severity==='bad'?'bad':s.severity==='warn'?'warn':'';setText('mode',off?(real?'The desk stopped sending updates':'Open /simulator in another tab to connect'):'mode: '+(s.mode||'—'));setText('active',off?'Unknown':s.active?'Moving':'Parked');$('active').classList.toggle('moving',!off&&!!s.active);
  const rb=Number(s.battery?.robot_pct),ub=Number(s.battery?.ups_pct),robotKnown=!off&&Number.isFinite(rb)&&s.battery?.robot_pct!==null&&s.battery?.robot_pct!==undefined,upsKnown=!off&&Number.isFinite(ub)&&s.battery?.ups_pct!==null&&s.battery?.ups_pct!==undefined;setText('battery',robotKnown?fmt(rb,0):'—');setText('hbatPct',robotKnown?fmt(rb,0)+'%':'—');$('hbatFill').style.width=(robotKnown?Math.max(0,Math.min(100,rb)):0)+'%';$('hbat').classList.toggle('low',robotKnown&&rb<=20);$('hbat').classList.toggle('mid',robotKnown&&rb>20&&rb<=40);segs('batterybar',rb,robotKnown);setText('ups',upsKnown?fmt(ub,0):'—');segs('upsbar',ub,upsKnown);setText('charging',typeof s.charging==='boolean'?(s.charging?'yes':'no'):'unknown');
- const warnings=[];if(off)warnings.push({kind:'warn',title:'Simulator disconnected',body:'Open /simulator and keep it running to update controls and readings.'});if(!robotKnown)warnings.push({kind:'warn',title:'Robot battery unavailable',body:'No valid robot battery reading.'});else if(rb<=20)warnings.push({kind:'danger',title:'Robot battery low',body:'At '+fmt(rb,0)+'%. Recharge before the next run.'});if(!upsKnown)warnings.push({kind:'warn',title:'Desk power unavailable',body:'No valid desk power reading.'});else if(ub<=20)warnings.push({kind:'danger',title:'Desk power low',body:'At '+fmt(ub,0)+'%. Check the power station.'});const bp=s.battery_plan;if(!off&&bp&&bp.can_summon===false)warnings.push({kind:'warn',title:'Not enough battery to summon',body:'A trip to you and back needs about '+Math.ceil(bp.need_trip_pct+bp.reserve_pct)+'%. Let it charge first.'});$('batteryWarnings').replaceChildren(...warnings.map(w=>{const el=document.createElement('div');el.className='battery-warning '+w.kind;const title=document.createElement('strong');title.textContent=w.title;const body=document.createElement('span');body.textContent=w.body;el.append(title,body);return el}));
+ const warnings=[];if(off&&!real)warnings.push({kind:'warn',title:'Simulator disconnected',body:'Open /simulator and keep it running to update controls and readings.'});if(!robotKnown)warnings.push({kind:'warn',title:'Robot battery unavailable',body:'No valid robot battery reading.'});else if(rb<=20)warnings.push({kind:'danger',title:'Robot battery low',body:'At '+fmt(rb,0)+'%. Recharge before the next run.'});if(!upsKnown)warnings.push({kind:'warn',title:'Desk power unavailable',body:'No valid desk power reading.'});else if(ub<=20)warnings.push({kind:'danger',title:'Desk power low',body:'At '+fmt(ub,0)+'%. Check the power station.'});const bp=s.battery_plan;if(!off&&bp&&bp.can_summon===false)warnings.push({kind:'warn',title:'Not enough battery to summon',body:'A trip to you and back needs about '+Math.ceil(bp.need_trip_pct+bp.reserve_pct)+'%. Let it charge first.'});$('batteryWarnings').replaceChildren(...warnings.map(w=>{const el=document.createElement('div');el.className='battery-warning '+w.kind;const title=document.createElement('strong');title.textContent=w.title;const body=document.createElement('span');body.textContent=w.body;el.append(title,body);return el}));
  setText('px',fmt(s.pose?.x,2)+' m');setText('py',fmt(s.pose?.y,2)+' m');setText('heading',fmt((((Number(s.pose?.theta)||0)*180/Math.PI)%360+360)%360,0)+'°');setText('estop',off?'Unknown':s.estop?'ENGAGED':'Clear');$('estop').className='value '+(off?'warn':s.estop?'danger':'good');setText('cord',s.cord?.plugged?'Plugged in':'Unplugged');$('cord').className='value '+(s.cord?.plugged?'warn':'');setText('interlock',s.cord?.interlock_on?'On':'Off');setText('explored',fmt(s.explored_pct,0)+'%');
  if(!$('x').dataset.edited){$('x').value=fmt(s.user?.x,1);$('y').value=fmt(s.user?.y,1)}updateTargetText();
  const p=posePoint(s.pose),now=performance.now();
@@ -367,7 +383,11 @@ function render(s){observeState(s);lastState=s;if(Number.isFinite(Number(s.epoch
  setText('spd',off||!p?'—':fmt(speedEMA<0.01?0:speedEMA,2));setText('lat',latencyMs===null?'—':String(latencyMs));
  // Battery plan, robot alerts, no-go zones and the trip log all come from the robot itself.
  if(!off&&bp&&Number.isFinite(+bp.need_home_pct)&&robotKnown){const spare=rb-bp.need_home_pct-bp.reserve_pct;setText('batPlan','Needs ~'+Math.ceil(bp.need_home_pct)+'% to get home · '+(spare>0?Math.floor(spare)+'% to spare':'heading home'))}else setText('batPlan','Trip planning: —');
- const at=!off&&s.alert_text?String(s.alert_text):'';$('alertBanner').hidden=!at;setText('alertText',at);if(at&&at!==lastAlert)logEvent('Robot alert',at,'danger');lastAlert=at;
+ const probs=deskProblems(s,off,real),pk=probs.map(p=>p[0]).join('|');$('problemBanner').hidden=!probs.length;
+ if(probs.length){setText('problemTitle',probs[0][0]+':');setText('problemText',probs[0][1]);setText('problemMore',probs.length>1?'Also: '+probs.slice(1).map(p=>p[0]).join(', '):'')}
+ if(pk!==lastProblems){if(probs.length)logEvent(probs[0][0],probs[0][1],'danger');else if(lastProblems)logEvent('Problem cleared','The desk can drive again','');lastProblems=pk}
+ let at=!off&&s.alert_text?String(s.alert_text):'';if(at&&probs.some(p=>p[1].includes(at)||at.includes(String(s.hardware&&s.hardware.problem||'\u0000'))))at='';   // already in the problem banner
+ $('alertBanner').hidden=!at;setText('alertText',at);if(at&&at!==lastAlert)logEvent('Robot alert',at,'danger');lastAlert=at;
  if(Array.isArray(s.zones)){const sig=JSON.stringify(s.zones);if(sig!==zonesSig){zonesSig=sig;zones=s.zones;renderZones()}}
  if(Array.isArray(s.trips))mergeTrips(s.trips);
 }
@@ -650,7 +670,7 @@ async function urgentCommand(path,body,msg){say(msg+'…');try{const r=await api
 // Virtual joystick sends only to the browser simulator bridge. Releasing any control sends zero commands.
 let stickPointer=null,driveX=0,driveY=0,driveTurn=0,driveActive=false,driveLoop=null;
 function drivePayload(){return {x:driveX,y:driveY,turn:driveTurn,speed:Number($('driveSpeed').value)/100}}
-function updateSpeedWarning(){const pct=Number($('driveSpeed').value),box=$('speedWarning'),note=$('speedLimitNote');$('driveSpeedValue').textContent=pct+'%';note.textContent=pct+'% of the simulator’s maximum. Real robot limits need their own testing.';box.hidden=false;box.className='speed-warning';if(pct>=80){box.classList.add('critical');box.textContent='Very high speed limit ('+pct+'%). Expect long stopping distances. Make sure the area is clear.'}else if(pct>=50){box.textContent='High speed limit ('+pct+'%). Stopping distance and collision risk go up.'}else{box.hidden=true;box.textContent=''}}
+function updateSpeedWarning(){const pct=Number($('driveSpeed').value),box=$('speedWarning'),note=$('speedLimitNote');$('driveSpeedValue').textContent=pct+'%';note.textContent=pct+'% of top speed. Real robot limits need their own testing.';box.hidden=false;box.className='speed-warning';if(pct>=80){box.classList.add('critical');box.textContent='Very high speed limit ('+pct+'%). Expect long stopping distances. Make sure the area is clear.'}else if(pct>=50){box.textContent='High speed limit ('+pct+'%). Stopping distance and collision risk go up.'}else{box.hidden=true;box.textContent=''}}
 // One joystick packet in flight at a time, numbered: if a newer one is wanted while one is out, send the latest
 // state as soon as it returns. So the final "let go" (zero) packet always goes out last and is never overtaken.
 const DRIVE_SID=Math.random().toString(36).slice(2,10);let driveSeq=0,driveInFlight=false,drivePending=false;
