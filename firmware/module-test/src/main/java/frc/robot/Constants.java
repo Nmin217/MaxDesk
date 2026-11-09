@@ -25,14 +25,17 @@ public final class Constants {
       // kCartPositionsMeasured = true. Wrong numbers make the wheels fight each other when it turns.
       // The triangle cart as wired (photo, 2026-11-09): the two modules on one side are the FRONT, the single
       // module is the BACK, centred. CAN IDs: odd = drive NEO, even = turn NEO 550.
-      new ModuleId("FL", 3, 4, 0.20, 0.20),     // front-left
-      new ModuleId("FR", 5, 6, 0.20, -0.20),    // front-right
-      new ModuleId("Back", 1, 2, -0.20, 0.0)    // back, centred
+      // Positions ESTIMATED 2026-11-09 from distances to the centre (FL 10 in, FR 8 in, Back 11 in), assuming
+      // both front modules are 5.5 in ahead of the centre and Back is straight behind it. Check: FL and FR
+      // should be about 14 in apart. Measure properly before trusting fast turns.
+      new ModuleId("FL", 3, 4, 0.140, 0.212),     // front-left:  5.5 in forward, 8.4 in left
+      new ModuleId("FR", 5, 6, 0.140, -0.148),    // front-right: 5.5 in forward, 5.8 in right
+      new ModuleId("Back", 1, 2, -0.279, 0.0)     // back, centred: 11 in behind
       // , new ModuleId("RR", 7, 8, -0.20, -0.20)   // on the four-wheel frame: all four corners
   );
 
   /** Set true once the positions above are measured. Until then the Cart modes print a warning. */
-  public static final boolean kCartPositionsMeasured = false;
+  public static final boolean kCartPositionsMeasured = true;   // estimates (see kModules): good enough for slow turns
 
   public static final class ModuleConstants {
     /** 12, 13 or 14: the pinion actually fitted. These modules have the 13T (medium); PLAN.md suggested 12T. */
