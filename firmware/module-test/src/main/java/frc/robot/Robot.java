@@ -8,6 +8,8 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.networktables.DoubleArraySubscriber;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
@@ -65,6 +67,11 @@ public class Robot extends TimedRobot {
       .mapToDouble(id -> Math.hypot(id.xMeters(), id.yMeters())).max().orElse(0.05));
   private final SendableChooser<Mode> modeChooser = new SendableChooser<>();
   private Mode mode = Mode.READOUT;
+  // The Xbox controller picks the mode too, so no dashboard is needed: Start = next, Back = previous, only while
+  // DISABLED (a mode never changes mid-drive). A change made on the dashboard's "Test Mode" chooser wins.
+  private Mode picked = null;
+  private Mode lastChooser = null;
+  private double rumbleUntil = 0;
   private Rotation2d joystickAngle = Rotation2d.kZero;
 
   public Robot() {
@@ -85,7 +92,48 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
     for (TestModule m : modules) m.publish();
+    pickModeFromController();
     SmartDashboard.putString("Running Mode", isEnabled() ? mode.toString() : "DISABLED");
+    SmartDashboard.putString("Next Mode", label(selectedMode()));
+  }
+
+  private static String label(Mode m) {
+    return switch (m) {
+      case READOUT -> "Readout (no motion)";
+      case SELF_TEST -> "Self test (scripted)";
+      case JOYSTICK -> "Joystick (hold RB)";
+      case APP -> "Phone app (test link)";
+      case CART_JOYSTICK -> "Cart: joystick (hold RB, right stick turns)";
+      case CART_APP -> "Cart: phone app";
+    };
+  }
+
+  /** The mode the next enable will run: the controller's pick, unless the dashboard chooser changed since. */
+  private Mode selectedMode() {
+    Mode ch = modeChooser.getSelected();
+    if (ch != lastChooser) {
+      if (lastChooser != null) picked = null;   // someone used the dashboard: it wins
+      lastChooser = ch;
+    }
+    return picked != null ? picked : (ch != null ? ch : Mode.READOUT);
+  }
+
+  private void pickModeFromController() {
+    boolean next = controller.getStartButtonPressed(), prev = controller.getBackButtonPressed();
+    double now = Timer.getFPGATimestamp();
+    if (rumbleUntil > 0 && now > rumbleUntil) { controller.setRumble(RumbleType.kBothRumble, 0); rumbleUntil = 0; }
+    if (!next && !prev) return;
+    if (isEnabled()) {
+      DriverStation.reportWarning("Disable first to change the mode (now running: " + label(mode) + ")", false);
+      return;
+    }
+    Mode[] all = Mode.values();
+    int i = selectedMode().ordinal();
+    picked = all[(i + (next ? 1 : all.length - 1)) % all.length];
+    DriverStation.reportWarning("Mode " + (picked.ordinal() + 1) + "/" + all.length + ": " + label(picked)
+        + ". Enable TeleOperated to run it. (Start = next, Back = previous)", false);
+    controller.setRumble(RumbleType.kBothRumble, 0.6);
+    rumbleUntil = now + 0.25;
   }
 
   @Override
@@ -95,10 +143,11 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopInit() {
-    mode = modeChooser.getSelected();
+    mode = selectedMode();
     stopAll();
     for (TestModule m : modules) m.clearStall();
-    System.out.println("=== Enabled: " + mode + " ===");
+    System.out.println("=== Enabled: " + label(mode) + " ===");
+    DriverStation.reportWarning("Running: " + label(mode), false);
     if (mode == Mode.SELF_TEST) {
       for (SelfTest t : selfTests) t.start();
     }

@@ -150,7 +150,12 @@ open this folder (`firmware/module-test`) in **WPILib VS Code**, and set your te
 ```
 
 Open the Driver Station and a dashboard (Elastic or SmartDashboard). The **Test Mode** chooser
-appears there. Pick a mode, then enable **TeleOperated**. **Enter disables and Space is
+appears there. Pick a mode, then enable **TeleOperated**.
+
+**No dashboard? Pick the mode with the Xbox controller.** While the robot is **disabled**, press **Start** for the next
+mode or **Back** for the previous one. The controller rumbles and the Driver Station's message window shows e.g.
+"Mode 5/6: Cart: joystick (hold RB, right stick turns)". Then enable TeleOperated. While enabled, Start and Back do
+nothing (they say "Disable first"), so the mode can't change mid-drive. A change on the dashboard chooser wins. **Enter disables and Space is
 emergency stop** in the Driver Station, so keep a hand near them. Every enable restarts the
 chosen test.
 
