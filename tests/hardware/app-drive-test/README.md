@@ -25,7 +25,7 @@ scales that down further.
 ## Setup (once)
 
 1. Deploy `firmware/module-test` to the roboRIO (see its README).
-2. On the laptop, in this folder: `pip install -r requirements.txt` (Python 3.10+, 64-bit).
+2. On the laptop, in this folder: `py -3.13 -m pip install -r requirements.txt` (64-bit Python 3.10 to 3.13; there is no 2026 pyntcore for Python 3.15 yet, so install 3.13 alongside if needed). Run it with `py -3.13 app_link.py`.
 
 ## Each session
 
