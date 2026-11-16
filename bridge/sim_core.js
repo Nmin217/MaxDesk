@@ -360,30 +360,52 @@ function contradiction(pts,px,py,pth){const c=Math.cos(pth),s=Math.sin(pth);let 
   return n/pts.length}
 // Lost: try every open, mapped spot in the room at 36 headings with a light scan, refine the 20 best with the full
 // scan, and accept only a clear winner (a different spot scoring nearly as well = not sure yet, keep looking).
-function globalSearch(pts){
-  const step=Math.max(1,Math.ceil(pts.length/48)),P=pts.filter((_,i)=>i%step===0),NT=36,K=20,top=[];
-  for(let gy=0;gy<GH;gy++)for(let gx=0;gx<GW;gx++){const k=gy*GW+gx;if(!seen[k]||smap[k])continue;
-    const x=(gx+.5)*CS,y=(gy+.5)*CS;if(lfield[(y/LF|0)*LFW+(x/LF|0)]<14)continue;   // the desk's centre can't be that close to a wall
-    for(let t=0;t<NT;t++){const th=t*2*Math.PI/NT,sc=scanScore(P,x,y,th,15)[0];   // loose score: the grid is 20 cm, 10 deg
-      if(top.length<K||sc>top[top.length-1].sc){top.push({x,y,th,sc});top.sort((a,b)=>b.sc-a.sc);if(top.length>K)top.pop()}}}
-  const refine=q=>{let b={...q,sc:scanScore(pts,q.x,q.y,q.th)};
-    const pass=(r,st,ra,sa)=>{const c0=b;for(let a=-ra;a<=ra+1e-9;a+=sa)for(let dx=-r;dx<=r+1e-9;dx+=st)for(let dy=-r;dy<=r+1e-9;dy+=st){
-      const sc=scanScore(pts,c0.x+dx,c0.y+dy,c0.th+a);if(sc[0]>b.sc[0])b={x:c0.x+dx,y:c0.y+dy,th:c0.th+a,sc}}};
-    pass(8,2,6*Math.PI/180,2*Math.PI/180);pass(1.5,.5,.75*Math.PI/180,.25*Math.PI/180);return b};
+// The search can be split into slices (gsStep with a time budget) so it never stalls the control loop: on the real
+// desk (hardware mode) it does at most GS_BUDGET_MS per control step and carries on next step. In the simulator it
+// runs in one go, as it always has. A step returns undefined while unfinished, then the result (or null).
+const GS_BUDGET_MS=4;let gsJob=null;
+function gsStart(pts){const step=Math.max(1,Math.ceil(pts.length/48));return {pts,P:pts.filter((_,i)=>i%step===0),k:0,top:[],done:[],ri:0}}
+function gsRefine(pts,q){let b={...q,sc:scanScore(pts,q.x,q.y,q.th)};
+  const pass=(r,st,ra,sa)=>{const c0=b;for(let a=-ra;a<=ra+1e-9;a+=sa)for(let dx=-r;dx<=r+1e-9;dx+=st)for(let dy=-r;dy<=r+1e-9;dy+=st){
+    const sc=scanScore(pts,c0.x+dx,c0.y+dy,c0.th+a);if(sc[0]>b.sc[0])b={x:c0.x+dx,y:c0.y+dy,th:c0.th+a,sc}}};
+  pass(8,2,6*Math.PI/180,2*Math.PI/180);pass(1.5,.5,.75*Math.PI/180,.25*Math.PI/180);return b}
+function gsStep(budgetMs){const J=gsJob,t0=performance.now(),NT=36,K=20,top=J.top;
+  while(J.k<GW*GH){const k=J.k++,gx=k%GW,gy=k/GW|0;
+    if(seen[k]&&!smap[k]){const x=(gx+.5)*CS,y=(gy+.5)*CS;
+      if(lfield[(y/LF|0)*LFW+(x/LF|0)]>=14)   // the desk's centre can't be that close to a wall
+        for(let t=0;t<NT;t++){const th=t*2*Math.PI/NT,sc=scanScore(J.P,x,y,th,15)[0];   // loose score: the grid is 20 cm, 10 deg
+          if(top.length<K||sc>top[top.length-1].sc){top.push({x,y,th,sc});top.sort((a,b)=>b.sc-a.sc);if(top.length>K)top.pop()}}}
+    if(performance.now()-t0>budgetMs)return undefined}
+  while(J.ri<top.length){J.done.push(gsRefine(J.pts,top[J.ri++]));if(performance.now()-t0>budgetMs)return undefined}
+  gsJob=null;
   // Mid-room the 5 m LiDAR sees only part of the map, so look-alike spots happen. Prefer ones near where it
   // last believed it was (a bump moves it a metre or two, not across the room).
   // Look-alike spots along the same wall score alike, but at the wrong ones part of the scan lands on floor the
   // map knows is open, or beyond a wall: that counts heavily against them.
-  const N=pts.length,done=top.map(refine);
+  const pts=J.pts,N=pts.length,done=J.done;
   for(const q of done){q.contra=contradiction(pts,q.x,q.y,q.th);q.rank=q.sc[0]-N*q.contra-N*.1*Math.hypot(q.x-T.x,q.y-T.y)/100}
   done.sort((a,b)=>b.rank-a.rank);
   if(!done.length)return null;
   const b=done[0],rival=done.find(q=>Math.hypot(q.x-b.x,q.y-b.y)>30||Math.abs(ang(q.th,b.th))>.35);
-  return {...b,inl:b.sc[1]/N,unique:!rival||rival.rank<.8*b.rank};
-}
+  return {...b,inl:b.sc[1]/N,unique:!rival||rival.rank<.8*b.rank}}
+// Lost: try every open, mapped spot in the room at 36 headings with a light scan, refine the 20 best with the full
+// scan, and accept only a clear winner (a different spot scoring nearly as well = not sure yet, keep looking).
+function globalSearch(pts){gsJob=gsStart(pts);return gsStep(Infinity)}
+// What to do with a finished search: accept a clear winner, or stay lost.
+function acceptGlobal(g){
+  if(!g||g.inl<.6||g.contra>.2){locCandN=0;return false}
+  // A clear winner, or the same very clean winner three searches running. Otherwise stay lost: stopped and
+  // asking for help is safe, a confident wrong answer is not.
+  locCandN=locCand&&Math.hypot(g.x-locCand.x,g.y-locCand.y)<10&&Math.abs(ang(g.th,locCand.th))<.15?locCandN+1:1;locCand=g;
+  if(!((g.unique&&g.inl>=.65)||(locCandN>=3&&g.inl>=.7&&g.contra<=.1)))return false;
+  T.x=g.x;T.y=g.y;T.th=g.th;locLost=false;locSuspect=false;locState='locked';locCandN=0;
+  setSt(active?'Found my position again: carrying on':'Found my position again','ok');
+  return true}
 function locStep(dt){
   if((G===T&&!HWIN)||!locOn()){locState='off';locLost=false;locSuspect=false;return false}
   if(jolt){jolt=false;locSuspect=true;locT=.2}   // felt a shove: stop mapping and check the position right now
+  if(!locLost)gsJob=null;
+  if(gsJob){const g=gsStep(GS_BUDGET_MS);return g===undefined?false:acceptGlobal(g)}   // a sliced search carries on every step
   if((locT+=dt)<.2)return false;locT=0;
   if(time-lfAt>1)buildField();
   if(locLost){
@@ -393,15 +415,8 @@ function locStep(dt){
     const c=Math.cos(T.th),s=Math.sin(T.th),pts=[];
     for(const h of hits){if(h.type==='person'||h.type==='user')continue;const dx=h.x-T.x,dy=h.y-T.y;pts.push([c*dx+s*dy,-s*dx+c*dy])}
     if(pts.length<20)return false;
-    const g=globalSearch(pts);
-    if(!g||g.inl<.6||g.contra>.2){locCandN=0;return false}
-    // A clear winner, or the same very clean winner three searches running. Otherwise stay lost: stopped and
-    // asking for help is safe, a confident wrong answer is not.
-    locCandN=locCand&&Math.hypot(g.x-locCand.x,g.y-locCand.y)<10&&Math.abs(ang(g.th,locCand.th))<.15?locCandN+1:1;locCand=g;
-    if(!((g.unique&&g.inl>=.65)||(locCandN>=3&&g.inl>=.7&&g.contra<=.1)))return false;
-    T.x=g.x;T.y=g.y;T.th=g.th;locLost=false;locSuspect=false;locState='locked';locCandN=0;
-    setSt(active?'Found my position again: carrying on':'Found my position again','ok');
-    return true;
+    if(HWIN){gsJob=gsStart(pts);const g=gsStep(GS_BUDGET_MS);return g===undefined?false:acceptGlobal(g)}   // real desk: sliced
+    return acceptGlobal(globalSearch(pts));
   }
   const c=Math.cos(T.th),s=Math.sin(T.th),all=[];
   for(const h of hits){if(h.type==='person'||h.type==='user')continue;   // people are tracked separately, not matched to the map

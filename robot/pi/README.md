@@ -152,6 +152,21 @@ the event list, and charts for each module: wheel speed (asked for and measured)
 current and temperature. Tests: `tests/pi/test_black_box.js`, and the black box tests in
 `tests/pi/test_hw_loop.js` (a jammed wheel, the LiDAR going quiet, saving from the app).
 
+## Dry run on the Pi (no CAN adapter or motors needed)
+
+`node tools/pi_dry_run.js` runs the whole desk software (bridge, brain in hardware mode, `pi_io`) in real time
+against the fake SPARK bus and fake room, and every 10 s reports:
+- how long each 60 Hz step took (budget 16.7 ms) and how late steps started;
+- CPU and memory use.
+
+By default the desk drives across the room and back by itself; `--no-demo` leaves the driving to your phone (open
+the address the bridge prints and pair). The first 10 s are always slower while things warm up.
+
+**What it found, and the fix:** when the desk got lost, the whole-room position search ran in one go, about 80 ms on
+a fast PC and several times that on a Pi 4. That froze everything else, including Stop commands and the SPARK
+heartbeat. On the real desk the search now runs in slices of 4 ms per step (`GS_BUDGET_MS`), and the worst step
+dropped to about 12 ms. The simulator still searches in one go, so its tests are unchanged.
+
 ## Position: drift, LiDAR correction and getting lost (prototyped in the simulator)
 
 The simulator's "Sensors & drift" panel models what the real desk will face: wheel odometry and the

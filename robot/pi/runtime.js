@@ -33,7 +33,8 @@ if (!global.document) {
   global.matchMedia = () => ({ matches: false, addEventListener() {} });
   global.addEventListener = () => {};
   global.devicePixelRatio = 1;
-  global.performance = { now: () => Date.now() };
+  // Keep Node's precise clock (or a test's fake one): the planner and the sliced position search time themselves with it.
+  if (!global.performance || typeof global.performance.now !== 'function') global.performance = { now: () => Date.now() };
   global.requestAnimationFrame = () => {};
   global.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 }
