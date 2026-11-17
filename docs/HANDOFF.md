@@ -37,6 +37,15 @@ avoids people and obstacles, and is controlled from a phone app.
   `firmware/*/Constants.java`. Measure properly once the 4th module is on.
 - **One encoder broke;** the owner has a Through Bore **V2**. The code's `kThroughBoreEncoderV2` switch is still
   global: make it per module before running V1 and V2 together.
+- **The real desk** (not converted to swerve yet): the top is **48 x 30 in** (1.22 x 0.76 m), the legs are 45 in apart, and
+  the feet are 43 in apart (centre to centre? still to confirm). Still needed: foot length, where the modules mount on
+  the feet, weight, height range.
+  - **Don't just change the brain's desk size.** Tried on 2026-11-17: with `HW=30.5, HH=19, TR=36` (48 x 30 in), the
+    simulator's bump recovery got worse. In 10 seeded shoves, 2 weren't recovered within 8 s; with the old size, 10 of
+    10 recovered within 1.5 s.
+  - Change the size together with the real LiDAR mount positions and a localisation check and retune. Places that
+    must change together: `HW/HH/TR` in the simulator, `DESK_HALF_*` in `robot/pi/runtime.js`, and `HALF_*` in
+    `tests/pi/fake_world.js`.
 - **SPARK firmware:** updated to the latest (25+). IDs were reset by the update and have been set again and burned
   to flash. Lesson learned: set IDs with only ONE SPARK on the CAN bus, or duplicates all change together.
 - **roboRIO:** imaged 2026, team 2197. Our program is deployed. Bench test status:
