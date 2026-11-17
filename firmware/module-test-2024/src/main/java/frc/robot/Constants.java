@@ -23,14 +23,13 @@ public final class Constants {
       // PLACEHOLDER positions for a three-wheel triangle cart: two at the front, one at the back
       // middle. MEASURE yours (centre of each module from the centre of the cart) and set
       // kCartPositionsMeasured = true. Wrong numbers make the wheels fight each other when it turns.
-      // The triangle cart as wired (photo, 2026-11-09): the two modules on one side are the FRONT, the single
-      // module is the BACK, centred. CAN IDs: odd = drive NEO, even = turn NEO 550.
-      // Positions ESTIMATED 2026-11-09 from distances to the centre (FL 10 in, FR 8 in, Back 11 in), assuming
-      // both front modules are 5.5 in ahead of the centre and Back is straight behind it. Check: FL and FR
-      // should be about 14 in apart. Measure properly before trusting fast turns.
-      new ModuleId("FL", 3, 4, 0.140, 0.212),     // front-left:  5.5 in forward, 8.4 in left
-      new ModuleId("FR", 5, 6, 0.140, -0.148),    // front-right: 5.5 in forward, 5.8 in right
-      new ModuleId("Back", 1, 2, -0.279, 0.0)     // back, centred: 11 in behind
+      // The triangle cart, FRONT = the diagonal rail (photo, 2026-11-17): the two modules on that rail are the front
+      // pair, the third module is the back. CAN IDs: odd = drive NEO, even = turn NEO 550.
+      // Positions ESTIMATED from the earlier distances to the centre (bottom-right 8 in, left 11 in, top-right 10 in)
+      // and the directions in the photo. Measure (forward/back, left/right from the centre) before fast turns.
+      new ModuleId("FL", 5, 6, 0.077, 0.188),     // front-left  = bottom-right module in the photo: 3.0 in fwd, 7.4 in left
+      new ModuleId("FR", 1, 2, 0.143, -0.240),    // front-right = left module in the photo:         5.6 in fwd, 9.4 in right
+      new ModuleId("Back", 3, 4, -0.252, -0.027)  // back        = top-right module in the photo:    9.9 in behind
       // , new ModuleId("RR", 7, 8, -0.20, -0.20)   // on the four-wheel frame: all four corners
   );
 

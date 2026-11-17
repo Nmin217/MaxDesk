@@ -26,22 +26,24 @@ avoids people and obstacles, and is controlled from a phone app.
 ## Hardware: current state
 - **Test cart:** a triangle frame on 2x4 blocks, 3 MAXSwerve modules, roboRIO 2, PDH, NEO drive and NEO 550
   steering on SPARK MAXes. Team number **2197**. A 4th module is waiting.
-- **Front = the side with two modules.** CAN IDs (drive/turn):
-  - **FL** (top in the photo) 3/4;
-  - **FR** (bottom) 5/6;
-  - **Back** (single, centred) 1/2;
-  - RR 7/8 later.
-- **Module positions (estimated)** from distances to the centre (FL 10 in, FR 8 in, Back 11 in):
-  - FL (0.140, 0.212) m, FR (0.140, -0.148) m, Back (-0.279, 0) m;
-  - stored in `firmware/*/Constants.java`;
-  - check: FL to FR should be about 14 in apart.
+- **Front = the diagonal rail** (photo of 2026-11-17: the rail between the left and bottom-right modules; forward points
+  out of it). CAN IDs (drive/turn), named by where they sit in that photo:
+  - **FL** = bottom-right module, 5/6;
+  - **FR** = left module, 1/2;
+  - **Back** = top-right module, 3/4;
+  - a 4th module (7/8) will be added later.
+- **Module positions (estimated)** from distances to the centre (bottom-right 8 in, left 11 in, top-right 10 in) and
+  the photo's directions: FL (0.077, 0.188) m, FR (0.143, -0.240) m, Back (-0.252, -0.027) m. They're in
+  `firmware/*/Constants.java`. Measure properly once the 4th module is on.
+- **One encoder broke;** the owner has a Through Bore **V2**. The code's `kThroughBoreEncoderV2` switch is still
+  global: make it per module before running V1 and V2 together.
 - **SPARK firmware:** updated to the latest (25+). IDs were reset by the update and have been set again and burned
   to flash. Lesson learned: set IDs with only ONE SPARK on the CAN bus, or duplicates all change together.
 - **roboRIO:** imaged 2026, team 2197. Our program is deployed. Bench test status:
   - deploy works, and the program runs (it replaced an old team program that used CTRE devices);
   - the drive motors spin, and Start/Back on the Xbox controller pick the mode;
-  - **the wheels don't all point the same way, so the steering needs RE-ZEROING** (REV Hardware Client, turn
-    SPARKs 4, 6, 2: Absolute Encoder Inverted, wheel pointing front, bevel gears on the same side, Set Zero
+  - **the wheels don't all point the same way, so the steering needs RE-ZEROING with the NEW forward** (REV Hardware
+    Client, turn SPARKs 6, 2, 4: Absolute Encoder Inverted, wheel pointing front, bevel gears on the same side, Set Zero
     Offset, Burn Flash);
   - SPARK 4 once timed out on CAN, and later looked fine;
   - SPARK 5 (FR drive) once misbehaved during the firmware update.
@@ -100,7 +102,7 @@ avoids people and obstacles, and is controlled from a phone app.
 ## Next steps
 1. **Hardware (roboRIO):**
    - re-zero the steering;
-   - Readout (top = FL, bottom = FR, left = Back, about 0° at the front);
+   - Readout (bottom-right = FL, left = FR, top-right = Back, about 0° pointing out of the diagonal rail);
    - Self test (PASS all three);
    - Joystick, then Cart joystick on blocks, then the floor.
 2. **Pi:** get SSH working, then install git, can-utils and Node 22, then
