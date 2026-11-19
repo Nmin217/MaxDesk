@@ -65,14 +65,15 @@ public class TestModule {
     double radiansPerRev = 2 * Math.PI;
     turnConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(ModuleConstants.kTurnCurrentLimitAmps);
     turnConfig.absoluteEncoder
+        // Encoder type first, so nothing in the preset can undo the settings after it.
+        .apply(id.encoderV2()
+            ? AbsoluteEncoderConfig.Presets.REV_ThroughBoreEncoderV2
+            : AbsoluteEncoderConfig.Presets.REV_ThroughBoreEncoder)
         // The MAXSwerve output shaft turns opposite to the steering motor. Without this the
         // position loop has positive feedback and the module spins forever.
         .inverted(true)
         .positionConversionFactor(radiansPerRev) // radians
-        .velocityConversionFactor(radiansPerRev / 60.0) // radians per second
-        .apply(id.encoderV2()
-            ? AbsoluteEncoderConfig.Presets.REV_ThroughBoreEncoderV2
-            : AbsoluteEncoderConfig.Presets.REV_ThroughBoreEncoder);
+        .velocityConversionFactor(radiansPerRev / 60.0); // radians per second
     turnConfig.closedLoop
         .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
         .pid(1, 0, 0)

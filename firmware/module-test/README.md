@@ -8,7 +8,7 @@ frame. It's set up for three modules (FL, FR, RL); the modules are listed in `Co
 it works with any number from one to four. Based on REV's
 [MAXSwerve Java template](https://github.com/REVrobotics/MAXSwerve-Java-Template) (2026 branch),
 with the same configuration. CAN IDs are as wired on the cart: odd = drive NEO, even = turn NEO 550
-(the triangle cart, front = the diagonal rail: FL 5/6, FR 1/2, Back 3/4). If yours differ, change `kModules` in `Constants.java`.
+(the four-module square frame: FL 1/2, FR 3/4, BL 5/6, BR 7/8, drive/turn). If yours differ, change `kModules` in `Constants.java`.
 
 > **Status:** builds. GitHub CI (`.github/workflows/ci.yml`) compiles it against WPILib 2026 and
 > REVLib 2026 on every push. The first build passed on 2026-11-08 with no changes. It has not been
@@ -45,15 +45,14 @@ knows which way the wheel points even right after power-on.
                 120 A main breaker ◄── this is your E-stop on the bench: flip it off
                       │
    ┌─────────────────────── REV PDH (or PDP) ───────────────────────────────┐
-   │ ch0 40A ch1 40A │ ch2 40A ch3 40A │ ch4 40A ch5 40A │  10A fused port   │
-   └───┬───────┬─────┴───┬───────┬─────┴───┬───────┬─────┴────────┬────────┘
-       │12 AWG │         │       │         │       │              │ 18 AWG
-    FL-turn FL-drive  FR-turn FR-drive  Back-turn Back-drive  roboRIO 2 (power in)
-     ID 6    ID 5      ID 2    ID 1      ID 4      ID 3
+   │ one 40A channel per SPARK (8 SPARKs = 8 channels)   │  10A fused port   │
+   └───┬──────────────────────────────────────────────────┴────────┬────────┘
+       │12 AWG                                                     │ 18 AWG
+    FL 1/2, FR 3/4, BL 5/6, BR 7/8 (drive/turn)               roboRIO 2 (power in)
 
- CAN (yellow = CAN-H, green = CAN-L), ONE daisy chain through all six SPARKs, no branches:
+ CAN (yellow = CAN-H, green = CAN-L), ONE daisy chain through all eight SPARKs, no branches:
 
- roboRIO ─► FL-turn ─► FL-drive ─► FR-turn ─► FR-drive ─► RL-turn ─► RL-drive ─► PDH CAN
+ roboRIO ─► FL ─► FR ─► BR ─► BL (both SPARKs of each) ─► PDH CAN
  (built-in 120 Ω)                                                        (termination switch ON)
 
  Each module (shown for FL; FR and RL are wired the same way):
@@ -136,9 +135,10 @@ be unique).
    turned 90° per corner. With the front at the top: FL points left-right, FR front-back, BL front-back,
    BR left-right. `zeroPointsDeg` in `Constants.kModules` tells the program which way each wheel
    points at zero (REV's pattern: FL 90, FR 0, BL 180, BR -90), and the program adds it back.
-   Check in Readout: hand-turn every wheel to point forward and the console's "robot" angles should all
-   read about 0 (or 360). If one reads about 180, add 180 to that module's `zeroPointsDeg`. If they're all
-   about 90 apart from that, your front is a different side from the one the table assumes.
+   Quickest check: Joystick mode, hold RB, press **A**: every wheel should point straight forward. (Or in
+   Readout, hand-turn every wheel forward: the console's "robot" angles should all read about 0 or 360.)
+   One wheel pointing (or reading) 180° off → add 180 to its `zeroPointsDeg`. Every wheel off by the same
+   90° → your front is a different side from the one the table assumes.
 4. Optional: in Hardware Client, spin each motor at low duty cycle to check that it runs at all
    before involving the roboRIO.
 
@@ -182,15 +182,17 @@ chosen test.
 **Cart mode setup.** The cart modes need the modules fixed to something, and need to know where
 each one is:
 
-1. Bolt the modules to a board. Three wheels: a triangle (two at the front, one centred at the
-   back), not three corners of a square. No desk on top: three wheels tip easily.
+1. Bolt the modules to a frame: four at the corners (or three as a triangle, two at the front and
+   one centred at the back, never three corners of a square). No desk on top yet.
 2. Measure each module's centre (its steering axis, the middle of the wheel seen from above) from the
    centre of the cart: **x = metres forward** (+) or back (−), **y = metres left** (+) or right (−).
 3. Put the numbers in `Constants.kModules` (the last two values of each line) and set
    `kCartPositionsMeasured = true`.
-4. Redo every module's zero offset **on the cart**, with each wheel pointing at the cart's front.
-   Then 0° means "forward" for every module, whichever way round it's bolted on.
-5. Check in Readout: all read ≈0° with the wheels pointing forward. Then Cart mode on blocks first,
+4. Zero each module with the jig and set its `zeroPointsDeg` (see step 3 of the SPARK setup), or
+   zero every wheel pointing at the frame's front and set `zeroPointsDeg` to 0 for all.
+5. Check: Joystick mode, hold RB and press **A**. Every wheel should point straight forward. Then
+   push the stick gently forward: all four roll the same way. A wheel rolling backwards needs 180
+   added to its `zeroPointsDeg`. Then Cart mode on blocks first,
    then on the floor at a low speed setting.
 
 Driving is robot-relative (no gyro yet): "forward" is always the cart's front, even after it turns.

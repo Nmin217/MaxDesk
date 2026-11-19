@@ -52,7 +52,6 @@ public final class Constants {
     /** 12, 13 or 14: the pinion actually fitted. These modules have the 13T (medium); PLAN.md suggested 12T. */
     public static final int kDrivingMotorPinionTeeth = 13;
 
-
     public static final double kWheelDiameterMeters = 0.0762; // 3 in
     // 45T wheel bevel, 22T first-stage spur, 15T bevel pinion (REV MAXSwerve)
     public static final double kDrivingMotorReduction =
