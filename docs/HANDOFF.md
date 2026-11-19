@@ -39,9 +39,8 @@ avoids people and obstacles, and is controlled from a phone app.
   wheels sit 90° apart per corner at zero (as they should). `Constants.ModuleId` now has `zeroPointsDeg` (which way
   the wheel points in robot terms at encoder 0; REV pattern FL 90, FR 0, BL 180, BR -90) and a per-module
   `encoderV2` (one module has a V2 after a V1 broke). Readout prints robot and raw angles to the DS console every
-  second. CAN IDs per corner (FL 1/2, FR 3/4, BL 5/6, BR 7/8) and the frame size (`kHalf` 0.25 m) are placeholders:
-  waiting for the owner to confirm which IDs are at which corner, which side is the front, which module has the V2,
-  and the module spacing.
+  second. Confirmed: front = top of the photo, FL 1/2, FR 3/4, BL 5/6, BR 7/8 (odd drive,
+  even turn), BR has the V2. Still a placeholder: module spacing (`kHalf` 0.25 m, `kCartPositionsMeasured = false`).
 - **The real desk** (not converted to swerve yet): the top is **48 x 30 in** (1.22 x 0.76 m), the legs are 45 in apart, and
   the T-feet are **about 43 in apart, centre to centre** (hole to hole, give or take 1–2 in). That's the left-right
   wheel spacing if the modules mount on the feet. Still needed: foot length (front to back), where on the feet the modules

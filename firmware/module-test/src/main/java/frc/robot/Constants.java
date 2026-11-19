@@ -35,14 +35,14 @@ public final class Constants {
 
   /**
    * The four-module square frame (photo, 2026-11-19). The zero directions are REV's MAXSwerve pattern for a jig
-   * zero: FL points left, FR forward, BL back, BR right. CHECK the CAN IDs against your wiring: each line must be
-   * the module that is really at that corner, or its zero direction goes to the wrong wheel.
+   * zero: FL points left, FR forward, BL back, BR right. CAN IDs confirmed by the owner (front = top of the photo):
+   * top-left 1/2, top-right 3/4, bottom-left 5/6, bottom-right 7/8; odd = drive, even = turn. BR has the V2 encoder.
    */
   public static final List<ModuleId> kModules = List.of(
       new ModuleId("FL", 1, 2,  kHalf,  kHalf,   90, false),
       new ModuleId("FR", 3, 4,  kHalf, -kHalf,    0, false),
       new ModuleId("BL", 5, 6, -kHalf,  kHalf,  180, false),
-      new ModuleId("BR", 7, 8, -kHalf, -kHalf,  -90, false)
+      new ModuleId("BR", 7, 8, -kHalf, -kHalf,  -90, true)   // the V2 encoder
   );
 
   /** Set true once the positions above are measured. Until then the Cart modes print a warning. */

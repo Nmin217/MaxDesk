@@ -124,8 +124,8 @@ be unique).
    | BL (back-left) | 6 | 5 |
    | BR (back-right) | 8 | 7 |
 
-   (The four-module square frame. These are placeholders: whatever you wired, make each line of
-   `Constants.kModules` match the module really sitting at that corner.)
+   (The four-module square frame, as wired. If you rewire, make each line of `Constants.kModules`
+   match the module really sitting at that corner.)
 
 3. **Zero the steering (turn SPARKs only)**: open *Absolute Encoder*, set **Direction = Inverted**
    *first*, then fit the MAXSwerve calibration tool on the module so the wheel is locked straight,
