@@ -49,7 +49,7 @@ public class Robot extends TimedRobot {
   private enum Mode { READOUT, SELF_TEST, JOYSTICK, APP, CART_JOYSTICK, CART_APP }
 
   private final List<TestModule> modules = Constants.kModules.stream()
-      .map(id -> new TestModule(id.name(), id.driveCanId(), id.turnCanId()))
+      .map(id -> new TestModule(id))
       .toList();
   private final List<SelfTest> selfTests = modules.stream().map(SelfTest::new).toList();
 
@@ -167,7 +167,10 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     switch (mode) {
-      case READOUT -> stopAll();
+      case READOUT -> {
+        stopAll();
+        printAngles();
+      }
       case SELF_TEST -> {
         for (SelfTest t : selfTests) t.run();
       }
@@ -176,6 +179,25 @@ public class Robot extends TimedRobot {
       case CART_JOYSTICK -> cartJoystick();
       case CART_APP -> cartApp();
     }
+  }
+
+  private double lastAnglePrint = Double.NEGATIVE_INFINITY;
+
+  /**
+   * Readout, once a second, in the Driver Station console (no dashboard needed). "robot" is the angle the program
+   * uses (0 = forward, 90 = left); "raw" is the encoder itself (0 = where the jig zeroed it). With every wheel
+   * pointing forward, all "robot" numbers should be near 0 (or 360).
+   */
+  private void printAngles() {
+    double now = Timer.getFPGATimestamp();
+    if (now - lastAnglePrint < 1.0) return;
+    lastAnglePrint = now;
+    StringBuilder line = new StringBuilder("Angles:");
+    for (TestModule m : modules) {
+      line.append(String.format("  %s robot %3.0f (raw %3.0f)", m.name(), m.angleDeg(),
+          Math.toDegrees(m.rawAngleRad())));
+    }
+    System.out.println(line);
   }
 
   @Override

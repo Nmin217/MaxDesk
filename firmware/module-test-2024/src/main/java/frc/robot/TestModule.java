@@ -34,14 +34,20 @@ public class TestModule {
   private final AbsoluteEncoder turnEncoder;
   private final SparkPIDController turnController;
 
+  /** Robot-frame direction of the wheel when the encoder reads 0 (see Constants.ModuleId). */
+  private final double zeroPointsRad;
+
   private boolean configOk = true;
   private double stallSince = -1;
   private boolean stalled = false;
   private double turnStallSince = -1;
   private boolean turnStalled = false;
 
-  public TestModule(String name, int driveCanId, int turnCanId) {
-    this.name = name;
+  public TestModule(Constants.ModuleId id) {
+    this.name = id.name();
+    this.zeroPointsRad = Math.toRadians(id.zeroPointsDeg());
+    int driveCanId = id.driveCanId();
+    int turnCanId = id.turnCanId();
     drive = new CANSparkMax(driveCanId, MotorType.kBrushless);
     turn = new CANSparkMax(turnCanId, MotorType.kBrushless);
 
@@ -100,8 +106,16 @@ public class TestModule {
     return configOk;
   }
 
-  /** Module angle in radians, 0..2pi, as the absolute encoder reports it. */
+  /**
+   * Module angle in robot terms, radians 0..2pi: 0 = the wheel points forward, pi/2 = left. This is the encoder
+   * reading turned by the module's zeroPointsDeg, so every module agrees whichever way it's bolted on.
+   */
   public double angleRad() {
+    return MathUtil.inputModulus(rawAngleRad() + zeroPointsRad, 0, 2 * Math.PI);
+  }
+
+  /** What the absolute encoder itself reports, radians 0..2pi (0 = where it was zeroed). */
+  public double rawAngleRad() {
     return turnEncoder.getPosition();
   }
 
@@ -119,10 +133,11 @@ public class TestModule {
     return Math.toDegrees(MathUtil.angleModulus(targetRad - angleRad()));
   }
 
-  /** Closed-loop steer to an angle (radians, any range). Drive is left as is. */
+  /** Closed-loop steer to a robot-frame angle (radians, any range). Drive is left as is. */
   public void steerTo(double targetRad) {
     if (turnGuard()) return;
-    turnController.setReference(MathUtil.inputModulus(targetRad, 0, 2 * Math.PI),
+    // The SPARK works in encoder terms, so take the module's zero direction back off.
+    turnController.setReference(MathUtil.inputModulus(targetRad - zeroPointsRad, 0, 2 * Math.PI),
         ControlType.kPosition);
   }
 
@@ -232,6 +247,7 @@ public class TestModule {
     String p = name + "/";
     SmartDashboard.putBoolean(p + "ConfigOK", configOk);
     SmartDashboard.putNumber(p + "AngleDeg", angleDeg());
+    SmartDashboard.putNumber(p + "RawEncoderDeg", Math.toDegrees(rawAngleRad()));
     SmartDashboard.putNumber(p + "DrivePosM", driveEncoder.getPosition());
     SmartDashboard.putNumber(p + "DriveVelMps", driveEncoder.getVelocity());
     SmartDashboard.putNumber(p + "DriveAmps", drive.getOutputCurrent());

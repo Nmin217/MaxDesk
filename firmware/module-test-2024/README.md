@@ -29,7 +29,7 @@ the software setup changes:
   Hardware Client. Every setting the module needs is set explicitly, then saved with `burnFlash()`.
 - WPILib 2024 has no `optimize()`/`cosineScale()` on a module state, so those lines are written out (never
   turn more than 90°; less drive while the wheel is still turning).
-- Assumes the original Through Bore Encoder (see `kThroughBoreEncoderV2` in `Constants.java`).
+- Reads the Through Bore Encoder as a duty-cycle signal, which works the same for V1 and V2 (the per-module `encoderV2` flag in `Constants.java` is ignored here).
 
 **Status:** GitHub CI compiles this against WPILib 2024 and REVLib 2024 on every push. It hasn't been run on
 hardware yet.

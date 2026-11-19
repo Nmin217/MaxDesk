@@ -119,15 +119,26 @@ be unique).
 
    | Module | Turn SPARK | Drive SPARK |
    |---|---|---|
-   | FL (front-left) | 6 | 5 |
-   | FR (front-right) | 2 | 1 |
-   | Back | 4 | 3 |
-   | RR (later, four-wheel frame) | 8 | 7 |
+   | FL (front-left) | 2 | 1 |
+   | FR (front-right) | 4 | 3 |
+   | BL (back-left) | 6 | 5 |
+   | BR (back-right) | 8 | 7 |
+
+   (The four-module square frame. These are placeholders: whatever you wired, make each line of
+   `Constants.kModules` match the module really sitting at that corner.)
 
 3. **Zero the steering (turn SPARKs only)**: open *Absolute Encoder*, set **Direction = Inverted**
    *first*, then fit the MAXSwerve calibration tool on the module so the wheel is locked straight,
-   and click **Set Zero Offset**. Repeat for every module. This puts 0° in the same physical place
-   on all of them. The program never overwrites this offset.
+   and click **Set Zero Offset**. Repeat for every module. The program never overwrites this offset.
+
+   **After a jig zero the wheels do NOT all point the same way, and that's correct.** The jig sits
+   in the frame corner, and each corner's module is turned 90° from the next one, so "zero" ends up
+   turned 90° per corner. With the front at the top: FL points left-right, FR front-back, BL front-back,
+   BR left-right. `zeroPointsDeg` in `Constants.kModules` tells the program which way each wheel
+   points at zero (REV's pattern: FL 90, FR 0, BL 180, BR -90), and the program adds it back.
+   Check in Readout: hand-turn every wheel to point forward and the console's "robot" angles should all
+   read about 0 (or 360). If one reads about 180, add 180 to that module's `zeroPointsDeg`. If they're all
+   about 90 apart from that, your front is a different side from the one the table assumes.
 4. Optional: in Hardware Client, spin each motor at low duty cycle to check that it runs at all
    before involving the roboRIO.
 

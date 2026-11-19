@@ -12,40 +12,46 @@ public final class Constants {
   private Constants() {}
 
   /**
-   * One module: dashboard name, drive SPARK CAN ID, turn SPARK CAN ID, and where its centre (the
-   * steering axis) sits on the cart or frame: xMeters forward of the centre, yMeters to the left.
-   * Only the Cart modes use the position.
+   * One module:
+   * <ul>
+   *   <li>name, drive SPARK CAN ID, turn SPARK CAN ID;
+   *   <li>xMeters / yMeters: where its centre (the steering axis) sits, metres forward of the frame's centre and
+   *       metres to the left. Only the Cart modes use the position;
+   *   <li>zeroPointsDeg: which way this wheel points, in robot terms, when its encoder reads 0, i.e. right after
+   *       you zeroed it with the 3D-printed jig. 0 = forward, 90 = left, 180 = back, -90 = right. The jig sits in
+   *       the frame corner, and each corner's module is turned 90 deg from the next, so the jig's "zero" is turned
+   *       90 deg per corner as well. This number undoes that. Zeroed with every wheel pointing forward instead?
+   *       Then it's 0 for all of them;
+   *   <li>encoderV2: true if this module has the Through Bore Encoder V2 (newer housing with a status LED),
+   *       false for the original V1 (black housing). Each module can differ. (The 2024 program reads both the
+   *       same way, so it ignores this.)
+   * </ul>
    */
-  public record ModuleId(String name, int driveCanId, int turnCanId, double xMeters, double yMeters) {}
+  public record ModuleId(String name, int driveCanId, int turnCanId, double xMeters, double yMeters,
+      double zeroPointsDeg, boolean encoderV2) {}
 
-  /** The modules on the bench. Comment out any that aren't wired; add RR when you build it. */
+  /** Placeholder half-spacing of the square frame (module centre to frame centre, each way). Measure it. */
+  private static final double kHalf = 0.25;
+
+  /**
+   * The four-module square frame (photo, 2026-11-19). The zero directions are REV's MAXSwerve pattern for a jig
+   * zero: FL points left, FR forward, BL back, BR right. CHECK the CAN IDs against your wiring: each line must be
+   * the module that is really at that corner, or its zero direction goes to the wrong wheel.
+   */
   public static final List<ModuleId> kModules = List.of(
-      // PLACEHOLDER positions for a three-wheel triangle cart: two at the front, one at the back
-      // middle. MEASURE yours (centre of each module from the centre of the cart) and set
-      // kCartPositionsMeasured = true. Wrong numbers make the wheels fight each other when it turns.
-      // The triangle cart, FRONT = the diagonal rail (photo, 2026-11-17): the two modules on that rail are the front
-      // pair, the third module is the back. CAN IDs: odd = drive NEO, even = turn NEO 550.
-      // Positions ESTIMATED from the earlier distances to the centre (bottom-right 8 in, left 11 in, top-right 10 in)
-      // and the directions in the photo. Measure (forward/back, left/right from the centre) before fast turns.
-      new ModuleId("FL", 5, 6, 0.077, 0.188),     // front-left  = bottom-right module in the photo: 3.0 in fwd, 7.4 in left
-      new ModuleId("FR", 1, 2, 0.143, -0.240),    // front-right = left module in the photo:         5.6 in fwd, 9.4 in right
-      new ModuleId("Back", 3, 4, -0.252, -0.027)  // back        = top-right module in the photo:    9.9 in behind
-      // , new ModuleId("RR", 7, 8, -0.20, -0.20)   // on the four-wheel frame: all four corners
+      new ModuleId("FL", 1, 2,  kHalf,  kHalf,   90, false),
+      new ModuleId("FR", 3, 4,  kHalf, -kHalf,    0, false),
+      new ModuleId("BL", 5, 6, -kHalf,  kHalf,  180, false),
+      new ModuleId("BR", 7, 8, -kHalf, -kHalf,  -90, false)
   );
 
   /** Set true once the positions above are measured. Until then the Cart modes print a warning. */
-  public static final boolean kCartPositionsMeasured = true;   // estimates (see kModules): good enough for slow turns
+  public static final boolean kCartPositionsMeasured = false;  // kHalf is a guess from the photo
 
   public static final class ModuleConstants {
     /** 12, 13 or 14: the pinion actually fitted. These modules have the 13T (medium); PLAN.md suggested 12T. */
     public static final int kDrivingMotorPinionTeeth = 13;
 
-    /**
-     * Which Through Bore Encoder is on the module. MAXSwerve kits sold before 2025 have the V1
-     * (black housing, 6-pin JST); V2 has a different housing and a status LED. Wrong choice =
-     * wrong angle readings.
-     */
-    public static final boolean kThroughBoreEncoderV2 = false;
 
     public static final double kWheelDiameterMeters = 0.0762; // 3 in
     // 45T wheel bevel, 22T first-stage spur, 15T bevel pinion (REV MAXSwerve)
