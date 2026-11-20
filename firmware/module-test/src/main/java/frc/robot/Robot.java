@@ -330,6 +330,7 @@ public class Robot extends TimedRobot {
     private Step step = Step.DONE;
     private int index;
     private double startAngleRad;
+    private double startMotorRot;
     private double startDriveM;
     private double inToleranceSince;
 
@@ -343,6 +344,7 @@ public class Robot extends TimedRobot {
         return;
       }
       startAngleRad = module.angleRad();
+      startMotorRot = module.turnMotorRotations();
       enter(Step.DIRECTION);
       report("running");
     }
@@ -362,14 +364,19 @@ public class Robot extends TimedRobot {
             module.stop();
             double movedDeg =
                 Math.toDegrees(MathUtil.angleModulus(module.angleRad() - startAngleRad));
-            log(String.format("direction check: +0.1 output moved %.1f deg", movedDeg));
+            double motorRot = module.turnMotorRotations() - startMotorRot;
+            log(String.format("direction check: +0.1 output moved %.1f deg (steering motor turned %.1f rotations)",
+                movedDeg, motorRot));
             if (movedDeg > 3) {
               enter(Step.PAUSE);
             } else if (movedDeg < -3) {
               fail("encoder counts backwards: absolute encoder must be inverted (see README)");
+            } else if (Math.abs(motorRot) > 1.0) {
+              fail("the steering motor turned but the absolute encoder reading did not change: encoder cable or"
+                  + " adapter unplugged at the encoder or on top of the turn SPARK (a V2 encoder needs its own cable)");
             } else {
-              fail("angle did not change: encoder unplugged, turn motor not moving,"
-                  + " or drive/turn CAN IDs swapped");
+              fail("the steering motor did not turn: check the NEO 550's three power wires and its sensor cable"
+                  + " into the turn SPARK, and that the drive/turn CAN IDs aren't swapped");
             }
           }
         }

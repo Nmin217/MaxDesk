@@ -140,6 +140,14 @@ public class TestModule {
     return MathUtil.inputModulus(rawAngleRad() + zeroPointsRad, 0, 2 * Math.PI);
   }
 
+  /**
+   * Steering motor rotations from the NEO 550's own built-in sensor (not the absolute encoder). Lets the self test
+   * tell "motor didn't turn" from "motor turned but the absolute encoder didn't see it".
+   */
+  public double turnMotorRotations() {
+    return turn.getEncoder().getPosition();
+  }
+
   /** What the absolute encoder itself reports, radians 0..2pi (0 = where it was zeroed). */
   public double rawAngleRad() {
     return turnEncoder.getPosition();
