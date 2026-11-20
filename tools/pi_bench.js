@@ -30,8 +30,8 @@ const S = require(path.join(__dirname, '..', 'robot', 'pi', 'swerve.js'));
 
 // The four-module square frame, the same as firmware/module-test Constants.kModules. Keep the two in step.
 // zeroPointsDeg: which way the wheel points (robot terms, 0 = forward, 90 = left) when its encoder reads 0, i.e.
-// right after the jig zero. x/y: module centre, metres forward / left of the frame centre (placeholders: measure).
-const HALF = 0.25;
+// right after the jig zero. x/y: module centre, metres forward / left of the frame centre (measured: ~1 ft from the centre).
+const HALF = 0.216;   // modules ~1 ft (0.305 m) from the centre on the diagonals: 0.305 / sqrt 2 each way
 const BENCH_MODULES = [
   { name: 'FL', driveId: 1, turnId: 2, x: HALF, y: HALF, zeroPointsDeg: 90 },
   { name: 'FR', driveId: 3, turnId: 4, x: HALF, y: -HALF, zeroPointsDeg: 0 },

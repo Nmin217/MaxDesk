@@ -30,8 +30,9 @@ public final class Constants {
   public record ModuleId(String name, int driveCanId, int turnCanId, double xMeters, double yMeters,
       double zeroPointsDeg, boolean encoderV2) {}
 
-  /** Placeholder half-spacing of the square frame (module centre to frame centre, each way). Measure it. */
-  private static final double kHalf = 0.25;
+  /** Each module sits about 1 ft (0.305 m) from the frame centre, at the corners of a square, so 0.305 / sqrt 2 =
+   * 0.216 m forward/back and 0.216 m left/right (owner measurement, 2026-11-20). */
+  private static final double kHalf = 0.216;
 
   /**
    * The four-module square frame (photo, 2026-11-19). The zero directions are REV's MAXSwerve pattern for a jig
@@ -46,7 +47,7 @@ public final class Constants {
   );
 
   /** Set true once the positions above are measured. Until then the Cart modes print a warning. */
-  public static final boolean kCartPositionsMeasured = false;  // kHalf is a guess from the photo
+  public static final boolean kCartPositionsMeasured = true;   // ~1 ft centre to each module (measured)
 
   public static final class ModuleConstants {
     /** 12, 13 or 14: the pinion actually fitted. These modules have the 13T (medium); PLAN.md suggested 12T. */

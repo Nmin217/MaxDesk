@@ -40,7 +40,7 @@ avoids people and obstacles, and is controlled from a phone app.
   the wheel points in robot terms at encoder 0; REV pattern FL 90, FR 0, BL 180, BR -90) and a per-module
   `encoderV2` (one module has a V2 after a V1 broke). Readout prints robot and raw angles to the DS console every
   second. Confirmed: front = top of the photo, FL 1/2, FR 3/4, BL 5/6, BR 7/8 (odd drive,
-  even turn), BR has the V2. Still a placeholder: module spacing (`kHalf` 0.25 m, `kCartPositionsMeasured = false`).
+  even turn), BR has the V2. Module spacing: ~1 ft from the centre to each module (owner, 2026-11-20) = 0.216 m each way (`kHalf`).
 - **Pi drives the SPARKs directly (2026-11-20).** No roboRIO or Driver Station: `robot/pi/spark_can.py` (Python
   stdlib SocketCAN helper, firmware 24 frames from sparkcan + status 5 for the absolute encoder; steering/drive loops
   at 100 Hz on the Pi; heartbeat only while Node says enabled; runaway/stuck steering guards), `spark_bus.js`,
