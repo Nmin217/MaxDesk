@@ -145,7 +145,17 @@ public class Robot extends TimedRobot {
   public void teleopInit() {
     mode = selectedMode();
     stopAll();
-    for (TestModule m : modules) m.clearStall();
+    for (TestModule m : modules) {
+      m.clearStall();
+      if (!m.configOk()) {
+        boolean ok = m.retryConfigIfNeeded();
+        String msg = ok ? "Module " + m.name() + ": settings sent on retry, it will run now."
+            : "Module " + m.name() + " still not answering on CAN: it stays STOPPED. Check the CAN wires and the"
+              + " power leads of its two SPARKs, and their IDs (REV Hardware Client).";
+        System.err.println(msg);
+        DriverStation.reportWarning(msg, false);
+      }
+    }
     System.out.println("=== Enabled: " + label(mode) + " ===");
     DriverStation.reportWarning("Running: " + label(mode), false);
     if (mode == Mode.SELF_TEST) {

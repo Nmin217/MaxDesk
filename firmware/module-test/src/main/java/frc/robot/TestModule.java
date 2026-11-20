@@ -39,6 +39,7 @@ public class TestModule {
   /** Robot-frame direction of the wheel when the encoder reads 0 (see Constants.ModuleId). */
   private final double zeroPointsRad;
 
+  private final boolean encoderV2;
   private boolean configOk = true;
   private double stallSince = -1;
   private boolean stalled = false;
@@ -48,11 +49,22 @@ public class TestModule {
   public TestModule(Constants.ModuleId id) {
     this.name = id.name();
     this.zeroPointsRad = Math.toRadians(id.zeroPointsDeg());
+    this.encoderV2 = id.encoderV2();
     int driveCanId = id.driveCanId();
     int turnCanId = id.turnCanId();
     drive = new SparkMax(driveCanId, MotorType.kBrushless);
     turn = new SparkMax(turnCanId, MotorType.kBrushless);
 
+    driveEncoder = drive.getEncoder();
+    turnEncoder = turn.getAbsoluteEncoder();
+    turnController = turn.getClosedLoopController();
+    configOk = applyConfig();
+    driveEncoder.setPosition(0);
+  }
+
+  /** Sends every setting to both SPARKs. False if either didn't answer (CAN wiring, power, wrong ID). */
+  private boolean applyConfig() {
+    boolean ok = true;
     SparkMaxConfig driveConfig = new SparkMaxConfig();
     double metersPerMotorRev = ModuleConstants.kWheelDiameterMeters * Math.PI
         / ModuleConstants.kDrivingMotorReduction;
@@ -66,7 +78,7 @@ public class TestModule {
     turnConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(ModuleConstants.kTurnCurrentLimitAmps);
     turnConfig.absoluteEncoder
         // Encoder type first, so nothing in the preset can undo the settings after it.
-        .apply(id.encoderV2()
+        .apply(encoderV2
             ? AbsoluteEncoderConfig.Presets.REV_ThroughBoreEncoderV2
             : AbsoluteEncoderConfig.Presets.REV_ThroughBoreEncoder)
         // The MAXSwerve output shaft turns opposite to the steering motor. Without this the
@@ -84,15 +96,12 @@ public class TestModule {
         .positionWrappingInputRange(0, radiansPerRev);
 
     // The zero offset set with REV Hardware Client (Set Zero Offset) survives this reset.
-    configOk &= check(drive.configure(driveConfig, ResetMode.kResetSafeParameters,
+    ok &= check(drive.configure(driveConfig, ResetMode.kResetSafeParameters,
         PersistMode.kPersistParameters), "drive");
-    configOk &= check(turn.configure(turnConfig, ResetMode.kResetSafeParameters,
+    ok &= check(turn.configure(turnConfig, ResetMode.kResetSafeParameters,
         PersistMode.kPersistParameters), "turn");
 
-    driveEncoder = drive.getEncoder();
-    turnEncoder = turn.getAbsoluteEncoder();
-    turnController = turn.getClosedLoopController();
-    driveEncoder.setPosition(0);
+    return ok;
   }
 
   private boolean check(REVLibError err, String which) {
@@ -110,6 +119,16 @@ public class TestModule {
 
   /** False if a SPARK did not answer during configuration (wrong CAN ID, CAN break, no power). */
   public boolean configOk() {
+    return configOk;
+  }
+
+  /**
+   * Tries the settings again if they failed last time (a SPARK that was late on CAN or rebooted). Called on every
+   * enable. Until it succeeds, this module never drives or steers: half-configured steering doesn't work and would
+   * make the module fight the others.
+   */
+  public boolean retryConfigIfNeeded() {
+    if (!configOk) configOk = applyConfig();
     return configOk;
   }
 
@@ -142,6 +161,7 @@ public class TestModule {
 
   /** Closed-loop steer to a robot-frame angle (radians, any range). Drive is left as is. */
   public void steerTo(double targetRad) {
+    if (!configOk) { turn.stopMotor(); return; }
     if (turnGuard()) return;
     // The SPARK works in encoder terms, so take the module's zero direction back off.
     turnController.setSetpoint(MathUtil.inputModulus(targetRad - zeroPointsRad, 0, 2 * Math.PI),
@@ -150,6 +170,7 @@ public class TestModule {
 
   /** Open-loop steer. Only for the direction check. */
   public void steerPercent(double percent) {
+    if (!configOk) { turn.stopMotor(); return; }
     if (turnGuard()) return;
     turn.set(MathUtil.clamp(percent, -0.2, 0.2));
   }
@@ -159,6 +180,7 @@ public class TestModule {
    * (until {@link #clearStall()}) if the wheel is jammed: see {@link TestLimits#kStallAmps}.
    */
   public void drivePercent(double percent) {
+    if (!configOk) { drive.stopMotor(); return; }
     double out = MathUtil.clamp(percent, -TestLimits.kMaxDrivePercent, TestLimits.kMaxDrivePercent);
     boolean pushing = Math.abs(out) > 0.02
         && Math.abs(driveEncoder.getVelocity()) < TestLimits.kStallSpeedMps

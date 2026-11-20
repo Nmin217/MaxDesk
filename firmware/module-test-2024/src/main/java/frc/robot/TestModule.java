@@ -55,37 +55,44 @@ public class TestModule {
     turnEncoder = turn.getAbsoluteEncoder(SparkAbsoluteEncoder.Type.kDutyCycle);
     turnController = turn.getPIDController();
 
+    configOk = applyConfig();
+    driveEncoder.setPosition(0);
+  }
+
+  /** Sends every setting to both SPARKs. False if either didn't answer (CAN wiring, power, wrong ID). */
+  private boolean applyConfig() {
+    boolean ok = true;
     double metersPerMotorRev = ModuleConstants.kWheelDiameterMeters * Math.PI
         / ModuleConstants.kDrivingMotorReduction;
-    configOk &= check(drive.setIdleMode(IdleMode.kBrake), "drive idle mode");
-    configOk &= check(drive.setSmartCurrentLimit(TestLimits.kBenchDriveCurrentLimitAmps), "drive current limit");
-    configOk &= check(driveEncoder.setPositionConversionFactor(metersPerMotorRev), "drive position factor"); // meters
-    configOk &= check(driveEncoder.setVelocityConversionFactor(metersPerMotorRev / 60.0), "drive velocity factor"); // m/s
+    ok &= check(drive.setIdleMode(IdleMode.kBrake), "drive idle mode");
+    ok &= check(drive.setSmartCurrentLimit(TestLimits.kBenchDriveCurrentLimitAmps), "drive current limit");
+    ok &= check(driveEncoder.setPositionConversionFactor(metersPerMotorRev), "drive position factor"); // meters
+    ok &= check(driveEncoder.setVelocityConversionFactor(metersPerMotorRev / 60.0), "drive velocity factor"); // m/s
 
     double radiansPerRev = 2 * Math.PI;
-    configOk &= check(turn.setIdleMode(IdleMode.kBrake), "turn idle mode");
-    configOk &= check(turn.setSmartCurrentLimit(ModuleConstants.kTurnCurrentLimitAmps), "turn current limit");
+    ok &= check(turn.setIdleMode(IdleMode.kBrake), "turn idle mode");
+    ok &= check(turn.setSmartCurrentLimit(ModuleConstants.kTurnCurrentLimitAmps), "turn current limit");
     // The MAXSwerve output shaft turns opposite to the steering motor. Without this the position
     // loop has positive feedback and the module spins forever.
-    configOk &= check(turnEncoder.setInverted(true), "turn encoder inverted");
-    configOk &= check(turnEncoder.setPositionConversionFactor(radiansPerRev), "turn position factor"); // radians
-    configOk &= check(turnEncoder.setVelocityConversionFactor(radiansPerRev / 60.0), "turn velocity factor"); // rad/s
-    configOk &= check(turnController.setFeedbackDevice(turnEncoder), "turn feedback sensor");
-    configOk &= check(turnController.setP(1), "turn P");
-    configOk &= check(turnController.setI(0), "turn I");
-    configOk &= check(turnController.setD(0), "turn D");
-    configOk &= check(turnController.setFF(0), "turn FF");
+    ok &= check(turnEncoder.setInverted(true), "turn encoder inverted");
+    ok &= check(turnEncoder.setPositionConversionFactor(radiansPerRev), "turn position factor"); // radians
+    ok &= check(turnEncoder.setVelocityConversionFactor(radiansPerRev / 60.0), "turn velocity factor"); // rad/s
+    ok &= check(turnController.setFeedbackDevice(turnEncoder), "turn feedback sensor");
+    ok &= check(turnController.setP(1), "turn P");
+    ok &= check(turnController.setI(0), "turn I");
+    ok &= check(turnController.setD(0), "turn D");
+    ok &= check(turnController.setFF(0), "turn FF");
     // Bench test: cap steering output so a wrong setting can't whip cables around.
-    configOk &= check(turnController.setOutputRange(-0.5, 0.5), "turn output range");
+    ok &= check(turnController.setOutputRange(-0.5, 0.5), "turn output range");
     // Take the short way through 0 (350 deg -> 10 deg turns 20 deg, not 340).
-    configOk &= check(turnController.setPositionPIDWrappingEnabled(true), "turn wrapping");
-    configOk &= check(turnController.setPositionPIDWrappingMinInput(0), "turn wrapping min");
-    configOk &= check(turnController.setPositionPIDWrappingMaxInput(radiansPerRev), "turn wrapping max");
+    ok &= check(turnController.setPositionPIDWrappingEnabled(true), "turn wrapping");
+    ok &= check(turnController.setPositionPIDWrappingMinInput(0), "turn wrapping min");
+    ok &= check(turnController.setPositionPIDWrappingMaxInput(radiansPerRev), "turn wrapping max");
 
     // Keep the settings through a power cycle. The zero offset set in Hardware Client is untouched.
-    configOk &= check(drive.burnFlash(), "drive burn flash");
-    configOk &= check(turn.burnFlash(), "turn burn flash");
-    driveEncoder.setPosition(0);
+    ok &= check(drive.burnFlash(), "drive burn flash");
+    ok &= check(turn.burnFlash(), "turn burn flash");
+    return ok;
   }
 
   private boolean check(REVLibError err, String which) {
@@ -103,6 +110,16 @@ public class TestModule {
 
   /** False if a SPARK did not answer during configuration (wrong CAN ID, CAN break, no power). */
   public boolean configOk() {
+    return configOk;
+  }
+
+  /**
+   * Tries the settings again if they failed last time (a SPARK that was late on CAN or rebooted). Called on every
+   * enable. Until it succeeds, this module never drives or steers: half-configured steering doesn't work and would
+   * make the module fight the others.
+   */
+  public boolean retryConfigIfNeeded() {
+    if (!configOk) configOk = applyConfig();
     return configOk;
   }
 
@@ -135,6 +152,7 @@ public class TestModule {
 
   /** Closed-loop steer to a robot-frame angle (radians, any range). Drive is left as is. */
   public void steerTo(double targetRad) {
+    if (!configOk) { turn.stopMotor(); return; }
     if (turnGuard()) return;
     // The SPARK works in encoder terms, so take the module's zero direction back off.
     turnController.setReference(MathUtil.inputModulus(targetRad - zeroPointsRad, 0, 2 * Math.PI),
@@ -143,6 +161,7 @@ public class TestModule {
 
   /** Open-loop steer. Only for the direction check. */
   public void steerPercent(double percent) {
+    if (!configOk) { turn.stopMotor(); return; }
     if (turnGuard()) return;
     turn.set(MathUtil.clamp(percent, -0.2, 0.2));
   }
@@ -152,6 +171,7 @@ public class TestModule {
    * (until {@link #clearStall()}) if the wheel is jammed: see {@link TestLimits#kStallAmps}.
    */
   public void drivePercent(double percent) {
+    if (!configOk) { drive.stopMotor(); return; }
     double out = MathUtil.clamp(percent, -TestLimits.kMaxDrivePercent, TestLimits.kMaxDrivePercent);
     boolean pushing = Math.abs(out) > 0.02
         && Math.abs(driveEncoder.getVelocity()) < TestLimits.kStallSpeedMps
