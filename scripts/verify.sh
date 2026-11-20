@@ -71,6 +71,8 @@ node tests/pi/test_black_box.js > /tmp/bbx.log 2>&1 && ok "black box: 60 s ring,
 node tests/pi/test_pi_io.js > /tmp/pio.log 2>&1 && ok "pi_io on a fake SPARK bus: CAN IDs, units, field-relative, 180 flip, heartbeat, odometry, faults" || { no "pi_io"; grep FAIL /tmp/pio.log | head -5; }
 node tests/pi/test_hw_loop.js > /tmp/hwl.log 2>&1 && ok "fake hardware end to end: summon arrives, no contact, LiDAR/SPARK unplugged stop it, black box files" || { no "fake hardware end to end"; grep -E "FAIL|    " /tmp/hwl.log | head -8; }
 node tests/pi/test_swerve.js > /tmp/sw.log 2>&1 && ok "swerve maths: module angles/speeds, desaturate, 90° flip, odometry" || { no "swerve maths"; grep FAIL /tmp/sw.log | head -6; }
+node tests/pi/test_pi_bench.js > /tmp/pbn.log 2>&1 && ok "pi bench (no roboRIO/DS): RB deadman, jig zero directions, self test, refuses with a SPARK missing, Xbox on Linux" || { no "pi bench"; grep FAIL /tmp/pbn.log | head -6; }
+node tests/pi/test_spark_bus.js > /tmp/sbus.log 2>&1 && ok "SPARK CAN helper end to end (pretend SPARKs): units, heartbeat stops motors, dead helper = stale" || { no "SPARK CAN helper end to end"; grep -A3 FAIL /tmp/sbus.log | head -10; }
 if MAXDESK_ROOM=office node tests/sim/run.js office > /tmp/of.log 2>&1 && grep -q "OFFICE PASS" /tmp/of.log; then
   ok "office floor (32 x 20 m): summons into offices, kitchen, lounge, meeting room arrive with no contact"
 else
@@ -81,7 +83,7 @@ if node tests/sim/run.js boxed > /tmp/bx.log 2>&1 && grep -q "BOXED PASS" /tmp/b
 else
   no "boxed in"; grep '"ok":false' /tmp/bx.log | head -6
 fi
-python3 -B -m unittest discover -s tests/pi_python > /tmp/pipy.log 2>&1 && ok "pi lidar safety monitor (python): metres, stale, blind, heartbeat, NT4" || { no "pi lidar python"; tail -8 /tmp/pipy.log; }
+python3 -B -m unittest discover -s tests/pi_python > /tmp/pipy.log 2>&1 && ok "pi python: lidar safety monitor; SPARK CAN helper (firmware 24 frames, heartbeat rules, steering/drive loops, runaway guard)" || { no "pi lidar python"; tail -8 /tmp/pipy.log; }
 python3 -B tests/hardware/app-drive-test/test_app_link.py > /tmp/adt.log 2>&1 && ok "bench drive test link: deadman seq, stop beats late drive, key" || { no "bench drive test link"; tail -8 /tmp/adt.log; }
 if bash tests/bridge/run.sh > /tmp/br.log 2>&1; then
   ok "bridge: dup poll, restart epoch handling"

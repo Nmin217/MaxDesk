@@ -41,6 +41,12 @@ avoids people and obstacles, and is controlled from a phone app.
   `encoderV2` (one module has a V2 after a V1 broke). Readout prints robot and raw angles to the DS console every
   second. Confirmed: front = top of the photo, FL 1/2, FR 3/4, BL 5/6, BR 7/8 (odd drive,
   even turn), BR has the V2. Still a placeholder: module spacing (`kHalf` 0.25 m, `kCartPositionsMeasured = false`).
+- **Pi drives the SPARKs directly (2026-11-20).** No roboRIO or Driver Station: `robot/pi/spark_can.py` (Python
+  stdlib SocketCAN helper, firmware 24 frames from sparkcan + status 5 for the absolute encoder; steering/drive loops
+  at 100 Hz on the Pi; heartbeat only while Node says enabled; runaway/stuck steering guards), `spark_bus.js`,
+  `xbox.js`, `tools/pi_bench.js` (Readout / Self test / Joystick / Cart, RB deadman, same zero directions as
+  module-test). Tests: `tests/pi_python/test_spark_can.py`, `tests/pi/test_pi_bench.js`, `tests/pi/test_spark_bus.js`.
+  The owner will downgrade the SPARKs from 25 to 24. Untested on hardware: status 5 byte layout, gains, CANivore.
 - **The real desk** (not converted to swerve yet): the top is **48 x 30 in** (1.22 x 0.76 m), the legs are 45 in apart, and
   the T-feet are **about 43 in apart, centre to centre** (hole to hole, give or take 1–2 in). That's the left-right
   wheel spacing if the modules mount on the feet. Still needed: foot length (front to back), where on the feet the modules

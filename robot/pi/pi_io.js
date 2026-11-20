@@ -14,8 +14,8 @@
  *   heartbeat(enabled)        call every tick; SPARKs stop driving if "enabled" stops arriving for 100 ms
  *   status(id)                null if never heard, else { ageMs, velocityRpm, positionRot, absRot, currentA,
  *                              tempC, busV, faults: [] }  (absRot: turn controllers only, NaN if no encoder)
- * Backends: fake_spark_bus.js (tests). Real ones (sparkcan helper, or our own SocketCAN driver) come later;
- * see docs/OPTION-B-PI-CAN.md.
+ * Backends: fake_spark_bus.js (tests) and spark_bus.js (real SPARK MAXes on firmware 24 over SocketCAN, through
+ * spark_can.py; `{ sim: true }` gives pretend ones). See docs/OPTION-B-PI-CAN.md and the README.
  *
  * Zeroing: set each module's absolute-encoder zero offset (REV Hardware Client) with the wheel pointing at the
  * desk's FRONT. Then encoder angle 0 = desk forward and angleOffset stays 0. A module zeroed some other way

@@ -152,6 +152,53 @@ the event list, and charts for each module: wheel speed (asked for and measured)
 current and temperature. Tests: `tests/pi/test_black_box.js`, and the black box tests in
 `tests/pi/test_hw_loop.js` (a jammed wheel, the LiDAR going quiet, saving from the app).
 
+## Driving the SPARKs from the Pi (no roboRIO, no Driver Station)
+
+The Pi talks to the SPARK MAXes itself, over CAN, and reads the Xbox controller plugged into its USB port.
+
+| File | Job |
+|---|---|
+| `spark_can.py` | The CAN helper (Python standard library only, nothing to install). Speaks the SPARK firmware 24 CAN format (from sparkcan, MIT) plus status frame 5, the absolute encoder. Runs the steering and drive loops at 100 Hz and sends the enable heartbeat. `--sim` = pretend SPARKs. |
+| `spark_bus.js` | Starts the helper and gives Node the same "SPARK bus" as `fake_spark_bus.js`, so `pi_io.js` (the desk) and the bench program both use it. |
+| `xbox.js` | Xbox controller from `/dev/input/js0`. Unplugged = every button released. |
+| `../../tools/pi_bench.js` | The bench program: Readout, Self test, Joystick, Cart, with the same controls as `firmware/module-test`. |
+
+**Safety, and why it is built this way**
+- The SPARKs only drive while they hear the CAN heartbeat. The helper sends it only while Node keeps saying
+  "enabled" (at most 100 ms apart), and the bench only says that while RB is held. Let go, unplug the controller,
+  or have Node crash or freeze, and the SPARKs stop by themselves about 0.1 s later.
+- Commands go out before each heartbeat, so a SPARK is never enabled with an old command loaded.
+- The steering loop runs on the Pi (not inside the SPARK) so no PID settings have to be written over CAN. Two guards
+  cut a module's steering until restart: the error growing while it pushes towards the target (encoder reads
+  backwards), or still far off at full steering power for 1 s (jammed). The Self test also checks the steering
+  direction open loop before any closed-loop steering.
+- Only safe settings are written at start: brushless, brake, current limits, and units (1 = rotations / rpm, which
+  undoes the units the roboRIO program burned in). The absolute encoder's zero offset, set with the jig, is never
+  touched. Nothing is burned to flash.
+- The hardware E-stop that cuts motor power is still the one safety that doesn't depend on software.
+
+**Setup (once)**
+1. SPARK firmware **24** on all eight (REV Hardware Client, one SPARK on CAN at a time; check its ID afterwards).
+   The roboRIO then runs `firmware/module-test-2024`.
+2. CAN adapter on the Pi. Unplug the roboRIO from the CAN chain (two controllers on one bus fight), and keep a
+   120 ohm terminator at each end. Bring the bus up (1 Mbit/s, as FRC uses):
+   `sudo ip link set can0 up type can bitrate 1000000`
+   then `candump can0` (from `sudo apt install can-utils`) should scroll with SPARK status frames.
+   - **CANable 2.0** (candleLight firmware): plug and play.
+   - **CANivore**: install CTRE's `canivore-usb` package; it appears as a CAN network interface. Not tested with
+     SPARKs yet: run the `candump` check first.
+3. Node 22 and git on the Pi, clone the repo, plug the Xbox controller into the Pi.
+
+**Run**
+- `node tools/pi_bench.js --sim`: pretend SPARKs, to try the controls first (a controller still helps).
+- `node tools/pi_bench.js` (or `--iface can1`, `--pad /dev/input/js1`): real SPARKs. FRAME ON BLOCKS.
+- The same order as on the roboRIO: Readout (hand-turn wheels; the "robot" angles read 0 pointing forward), then
+  Self test, then Joystick (RB + A lines every wheel up; push forward gently, all roll the same way), then Cart.
+
+**Not verified on hardware yet** (all of it ran only against pretend SPARKs): the status frame 5 layout (REV's docs
+say position is a 32-bit float, first in the frame), the loop gains (`TURN_KP`, `DRIVE_KP` in `spark_can.py`), and
+the CANivore. Readout is the first check: if the angles look wrong or never change, stop there and report.
+
 ## Dry run on the Pi (no CAN adapter or motors needed)
 
 `node tools/pi_dry_run.js` runs the whole desk software (bridge, brain in hardware mode, `pi_io`) in real time

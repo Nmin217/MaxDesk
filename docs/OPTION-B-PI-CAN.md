@@ -1,5 +1,9 @@
 # Option B: driving the SPARK MAXes from a Raspberry Pi (no roboRIO)
 
+> **Built (2026-11-20):** route 1, as our own Python port of sparkcan's CAN format (`robot/pi/spark_can.py`) plus
+> `spark_bus.js`, `xbox.js` and the bench program `tools/pi_bench.js`. Steering and drive loops run on the Pi.
+> Firmware 24. See `robot/pi/README.md`, "Driving the SPARKs from the Pi". Tested only against pretend SPARKs so far.
+
 Researched October 2026. Library and firmware support move quickly, so check each link before buying
 anything. A roboRIO stays the fallback if none of these work.
 

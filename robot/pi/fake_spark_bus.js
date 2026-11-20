@@ -34,7 +34,9 @@ function createFakeSparkBus({ ids = [], busVolts = 12.6 } = {}) {
     // ---- the SPARK bus interface (what pi_io.js uses) ----
     configure(id, cfg) { const d = get(id); if (d.faults.unplugged) return false; d.cfg = { ...cfg }; d.kind = cfg.kind; log.push({ t, id, op: 'configure', cfg: { ...cfg } }); return true; },
     setVelocity(id, rpm) { const d = get(id); log.push({ t, id, op: 'velocity', value: rpm }); if (!d.faults.unplugged && d.cfg) d.target = Math.max(-DRIVE_MAX_RPM, Math.min(DRIVE_MAX_RPM, +rpm || 0)); },
-    setPosition(id, rotations) { const d = get(id); log.push({ t, id, op: 'position', value: rotations }); if (!d.faults.unplugged && d.cfg) d.target = +rotations || 0; },
+    setPosition(id, rotations) { const d = get(id); log.push({ t, id, op: 'position', value: rotations }); if (!d.faults.unplugged && d.cfg) { d.target = +rotations || 0; d.duty = null; } },
+    setDuty(id, duty) { const d = get(id); log.push({ t, id, op: 'duty', value: duty }); if (!d.faults.unplugged && d.cfg) { d.duty = Math.max(-1, Math.min(1, +duty || 0)); d.target = null; } },   // open loop (bench direction check)
+    resetFaults() {},
     heartbeat(enabled) { if (enabled) enabledUntil = t + HEARTBEAT_TIMEOUT_S; else enabledUntil = -1; },
     status(id) {
       const d = dev.get(id);
@@ -58,7 +60,10 @@ function createFakeSparkBus({ ids = [], busVolts = 12.6 } = {}) {
           d.rot += d.rpm / 60 * dt;
           d.current = d.faults.jammed && enabled && Math.abs(want) > 50 ? 35 : 1.5 + Math.abs(d.rpm - before) / dt * 0.004 + Math.abs(d.rpm) * 0.002;
         } else if (d.kind === 'turn') {
-          if (enabled && d.target !== null && !d.faults.jammed) {
+          if (enabled && d.duty !== null && d.duty !== undefined && !d.faults.jammed) {
+            d.angle = wrapPi(d.angle + d.duty * 25 * dt * (d.faults.backwards ? -1 : 1));   // ~25 rad/s at full power
+            d.current = 1 + Math.abs(d.duty) * 10;
+          } else if (enabled && d.target !== null && !d.faults.jammed) {
             const err = wrapPi(d.target * 2 * Math.PI - d.angle);
             d.angle = wrapPi(d.angle + Math.max(-TURN_MAX_RAD_S * dt, Math.min(TURN_MAX_RAD_S * dt, err * TURN_GAIN * dt)));
             d.current = 1 + Math.min(10, Math.abs(err) * 6);
