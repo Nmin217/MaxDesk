@@ -3,11 +3,13 @@ package frc.robot;
 import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.CANSparkBase.ControlType;
 import com.revrobotics.CANSparkBase.IdleMode;
+import com.revrobotics.CANSparkBase.SoftLimitDirection;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.REVLibError;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkAbsoluteEncoder;
+import com.revrobotics.SparkLimitSwitch;
 import com.revrobotics.SparkPIDController;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -65,12 +67,23 @@ public class TestModule {
     double metersPerMotorRev = ModuleConstants.kWheelDiameterMeters * Math.PI
         / ModuleConstants.kDrivingMotorReduction;
     ok &= check(drive.setIdleMode(IdleMode.kBrake), "drive idle mode");
+    // No limit switches or soft limits on a swerve module: never let one block a motor.
+    ok &= check(drive.getForwardLimitSwitch(SparkLimitSwitch.Type.kNormallyOpen).enableLimitSwitch(false), "drive fwd limit off");
+    ok &= check(drive.getReverseLimitSwitch(SparkLimitSwitch.Type.kNormallyOpen).enableLimitSwitch(false), "drive rev limit off");
+    ok &= check(drive.enableSoftLimit(SoftLimitDirection.kForward, false), "drive fwd soft limit off");
+    ok &= check(drive.enableSoftLimit(SoftLimitDirection.kReverse, false), "drive rev soft limit off");
     ok &= check(drive.setSmartCurrentLimit(TestLimits.kBenchDriveCurrentLimitAmps), "drive current limit");
     ok &= check(driveEncoder.setPositionConversionFactor(metersPerMotorRev), "drive position factor"); // meters
     ok &= check(driveEncoder.setVelocityConversionFactor(metersPerMotorRev / 60.0), "drive velocity factor"); // m/s
 
     double radiansPerRev = 2 * Math.PI;
     ok &= check(turn.setIdleMode(IdleMode.kBrake), "turn idle mode");
+    // The limit-switch inputs share the top port with the encoder adapter. A wrong adapter or wiring can make them
+    // read "pressed", and the SPARK then refuses to turn the motor. There are no limit switches here: turn them off.
+    ok &= check(turn.getForwardLimitSwitch(SparkLimitSwitch.Type.kNormallyOpen).enableLimitSwitch(false), "turn fwd limit off");
+    ok &= check(turn.getReverseLimitSwitch(SparkLimitSwitch.Type.kNormallyOpen).enableLimitSwitch(false), "turn rev limit off");
+    ok &= check(turn.enableSoftLimit(SoftLimitDirection.kForward, false), "turn fwd soft limit off");
+    ok &= check(turn.enableSoftLimit(SoftLimitDirection.kReverse, false), "turn rev soft limit off");
     ok &= check(turn.setSmartCurrentLimit(ModuleConstants.kTurnCurrentLimitAmps), "turn current limit");
     // The MAXSwerve output shaft turns opposite to the steering motor. Without this the position
     // loop has positive feedback and the module spins forever.
@@ -137,6 +150,16 @@ public class TestModule {
    */
   public double turnMotorRotations() {
     return turn.getEncoder().getPosition();
+  }
+
+  /** What the turn SPARK itself reports that could stop its motor, for the self test's failure message. */
+  public String turnSparkReport() {
+    StringBuilder r = new StringBuilder();
+    if (turn.getForwardLimitSwitch(SparkLimitSwitch.Type.kNormallyOpen).isPressed()) r.append(" forward limit switch input reads PRESSED;");
+    if (turn.getReverseLimitSwitch(SparkLimitSwitch.Type.kNormallyOpen).isPressed()) r.append(" reverse limit switch input reads PRESSED;");
+    if (turn.getFaults() != 0) r.append(String.format(" the SPARK reports faults (bits 0x%04X, see REV Hardware Client);", turn.getFaults()));
+    r.append(String.format(" applied output %.2f, current %.1f A", turn.getAppliedOutput(), turn.getOutputCurrent()));
+    return r.toString();
   }
 
   /** What the absolute encoder itself reports, radians 0..2pi (0 = where it was zeroed). */

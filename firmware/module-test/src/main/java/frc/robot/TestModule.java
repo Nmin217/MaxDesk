@@ -69,6 +69,9 @@ public class TestModule {
     double metersPerMotorRev = ModuleConstants.kWheelDiameterMeters * Math.PI
         / ModuleConstants.kDrivingMotorReduction;
     driveConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(TestLimits.kBenchDriveCurrentLimitAmps);
+    // No limit switches or soft limits on a swerve module: never let one block a motor.
+    driveConfig.limitSwitch.forwardLimitSwitchEnabled(false).reverseLimitSwitchEnabled(false);
+    driveConfig.softLimit.forwardSoftLimitEnabled(false).reverseSoftLimitEnabled(false);
     driveConfig.encoder
         .positionConversionFactor(metersPerMotorRev) // meters
         .velocityConversionFactor(metersPerMotorRev / 60.0); // meters per second
@@ -76,6 +79,10 @@ public class TestModule {
     SparkMaxConfig turnConfig = new SparkMaxConfig();
     double radiansPerRev = 2 * Math.PI;
     turnConfig.idleMode(IdleMode.kBrake).smartCurrentLimit(ModuleConstants.kTurnCurrentLimitAmps);
+    // The limit-switch inputs share the top port with the encoder adapter. A wrong adapter or wiring can make them
+    // read "pressed", and the SPARK then refuses to turn the motor. There are no limit switches here: turn them off.
+    turnConfig.limitSwitch.forwardLimitSwitchEnabled(false).reverseLimitSwitchEnabled(false);
+    turnConfig.softLimit.forwardSoftLimitEnabled(false).reverseSoftLimitEnabled(false);
     turnConfig.absoluteEncoder
         // Encoder type first, so nothing in the preset can undo the settings after it.
         .apply(encoderV2
@@ -146,6 +153,17 @@ public class TestModule {
    */
   public double turnMotorRotations() {
     return turn.getEncoder().getPosition();
+  }
+
+  /** What the turn SPARK itself reports that could stop its motor, for the self test's failure message. */
+  public String turnSparkReport() {
+    StringBuilder r = new StringBuilder();
+    if (turn.getForwardLimitSwitch().isPressed()) r.append(" forward limit switch input reads PRESSED;");
+    if (turn.getReverseLimitSwitch().isPressed()) r.append(" reverse limit switch input reads PRESSED;");
+    if (turn.hasActiveFault()) r.append(" the SPARK reports an active fault (see REV Hardware Client);");
+    if (turn.hasActiveWarning()) r.append(" the SPARK reports a warning;");
+    r.append(String.format(" applied output %.2f, current %.1f A", turn.getAppliedOutput(), turn.getOutputCurrent()));
+    return r.toString();
   }
 
   /** What the absolute encoder itself reports, radians 0..2pi (0 = where it was zeroed). */

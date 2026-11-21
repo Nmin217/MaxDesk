@@ -364,10 +364,11 @@ public class Robot extends TimedRobot {
             return;
           }
           if ((t > 0.6 && Math.abs(movedNow) > 3) || t > 1.2) {
-            module.stop();
             double motorRot = module.turnMotorRotations() - startMotorRot;
             log(String.format("direction check: +%.1f output moved %.1f deg (steering motor turned %.1f rotations)",
                 power, movedNow, motorRot));
+            if (Math.abs(movedNow) <= 3) log("turn SPARK says:" + module.turnSparkReport());
+            module.stop();
             if (power > 0.1 && Math.abs(movedNow) > 3) {
               log("note: needed 20 % to move; this module is stiffer than it should be. Check it turns freely by hand");
             }
