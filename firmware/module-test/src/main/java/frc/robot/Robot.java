@@ -353,30 +353,36 @@ public class Robot extends TimedRobot {
       double t = stepTimer.get();
       switch (step) {
         case DIRECTION -> {
-          // Small open-loop push. With the encoder inverted correctly, + output => + angle.
-          module.steerPercent(0.1);
+          // Small open-loop push. With the encoder inverted correctly, + output => + angle. A stiff module (new or
+          // just repaired) may not move at 10 %, so after 0.6 s without movement it tries 20 % for another 0.6 s.
+          double movedNow = Math.toDegrees(MathUtil.angleModulus(module.angleRad() - startAngleRad));
+          double power = t < 0.6 ? 0.1 : 0.2;
+          module.steerPercent(power);
           if (module.turnStalled()) {
             fail("steering stalled: high current, module not turning. Check the NEO 550 phase"
-                + " wires (red/black/white) and that the module turns freely");
+                + " wires (red/black/white) and that the module turns freely by hand");
             return;
           }
-          if (t > 0.6) {
+          if ((t > 0.6 && Math.abs(movedNow) > 3) || t > 1.2) {
             module.stop();
-            double movedDeg =
-                Math.toDegrees(MathUtil.angleModulus(module.angleRad() - startAngleRad));
             double motorRot = module.turnMotorRotations() - startMotorRot;
-            log(String.format("direction check: +0.1 output moved %.1f deg (steering motor turned %.1f rotations)",
-                movedDeg, motorRot));
-            if (movedDeg > 3) {
+            log(String.format("direction check: +%.1f output moved %.1f deg (steering motor turned %.1f rotations)",
+                power, movedNow, motorRot));
+            if (power > 0.1 && Math.abs(movedNow) > 3) {
+              log("note: needed 20 % to move; this module is stiffer than it should be. Check it turns freely by hand");
+            }
+            if (movedNow > 3) {
               enter(Step.PAUSE);
-            } else if (movedDeg < -3) {
+            } else if (movedNow < -3) {
               fail("encoder counts backwards: absolute encoder must be inverted (see README)");
             } else if (Math.abs(motorRot) > 1.0) {
               fail("the steering motor turned but the absolute encoder reading did not change: encoder cable or"
-                  + " adapter unplugged at the encoder or on top of the turn SPARK (a V2 encoder needs its own cable)");
+                  + " adapter unplugged at the encoder or on top of the turn SPARK, the encoder not turning with the"
+                  + " shaft, or the SPARK's data port set to alternate encoder");
             } else {
-              fail("the steering motor did not turn: check the NEO 550's three power wires and its sensor cable"
-                  + " into the turn SPARK, and that the drive/turn CAN IDs aren't swapped");
+              fail("the steering motor did not turn even at 20 %: the module is binding (turn it by hand), or check"
+                  + " the NEO 550's three power wires and its sensor cable into the turn SPARK, and that the"
+                  + " drive/turn CAN IDs aren't swapped");
             }
           }
         }
