@@ -331,6 +331,7 @@ public class Robot extends TimedRobot {
     private int index;
     private double startAngleRad;
     private double startMotorRot;
+    private double directionPower;
     private double startDriveM;
     private double inToleranceSince;
 
@@ -345,6 +346,7 @@ public class Robot extends TimedRobot {
       }
       startAngleRad = module.angleRad();
       startMotorRot = module.turnMotorRotations();
+      directionPower = 0.1;
       enter(Step.DIRECTION);
       report("running");
     }
@@ -356,14 +358,16 @@ public class Robot extends TimedRobot {
           // Small open-loop push. With the encoder inverted correctly, + output => + angle. A stiff module (new or
           // just repaired) may not move at 10 %, so after 0.6 s without movement it tries 20 % for another 0.6 s.
           double movedNow = Math.toDegrees(MathUtil.angleModulus(module.angleRad() - startAngleRad));
-          double power = t < 0.6 ? 0.1 : 0.2;
+          double power = directionPower;
           module.steerPercent(power);
           if (module.turnStalled()) {
             fail("steering stalled: high current, module not turning. Check the NEO 550 phase"
                 + " wires (red/black/white) and that the module turns freely by hand");
             return;
           }
-          if ((t > 0.6 && Math.abs(movedNow) > 3) || t > 1.2) {
+          if (t > 0.6 && power < 0.15 && Math.abs(movedNow) <= 3) {
+            directionPower = 0.2;   // didn't move at 10 % in 0.6 s: try 20 % until 1.2 s
+          } else if ((t > 0.6 && Math.abs(movedNow) > 3) || t > 1.2) {
             double motorRot = module.turnMotorRotations() - startMotorRot;
             log(String.format("direction check: +%.1f output moved %.1f deg (steering motor turned %.1f rotations)",
                 power, movedNow, motorRot));
