@@ -53,6 +53,9 @@ avoids people and obstacles, and is controlled from a phone app.
   rails), about 1 in inside the side rails. Belly pan at the back only (about 46 x 11 in, under the rails, with a cross
   brace at its front edge) so the front stays open floor for feet. 3D model: claude.ai artifact "MaxDesk drive frame".
   Still needed for the software: wheel-centre positions, which side is the drive front, weight.
+- **Final control hardware (2026-11-24):** a new **Raspberry Pi 5** (with active cooler, 5 V 5 A supply) and a
+  **CANable 2.0** USB-CAN adapter go in the desk. The CANivore, Xbox/Logitech controller, Pi 4 and roboRIO are temporary
+  test gear (the finished desk is driven from the phone app). BOM: `docs/Summon_Desk_BOM.xlsx`, sheet "Have vs need".
 - **The real desk** (not converted to swerve yet): the top is **48 x 30 in** (1.22 x 0.76 m), the legs are 45 in apart, and
   the T-feet are **about 43 in apart, centre to centre** (hole to hole, give or take 1–2 in). That's the left-right
   wheel spacing if the modules mount on the feet. Still needed: foot length (front to back), where on the feet the modules
