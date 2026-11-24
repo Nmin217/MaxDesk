@@ -56,6 +56,11 @@ avoids people and obstacles, and is controlled from a phone app.
 - **Final control hardware (2026-11-24):** a new **Raspberry Pi 5** (with active cooler, 5 V 5 A supply) and a
   **CANable 2.0** USB-CAN adapter go in the desk. The CANivore, Xbox/Logitech controller, Pi 4 and roboRIO are temporary
   test gear (the finished desk is driven from the phone app). BOM: `docs/Summon_Desk_BOM.xlsx`, sheet "Have vs need".
+- **LiDARs (2026-11-24):** two 2D 360-degree LiDARs (recommended Slamtec RPLIDAR C1; A1M8 works with the existing
+  Python reader; owner to check whether they already have some) on **opposite corners, front-left and back-right**, on
+  short brackets just outside the corner, ~10 in up and level, USB to the Pi 5. This matches the simulator's two
+  corner LiDARs. Still to write: the Node LiDAR driver for `pi_io` (`lidar.read()` -> rays in the desk frame, with
+  each unit's mount position), once the model is known.
 - **The real desk** (not converted to swerve yet): the top is **48 x 30 in** (1.22 x 0.76 m), the legs are 45 in apart, and
   the T-feet are **about 43 in apart, centre to centre** (hole to hole, give or take 1–2 in). That's the left-right
   wheel spacing if the modules mount on the feet. Still needed: foot length (front to back), where on the feet the modules
