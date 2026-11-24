@@ -47,6 +47,12 @@ avoids people and obstacles, and is controlled from a phone app.
   `xbox.js`, `tools/pi_bench.js` (Readout / Self test / Joystick / Cart, RB deadman, same zero directions as
   module-test). Tests: `tests/pi_python/test_spark_can.py`, `tests/pi/test_pi_bench.js`, `tests/pi/test_spark_bus.js`.
   The owner will downgrade the SPARKs from 25 to 24. Untested on hardware: status 5 byte layout, gains, CANivore.
+- **Desk drive frame plan (2026-11-24, owner's design).** Outer frame 48 x 30 in, swerve module at each corner,
+  2 in corner allowance: outer rails 44 in x2, side rails 26 in x2. T-feet removed; the desk legs are **43 in apart**
+  (owner, centre to centre) and bolt through two inner front-to-back leg rails (30 - 2 x rail width = 28 in with 1 in
+  rails), about 1 in inside the side rails. Belly pan at the back only (about 46 x 11 in, under the rails, with a cross
+  brace at its front edge) so the front stays open floor for feet. 3D model: claude.ai artifact "MaxDesk drive frame".
+  Still needed for the software: wheel-centre positions, which side is the drive front, weight.
 - **The real desk** (not converted to swerve yet): the top is **48 x 30 in** (1.22 x 0.76 m), the legs are 45 in apart, and
   the T-feet are **about 43 in apart, centre to centre** (hole to hole, give or take 1–2 in). That's the left-right
   wheel spacing if the modules mount on the feet. Still needed: foot length (front to back), where on the feet the modules
