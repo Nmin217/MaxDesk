@@ -126,6 +126,8 @@ function createPiIO({
     // Not wired = not safe: without inputs, the E-stop reads as engaged and the cord as locked.
     estopEngaged() { if (!inputs) throw new Error('no E-stop input configured'); return !!inputs.estopEngaged(); },
     readCord() { if (!inputs) throw new Error('no cord input configured'); return inputs.readCord(); },
+    // Bumpers: null if the inputs have no bumper reader (none fitted); throws if no inputs are wired at all.
+    readBumpers() { if (!inputs) throw new Error('no bumper input configured'); return typeof inputs.readBumpers === 'function' ? inputs.readBumpers() : null; },
 
     modules: mods.map(m => ({ ...m }))
   };

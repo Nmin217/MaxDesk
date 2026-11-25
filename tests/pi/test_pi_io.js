@@ -167,6 +167,14 @@ test('three-module cart: only FL, FR, RL are configured and driven', () => {
 test('unwired E-stop or cord input reads as unsafe (the runtime then refuses to drive)', () => {
   const io = createPiIO({ bus: createFakeSparkBus() });
   assert.throws(() => io.estopEngaged()); assert.throws(() => io.readCord()); assert.throws(() => io.readLidar());
+  assert.throws(() => io.readBumpers());
+});
+
+test('bumpers: none fitted reads null; fitted ones pass straight through', () => {
+  const bus = createFakeSparkBus();
+  assert.equal(createPiIO({ bus, inputs }).readBumpers(), null);
+  const withBumpers = { ...inputs, readBumpers: () => ({ front: false, back: false, left: true, right: false }) };
+  assert.deepEqual(createPiIO({ bus, inputs: withBumpers }).readBumpers(), { front: false, back: false, left: true, right: false });
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

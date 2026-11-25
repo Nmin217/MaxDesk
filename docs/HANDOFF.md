@@ -62,6 +62,15 @@ avoids people and obstacles, and is controlled from a phone app.
   they move with the desk top. All USB through a powered hub (own 12->5 V supply) to the Pi 5. Software still to write:
   the Node LiDAR driver (`lidar.read()` -> rays in the desk frame, each unit's mount pose); the low pair feeds
   localisation, the upper pair only adds obstacles to the safety check. Old BOM line said A2s: superseded.
+- **Open front + bumpers (2026-11-25).** No front rail: the front is open so a chair rolls in (~42 in clear between
+  the leg rails). Leg rails run from the back rail to the front edge (29 in); each side rail is tied to its leg rail
+  with plates into one stiff beam that carries the front module. Front-left LiDAR moved onto that beam, just behind
+  the module. Crash detection: soft bumper strips with normally-closed microswitches along the desk-top edges and the
+  outside of the side and back rails, one chain per side into Pi GPIO. Software done: `io.readBumpers()` ->
+  `{front, back, left, right}`; a new press stops the desk, ends the trip and alerts with the side; while pressed it
+  may only drive away from that side, without turning; unreadable = no motion; null = none fitted (runtime.js,
+  pi_io.js, mock_io.js, tests). Still to write: the Pi GPIO reader for the bumper chains. Idea not built: refuse to
+  drive while something (a chair, a person) is inside the open front bay.
 - **The real desk** (not converted to swerve yet): the top is **48 x 30 in** (1.22 x 0.76 m), the legs are 45 in apart, and
   the T-feet are **about 43 in apart, centre to centre** (hole to hole, give or take 1–2 in). That's the left-right
   wheel spacing if the modules mount on the feet. Still needed: foot length (front to back), where on the feet the modules

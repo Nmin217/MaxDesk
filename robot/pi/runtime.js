@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const S = require('./swerve');
 const os = require('os');
 const path = require('path');
 const http = require('http');
@@ -176,6 +177,11 @@ function createRuntime({
   const jam = createJamDetector();
   const hw = createHardwareMonitor(expectedModules);
   let hwCheckT = 0, hwState = { blocked: false, text: '' };
+  // Bumpers (crash detection): sides pressed last tick, and whether the "can't read the bumpers" alert is showing.
+  let bumpPrev = {}, bumpFaultShown = false;
+  const BUMP_SIDES = ['front', 'back', 'left', 'right'];
+  // Unit vector of each side in the desk's own frame (+x forward, +y left).
+  const BUMP_DIR = { front: [1, 0], back: [-1, 0], left: [0, 1], right: [0, -1] };
   // Hardware input: an IO that drives real motors (pi_io.js) also feeds the brain real sensors instead of its pretend room.
   const hwMode = !!io.isHardware;
   if (hwMode) sim.setHardwareInput(true);
@@ -354,10 +360,39 @@ function createRuntime({
         const j = jam.step(mods, dt);
         if (j) { out = 'stop:' + j.kind; sim.jamStop(j.text); if (bb) bb.trigger(j.text); io.stopAll(); slew.reset(); return; }
       }
+      // Bumpers (optional, io.readBumpers): a new press anywhere stops the desk at once, ends the trip and says
+      // which side. While a side stays pressed the desk may only drive AWAY from it, without turning, so it can
+      // be backed off a wall. Readings that throw = can't tell = no motion (fail closed). null = none fitted.
+      let pressed = null;
+      if (typeof io.readBumpers === 'function') {
+        let b, bad = false;
+        try { b = io.readBumpers(); } catch (_) { bad = true; }
+        if (bad) {
+          if (!bumpFaultShown) { bumpFaultShown = true; sim.jamStop('Bumper switches not reading: check their wiring.'); if (bb) bb.trigger('bumpers unreadable'); }
+          out = 'stop:bumpers unreadable'; io.stopAll(); slew.reset(); return;
+        }
+        bumpFaultShown = false;
+        if (b) {
+          pressed = BUMP_SIDES.filter(k => b[k]);
+          const fresh = pressed.filter(k => !bumpPrev[k]);
+          bumpPrev = Object.fromEntries(pressed.map(k => [k, true]));
+          if (fresh.length) {
+            const where = fresh.join(' and ');
+            sim.jamStop(`Bumped into something (${where} side). Stopped.`);
+            if (bb) bb.trigger('bump: ' + where);
+            out = 'stop:bump'; io.stopAll(); slew.reset(); return;
+          }
+        } else bumpPrev = {};
+      }
       const moving = Math.hypot(s.T.vx, s.T.vy) > 0.01 || Math.abs(s.T.w) > 0.01;
       if (moving || s.active) {
         const v = toField(s.T.vx, s.T.vy, s.T.w);
         const o = slew.step(v.vx, v.vy, v.omega, dt);
+        if (pressed && pressed.length) {
+          const r = S.fieldToRobot(o.vx, o.vy, S.ioThetaToHeading(-s.T.th));
+          const into = pressed.some(k => r.vx * BUMP_DIR[k][0] + r.vy * BUMP_DIR[k][1] > 0.02);
+          if (into || Math.abs(o.omega) > 0.05) { out = 'stop:bumper held'; io.stopAll(); slew.reset(); return; }
+        }
         io.writeWheels(o.vx, o.vy, o.omega, -s.T.th);   // + the heading the brain believes (IO convention: theta = -sim th)
         out = 'drive';
       } else { io.stopAll(); slew.reset(); }

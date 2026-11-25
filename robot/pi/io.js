@@ -20,6 +20,10 @@
  *   not move; the runtime calls stopAll() instead of writeWheels(). If it throws, the runtime
  *   treats the cord as locked (fail closed).
  * estopEngaged(): bool. If it throws, the runtime treats the e-stop as engaged.
+ * readBumpers() (optional): { front, back, left, right } booleans (true = pressed), or null when no bumpers are
+ *   fitted. A new press stops the desk and ends the trip; while a side stays pressed it may only drive away from it,
+ *   without turning. If it throws, nothing moves (fail closed). Wire each side as a normally-closed chain so a cut
+ *   wire reads as pressed.
  * readModules() (optional): [{ name, driveCmdMps, driveMps, driveAmps, steerErrDeg, steerAmps }],
  *   one per swerve module: commanded and measured wheel speed, drive current, how far the steering
  *   is from its target, steering current. The runtime uses it to stop on a jammed module

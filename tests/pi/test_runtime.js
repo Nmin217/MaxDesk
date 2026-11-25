@@ -434,6 +434,88 @@ async function test(name, fn) {
     } finally { runtime.stop(); await bridge.close(); }
   });
 
+  await test('bumper: a press mid-trip stops the desk at once, ends the trip and says which side', async () => {
+    const bridge = await startStubBridge();
+    const io = createMockIO();
+    io.setBumpers({ front: false, back: false, left: false, right: false });
+    const runtime = createRuntime({ io, bridgeUrl: bridge.url, token: 't', statePushMs: 1e12, pollMs: 1e12 });
+    try {
+      await runtime.start();
+      bridge.queue({ type: 'summon', x: 4, y: 3, epoch: 1, id: 1 });
+      await runtime.pollNow();
+      for (let i = 0; i < 90; i++) await runtime.tickOnce(1 / 60);
+      assert.ok(runtime.sim.getState().active && io.getWrites().length > 0, 'trip under way');
+      io.setBumpers({ front: false, back: false, left: true, right: false });
+      const before = io.getWrites().length;
+      await runtime.tickOnce(1 / 60);
+      assert.equal(io.getWrites().length, before, 'no wheel command on the tick the bumper closed');
+      assert.ok(io.isStopped());
+      const ex = runtime.sim.getExtras();
+      assert.equal(runtime.sim.getState().active, false, 'trip ended');
+      assert.match(ex.alert_text, /Bumped into something \(left side\)/);
+      for (let i = 0; i < 60; i++) await runtime.tickOnce(1 / 60);
+      assert.equal(io.getWrites().length, before, 'does not carry on by itself');
+    } finally { runtime.stop(); await bridge.close(); }
+  });
+
+  await test('bumper: while a side stays pressed the desk can only drive away from it, without turning', async () => {
+    const bridge = await startStubBridge();
+    const io = createMockIO();
+    io.setBumpers({ front: false, back: false, left: false, right: false });
+    const runtime = createRuntime({ io, bridgeUrl: bridge.url, token: 't', statePushMs: 1e12, pollMs: 1e12 });
+    const S = require('../../robot/pi/swerve');
+    try {
+      await runtime.start();
+      await runtime.tickOnce(1 / 60);
+      io.setBumpers({ front: false, back: false, left: true, right: false });
+      await runtime.tickOnce(1 / 60);                       // the press itself: stop + alert
+      let movedAway = 0;
+      for (const [x, y, turn] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1]]) {
+        const from = io.getWrites().length;
+        for (let i = 0; i < 40; i++) {
+          bridge.queue({ type: 'drive', x, y, turn, speed: 0.5, epoch: 1 });
+          await runtime.pollNow();
+          await runtime.tickOnce(1 / 60);
+        }
+        for (const w of io.getWrites().slice(from)) {
+          const r = S.fieldToRobot(w.vx, w.vy, S.ioThetaToHeading(w.theta));
+          assert.ok(r.vy <= 0.02 + 1e-9, `drove into the pressed left side (robot vy ${r.vy})`);
+          assert.ok(Math.abs(w.omega) <= 0.05 + 1e-9, 'turned while pressed');
+          if (r.vy < -0.02) movedAway++;
+        }
+        bridge.queue({ type: 'drive', x: 0, y: 0, turn: 0, speed: 0.5, epoch: 1 });
+        await runtime.pollNow();
+        for (let i = 0; i < 20; i++) await runtime.tickOnce(1 / 60);
+      }
+      assert.ok(movedAway > 0, 'driving away from the bump must still work');
+    } finally { runtime.stop(); await bridge.close(); }
+  });
+
+  await test('bumper: readings that throw block all motion and say so; none fitted (null) changes nothing', async () => {
+    const bridge = await startStubBridge();
+    const io = createMockIO();
+    io.readBumpers = () => { throw new Error('GPIO gone'); };
+    const runtime = createRuntime({ io, bridgeUrl: bridge.url, token: 't', statePushMs: 1e12, pollMs: 1e12 });
+    try {
+      await runtime.start();
+      bridge.queue({ type: 'summon', x: 4, y: 3, epoch: 1, id: 1 });
+      await runtime.pollNow();
+      for (let i = 0; i < 60; i++) await runtime.tickOnce(1 / 60);
+      assert.equal(io.getWrites().length, 0);
+      assert.match(runtime.sim.getExtras().alert_text, /Bumper switches not reading/);
+    } finally { runtime.stop(); await bridge.close(); }
+    const bridge2 = await startStubBridge();
+    const io2 = createMockIO();   // bumpers null by default = none fitted
+    const runtime2 = createRuntime({ io: io2, bridgeUrl: bridge2.url, token: 't', statePushMs: 1e12, pollMs: 1e12 });
+    try {
+      await runtime2.start();
+      bridge2.queue({ type: 'summon', x: 4, y: 3, epoch: 1, id: 1 });
+      await runtime2.pollNow();
+      for (let i = 0; i < 60; i++) await runtime2.tickOnce(1 / 60);
+      assert.ok(io2.getWrites().length > 0, 'drives normally without bumpers');
+    } finally { runtime2.stop(); await bridge2.close(); }
+  });
+
   await test('room map and no-go zones survive a power cycle', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'maxdesk-cycle-'));
     const opts = { bridgeUrl: 'http://127.0.0.1:1', token: 't', dataDir: dir };
