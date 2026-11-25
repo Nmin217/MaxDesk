@@ -71,6 +71,7 @@ node tests/pi/test_black_box.js > /tmp/bbx.log 2>&1 && ok "black box: 60 s ring,
 node tests/pi/test_pi_io.js > /tmp/pio.log 2>&1 && ok "pi_io on a fake SPARK bus: CAN IDs, units, field-relative, 180 flip, heartbeat, odometry, faults" || { no "pi_io"; grep FAIL /tmp/pio.log | head -5; }
 node tests/pi/test_hw_loop.js > /tmp/hwl.log 2>&1 && ok "fake hardware end to end: summon arrives, no contact, LiDAR/SPARK unplugged stop it, black box files" || { no "fake hardware end to end"; grep -E "FAIL|    " /tmp/hwl.log | head -8; }
 node tests/pi/test_swerve.js > /tmp/sw.log 2>&1 && ok "swerve maths: module angles/speeds, desaturate, 90° flip, odometry" || { no "swerve maths"; grep FAIL /tmp/sw.log | head -6; }
+node tests/pi/test_bay_watch.js > /tmp/bay.log 2>&1 && ok "bay watch: someone sitting vs an empty chair in the open front, when unsure = person, room to back away" || { no "bay watch"; grep FAIL /tmp/bay.log | head -6; }
 node tests/pi/test_pi_bench.js > /tmp/pbn.log 2>&1 && ok "pi bench (no roboRIO/DS): RB deadman, jig zero directions, self test, refuses with a SPARK missing, Xbox on Linux" || { no "pi bench"; grep FAIL /tmp/pbn.log | head -6; }
 node tests/pi/test_spark_bus.js > /tmp/sbus.log 2>&1 && ok "SPARK CAN helper end to end (pretend SPARKs): units, heartbeat stops motors, dead helper = stale" || { no "SPARK CAN helper end to end"; grep -A3 FAIL /tmp/sbus.log | head -10; }
 if MAXDESK_ROOM=office node tests/sim/run.js office > /tmp/of.log 2>&1 && grep -q "OFFICE PASS" /tmp/of.log; then

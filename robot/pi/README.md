@@ -199,6 +199,28 @@ The Pi talks to the SPARK MAXes itself, over CAN, and reads the Xbox controller 
 say position is a 32-bit float, first in the frame), the loop gains (`TURN_KP`, `DRIVE_KP` in `spark_can.py`), and
 the CANivore. Readout is the first check: if the angles look wrong or never change, stop there and report.
 
+## Safety around the open front: bumpers and the bay watch
+
+The frame is open on the side you sit at, so a chair rolls in. In the software's frame that side is the desk's
+**back** (−x): the desk's forward is the back of the monitor.
+
+**Bay watch (`bay_watch.js`)**, with real LiDARs only. At the low LiDARs' height an empty office chair shows up as
+one small round thing (its gas column); a person shows up as legs.
+- **Someone sitting or standing there:** the desk won't move. A summon is refused with "Someone is at the desk".
+  A single leg, or anything wider than a chair column, counts as a person: when unsure, it assumes a person. It
+  only clears after 2 s with no legs seen.
+- **Just a chair:** before the trip, the desk slides straight out from over it (toward its forward, 0.15 m/s, no
+  turning, no sideways), so the chair leaves through the opening instead of being swept by the rails. Then the trip
+  carries on. If something is within 0.6 m of the desk's forward edge, or it hasn't cleared the chair in 6 s, it
+  stops and asks for the chair to be pulled out.
+- Bay size (defaults): 0.46 m deep from the open edge, 0.50 m either side of the centre. Set with
+  `createRuntime({ bay: { bayDepth, bayHalfWidth } })`; `bay: null` turns it off.
+
+**Bumpers (`io.readBumpers()`):** `{ front, back, left, right }`, true = pressed. Wire each side as a normally-closed
+switch chain, so a cut wire reads as pressed. A new press stops the desk at once, ends the trip and says which
+side. While a side stays pressed the desk may only drive away from it, without turning. Unreadable = no motion;
+`null` = no bumpers fitted. Still to write: the Pi GPIO reader for the four chains.
+
 ## Dry run on the Pi (no CAN adapter or motors needed)
 
 `node tools/pi_dry_run.js` runs the whole desk software (bridge, brain in hardware mode, `pi_io`) in real time

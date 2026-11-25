@@ -17,7 +17,8 @@ Object.defineProperty(globalThis, 'performance', { value: { now: () => fakeMs },
 const { createRuntime } = require('../../robot/pi/runtime');
 const { createPiIO, DEFAULT_MODULES } = require('../../robot/pi/pi_io');
 const { createFakeSparkBus } = require('../../robot/pi/fake_spark_bus');
-const { createFakeWorld, PX } = require('./fake_world');
+const { createFakeWorld, ROOM, PX } = require('./fake_world');
+const SW = require('../../robot/pi/swerve');
 
 function stubBridge() {
   const pending = [];
@@ -113,6 +114,53 @@ async function rig(worldOpts = {}, { gyro = !!process.env.GYRO } = {}) {
   const heavy = { scale: 0.05, yawPerM: 0.03 };
   await test('heavy wheel slip, gyro: under 50 cm, arrives, no contact', () => firstTrip(true, 0.50, heavy));
   await test('heavy wheel slip, no gyro: badly off mid-trip but still no contact and accurate on arrival', () => firstTrip(false, null, heavy));
+
+  // The open bay on the side you sit at is the desk's back (-x). Put things there, in the room, at the start position.
+  const START = { x: 85 * PX, y: -95 * PX, heading: Math.PI / 2 };
+  const atDesk = (dx, dy, r) => { const f = SW.robotToField(dx, dy, START.heading); return { x: START.x + f.vx, y: START.y + f.vy, r }; };
+  const COLUMN = atDesk(-0.20, 0, 0.03), LEGS = [atDesk(-0.30, 0.12, 0.055), atDesk(-0.30, -0.12, 0.055)];
+  const withThings = (circs, rects = []) => ({ room: { ...ROOM, circs: [...ROOM.circs, ...circs], rects: [...ROOM.rects, ...rects] } });
+  const moved = (r) => Math.hypot(r.world.pose.x - START.x, r.world.pose.y - START.y);
+
+  await test('bay: someone sitting at the desk: a summon never moves it and the app says why', async () => {
+    const r = await rig(withThings([COLUMN, ...LEGS]));
+    try {
+      await r.tick(120); await r.summon(14, 8.6); await r.tick(360);
+      assert.ok(moved(r) < 0.02, `moved ${moved(r).toFixed(3)} m`);
+      const ex = r.runtime.sim.getExtras();
+      assert.equal(r.runtime.sim.getState().active, false, 'trip refused');
+      assert.match(ex.alert_text, /Someone is at the desk/);
+    } finally { await r.done(); }
+  });
+
+  await test('bay: an empty chair pushed in: the desk slides straight out from over it, then carries on with the trip', async () => {
+    const r = await rig(withThings([COLUMN]));
+    try {
+      await r.tick(120); await r.summon(14, 8.6);
+      const p0 = r.world.pose;
+      await r.tick(Math.round(1.5 / dt));
+      const fwd = (r.world.pose.x - p0.x) * Math.cos(START.heading) + (r.world.pose.y - p0.y) * Math.sin(START.heading);
+      const side = -(r.world.pose.x - p0.x) * Math.sin(START.heading) + (r.world.pose.y - p0.y) * Math.cos(START.heading);
+      assert.ok(fwd > 0.08, `should be moving straight away from the chair (forward ${fwd.toFixed(3)} m)`);
+      assert.ok(Math.abs(side) < 0.03, `no sideways sweep of the chair (${side.toFixed(3)} m)`);
+      assert.ok(Math.abs(r.world.pose.heading - p0.heading) < 0.05, 'no turning while over the chair');
+      await r.tick(Math.round(6 / dt));
+      assert.ok(r.runtime.sim.getState().active || r.runtime.sim.getExtras().trips.length, 'trip carried on');
+      assert.doesNotMatch(r.runtime.sim.getExtras().alert_text || '', /chair/i);
+      assert.ok(moved(r) > 0.6, `desk got going after clearing the chair (${moved(r).toFixed(2)} m)`);
+    } finally { await r.done(); }
+  });
+
+  await test('bay: chair pushed in and something right behind the desk: stays put and asks for the chair to be pulled out', async () => {
+    const f = SW.robotToField(0.36 + 0.25, 0, START.heading);
+    const box = { x0: START.x + f.vx - 0.5, x1: START.x + f.vx + 0.5, y0: START.y + f.vy - 0.05, y1: START.y + f.vy + 0.05 };
+    const r = await rig(withThings([COLUMN], [box]));
+    try {
+      await r.tick(120); await r.summon(14, 8.6); await r.tick(240);
+      assert.ok(moved(r) < 0.03, `moved ${moved(r).toFixed(3)} m`);
+      assert.match(r.runtime.sim.getExtras().alert_text, /no room to back away/);
+    } finally { await r.done(); }
+  });
 
   await test('LiDAR unplugged mid-trip: wheels hold within 0.3 s, trip ends after 2 s with a plain message', async () => {
     const r = await rig();

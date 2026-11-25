@@ -9,6 +9,7 @@ const { URL } = require('url');
 const { createHardwareMonitor } = require('./hardware_check');
 const { createBlackBox } = require('./black_box');
 const { createSlewLimiter, createJamDetector } = require('./motion_guard');
+const { createBayWatch } = require('./bay_watch');
 
 // Fake DOM so the simulator core runs headlessly. Mirrors bridge/bridge_sim.js.
 global.els = {};
@@ -160,6 +161,7 @@ function createRuntime({
   nowMs = () => Date.now(),
   statePushMs = 100, pollMs = 100, staleBridgeMs = 2000,   // 100 ms: a Stop reaches the wheels within ~0.1 s plus Wi-Fi
   autoLoop = true,   // false: the caller runs tickOnce/pollNow itself (tests that step a fake world in lockstep)
+  bay = {},   // bay watch options (bay_watch.js); null turns it off. Only used with real sensors (hardware input).
   blackBox = true,   // record the last 60 s and save it to <dataDir>/blackbox when something goes wrong (black_box.js)
   expectedModules = (process.env.MAXDESK_MODULES || 'FL,FR,RL,RR').split(',').map(x => x.trim()).filter(Boolean)   // the hardware check expects these
 } = {}) {
@@ -179,6 +181,10 @@ function createRuntime({
   let hwCheckT = 0, hwState = { blocked: false, text: '' };
   // Bumpers (crash detection): sides pressed last tick, and whether the "can't read the bumpers" alert is showing.
   let bumpPrev = {}, bumpFaultShown = false;
+  // Bay watch: someone sitting at the desk = no motion; an empty chair pushed in = back straight away from it first.
+  const bayWatch = bay ? createBayWatch({ deskHalfFwd: DESK_HALF_FWD - 0.03, deskHalfLeft: DESK_HALF_LEFT - 0.03, ...bay }) : null;
+  let bayRays = null, bayAlertShown = false, backOutS = 0;
+  const BACK_OUT_MPS = 0.15, BACK_OUT_MAX_S = 6;
   const BUMP_SIDES = ['front', 'back', 'left', 'right'];
   // Unit vector of each side in the desk's own frame (+x forward, +y left).
   const BUMP_DIR = { front: [1, 0], back: [-1, 0], left: [0, 1], right: [0, -1] };
@@ -236,6 +242,7 @@ function createRuntime({
       lidarAgeMs = l.ageMs;
       if (l.seq !== lastScanSeq) {
         lastScanSeq = l.seq;
+        bayRays = l.rays;
         sim.hwScan(l.rays.filter(r => !(r[4] && Math.abs(r[2]) <= DESK_HALF_FWD && Math.abs(r[3]) <= DESK_HALF_LEFT)));
       }
     } else lidarAgeMs = Infinity;
@@ -385,6 +392,32 @@ function createRuntime({
         } else bumpPrev = {};
       }
       const moving = Math.hypot(s.T.vx, s.T.vy) > 0.01 || Math.abs(s.T.w) > 0.01;
+      // Bay watch (real sensors only): who or what is in the open bay on the side you sit at.
+      const bayV = hwMode && bayWatch && bayRays ? bayWatch.step(bayRays, nowMs()) : null;
+      if (bayV && bayV.state !== 'chair') backOutS = 0;
+      if (bayV && bayV.state === 'clear') bayAlertShown = false;
+      if (bayV && bayV.state === 'person' && (moving || s.active)) {
+        if (!bayAlertShown) { bayAlertShown = true; sim.jamStop("Someone is at the desk, so it won't drive. Summon it again once they've moved away."); if (bb) bb.trigger('someone at the desk'); }
+        out = 'stop:someone at desk'; io.stopAll(); slew.reset(); return;
+      }
+      if (bayV && bayV.state === 'chair' && (moving || s.active)) {
+        // Slide out from over the chair: straight toward the desk's forward (away from the open side), slowly, so
+        // the chair leaves through the opening instead of being swept by the rails. Then the trip carries on.
+        if (!bayV.rearClear || backOutS > BACK_OUT_MAX_S) {
+          if (!bayAlertShown) {
+            bayAlertShown = true;
+            sim.jamStop(bayV.rearClear ? "Couldn't back away from the chair under the desk. Pull the chair out and summon again."
+              : 'A chair is under the desk and there is no room to back away from it. Pull the chair out and summon again.');
+            if (bb) bb.trigger('chair under the desk');
+          }
+          out = 'stop:chair in bay'; io.stopAll(); slew.reset(); return;
+        }
+        backOutS += dt;
+        const f = S.robotToField(BACK_OUT_MPS, 0, S.ioThetaToHeading(-s.T.th));
+        const o = slew.step(f.vx, f.vy, 0, dt);
+        io.writeWheels(o.vx, o.vy, o.omega, -s.T.th);
+        out = 'backing away from chair'; return;
+      }
       if (moving || s.active) {
         const v = toField(s.T.vx, s.T.vy, s.T.w);
         const o = slew.step(v.vx, v.vy, v.omega, dt);
